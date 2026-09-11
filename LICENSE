@@ -2,7 +2,7 @@ AMENDMENT TO THE TERMS AND CONDITIONS: NON-COMMERCIAL & TRADEMARK USE ONLY
 
 1. NON-COMMERCIAL RESTRICTION: Notwithstanding anything to the contrary in Section 4 or any other part of the GNU General Public License v3.0, permission is NOT granted to convey, distribute, or sell copies of this Program, its derivatives, or its compiled binaries (including APKs) for a fee, commercial distribution, or placement within paid application marketplaces. 
 
-2. TRADEMARK & BRAND PROTECTION: Permission is granted to fork and modify the source code, but any redistributed version, fork, or derivative work must be distributed under a completely different name and branding. The name "Emad", its custom logos, and unique celestial-glassmorphic visual assets remain the exclusive trademark of the original author (SuperGamer2026) and cannot be used without explicit written consent.
+2. TRADEMARK & BRAND PROTECTION: Permission is granted to fork and modify the source code, but any redistributed version, fork, or derivative work must be distributed under a completely different name and branding. The name "Emad", its custom logos, and unique celestial-glassmorphic visual assets remain the exclusive trademark of the original author (SammyNashed) and cannot be used without explicit written consent.
 
 ==============================================================================
                        GNU GENERAL PUBLIC LICENSE
@@ -639,7 +639,7 @@ state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
     Emad - A celestial-glassmorphic Islamic prayer and Qada tracker
-    Copyright (C) 2026  SuperGamer2026
+    Copyright (C) 2026  SammyNashed
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -659,7 +659,7 @@ Also add information on how to contact you by electronic and paper mail.
   If the program does terminal interaction, make it output a short
 notice like this when it starts in an interactive mode:
 
-    Emad  Copyright (C) 2026  SuperGamer2026
+    Emad  Copyright (C) 2026  SammyNashed
     This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
     This is free software, and you are welcome to redistribute it
     under certain conditions; type `show c' for details.

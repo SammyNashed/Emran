@@ -1,4 +1,4 @@
-![Emad Premium Showcase Banner](https://github.com/SuperGamer2026/Emad/raw/main/EmadBanner.png)
+![Emad Premium Showcase Banner](https://github.com/SammyNashed/Emran/raw/main/EmadBanner.png)
 
 # Emad 🌌
 A highly polished, celestial-glassmorphic Islamic prayer and Qada tracker engineered with Kotlin and Jetpack Compose.
@@ -17,7 +17,7 @@ Emad was born out of a desire for something better—a seamless, completely priv
 
 You don't need to configure complex developer tools or compile code locally to start tracking. 
 
-1. Navigate to the **[Releases](https://github.com/SuperGamer2026/Emad/releases)** hub on the right-hand sidebar of this page.
+1. Navigate to the **[Releases](https://github.com/SammyNashed/Emran/releases)** hub on the right-hand sidebar of this page.
 2. Download the latest pre-compiled **`Emad_v1.0.apk`** directly to your Android device.
 3. Open the downloaded file on your phone to install it instantly.
 
@@ -39,7 +39,7 @@ The core user interface utilizes an ultra-clean layout to deliver vital context 
 ### 3. Deep Aesthetic Personalization
 * **19 Premium Color Presets & App Icons:** Includes highly tailored colorways like *Expressive*, *Cosmic Noir*, and *Midnight Teal* to entirely reshape the application atmosphere alongside matching visual themes.
 
-![Emad Color Themes Showcase](https://github.com/SuperGamer2026/Emad/raw/main/EmadScreenshot.png)
+![Emad Color Themes Showcase](https://github.com/SammyNashed/Emran/raw/main/EmadScreenshot.png)
 
 * **Two-Dot Unified Interface:** Theme and config selectors utilize a minimalist, matching two-dot color indicator layout across onboarding and settings menus for absolute visual consistency.
 * **Dynamic Streak Milestones:** Built-in rewards track your active consistency metrics, giving you concrete, progressive achievements (*Novice Flame*, *Spark Initiate*, *Torchbearer*) to keep your tracking habits active.
