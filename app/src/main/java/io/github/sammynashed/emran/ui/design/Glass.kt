@@ -45,8 +45,7 @@ import androidx.compose.ui.unit.Dp
  * How much of the liquid-glass effect this device can draw.
  *
  * minSdk is 24 and AGSL needs 33, so glass degrades instead of disappearing:
- *  - LENS  (API 33+): the backdrop is blurred AND bent at the edges (refraction with
- *    a hint of colour fringing), like a real glass lens.
+ *  - LENS  (API 33+): the backdrop is blurred AND bent at the edges (refraction), like a real glass lens.
  *  - BLUR  (API 31-32): the backdrop is blurred, no bending.
  *  - FLAT  (below 31): a clean translucent tint with the same rim light.
  * Every tier keeps the rim and the tint, so the app is recognisably the same.
@@ -86,10 +85,10 @@ half4 main(float2 fragCoord) {
         sdBox(p + e.yx, hs, radius) - sdBox(p - e.yx, hs, radius));
     n = n / max(length(n), 0.0001);
     float2 o = -n * bend * k;
-    half4 r = content.eval(fragCoord + o * 1.00);
-    half4 g = content.eval(fragCoord + o * 0.90);
-    half4 b = content.eval(fragCoord + o * 0.80);
-    return half4(r.r, g.g, b.b, 1.0);
+    // One sample for all three colours. A version that split red/green/blue slightly
+    // (chromatic dispersion) looked like real glass over a still image, but over a
+    // moving sky of clouds and stars it threw rainbow fringes around every pane.
+    return half4(content.eval(fragCoord + o).rgb, 1.0);
 }
 """
 
