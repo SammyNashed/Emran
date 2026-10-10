@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.filled.MenuBook
@@ -45,6 +47,12 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import io.github.sammynashed.emran.ui.screens.*
 import io.github.sammynashed.emran.ui.theme.*
 import io.github.sammynashed.emran.ui.components.cosmicAuroraBackground
+import io.github.sammynashed.emran.ui.design.DockTab
+import io.github.sammynashed.emran.ui.design.GlassDock
+import io.github.sammynashed.emran.ui.design.GlassTier
+import io.github.sammynashed.emran.ui.design.SkyDebug
+import io.github.sammynashed.emran.ui.design.SkyHost
+import io.github.sammynashed.emran.ui.screens.MoreScreen
 import io.github.sammynashed.emran.ui.components.liquidGlassCard
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import io.github.sammynashed.emran.ui.viewmodel.QuranViewModel
@@ -66,7 +74,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Transparent bars with no contrast scrim, so the sky runs right under them.
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
+        if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
+        applyDesignDebugExtras(intent)
 
         // Pre-warm Quran repository data on a background thread at startup
         lifecycleScope.launch {
@@ -87,7 +101,8 @@ class MainActivity : ComponentActivity() {
             val themePreset by viewModel.themePreset.collectAsState()
             val themeModeName by viewModel.themeMode.collectAsState()
             val appIconPreset by viewModel.appIconPreset.collectAsState()
-            val currentLanguage by viewModel.currentLanguage.collectAsState()
+            val savedLanguage by viewModel.currentLanguage.collectAsState()
+            val currentLanguage = SkyDebug.language ?: savedLanguage
 
             val dockVisibleState = remember { mutableStateOf(true) }
 
@@ -180,7 +195,7 @@ class MainActivity : ComponentActivity() {
                                     tourManager.nextStep()
                                 } else if (step.id == "adhkar_first_folder" && currentRoute.startsWith("adhkar_detail")) {
                                     tourManager.nextStep()
-                                } else if (step.id == "sub_screen_back_button" && currentRoute == "home") {
+                                } else if (step.id == "sub_screen_back_button" && (currentRoute == "home" || currentRoute == "more")) {
                                     tourManager.nextStep()
                                 } else if (step.id == "sub_screen_back_button" && step.targetRoute == "adhkar_detail" && currentRoute == "adhkar") {
                                     tourManager.nextStep()
@@ -219,6 +234,7 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                             "prayer_times" -> navController.navigate("prayer_times") { launchSingleTop = true }
+                                            "more" -> navController.navigate("more") { launchSingleTop = true }
                                             "compass" -> navController.navigate("compass") { launchSingleTop = true }
                                             "dhikr" -> navController.navigate("dhikr") { launchSingleTop = true }
                                             "adhkar" -> navController.navigate("adhkar") { launchSingleTop = true }
@@ -238,7 +254,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     LaunchedEffect(route) {
-                        if (route == "PRAYER_TAB") {
+                        if (route == "more") {
+                            navController.navigate("more") { launchSingleTop = true }
+                        } else if (route == "PRAYER_TAB" || route == "prayer_times") {
                             activeTabRoute = "home"
                             navController.navigate("prayer_times") {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -257,12 +275,22 @@ class MainActivity : ComponentActivity() {
                         io.github.sammynashed.emran.ui.tour.LocalTourRegistry provides tourRegistry,
                         io.github.sammynashed.emran.ui.tour.LocalTourManager provides tourManager
                     ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        // Screens already redesigned live on the sky; the rest keep their old
+                        // background until their stage (the sky is white-on-bright unfriendly to them).
+                        val skyScreen = (currentRoute == "home" && activeTabRoute == "home") ||
+                            currentRoute == "prayer_times" || currentRoute == "more"
+                        SkyHost(
+                            viewModel = viewModel,
+                            showSky = skyScreen,
+                            fallbackLightBars = AppTheme.colors.isLight,
+                        ) {
                             Scaffold(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .then(
-                                        if (themePreset == "BLACK_STONE") {
+                                        if (skyScreen) {
+                                            Modifier
+                                        } else if (themePreset == "BLACK_STONE") {
                                             Modifier.background(AppTheme.colors.background)
                                         } else {
                                             Modifier.cosmicAuroraBackground(
@@ -330,51 +358,10 @@ class MainActivity : ComponentActivity() {
                                                 Box(modifier = Modifier.fillMaxSize()) {
                                                 HomeScreen(
                                                     viewModel = viewModel,
-                                                    onNavigateToPrayers = {
-                                                        navController.navigate("prayer_times") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onNavigateToQibla = {
-                                                        navController.navigate("compass") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onNavigateToDhikr = {
-                                                        navController.navigate("dhikr") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onNavigateToAdhkar = {
-                                                        navController.navigate("adhkar") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onNavigateToHadith = {
-                                                        navController.navigate("hadith") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onNavigateToBookmarks = {
-                                                        navController.navigate("bookmarks") {
-                                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
-                                                    },
-                                                    onOpenHadith = { book, chapter, number ->
-                                                        navController.navigate("hadith_chapter/$book/$chapter?n=$number")
-                                                    },
+                                                    onNavigateToPrayers = { navController.navigate("prayer_times") { launchSingleTop = true } },
+                                                    onNavigateToQibla = { navController.navigate("compass") { launchSingleTop = true } },
+                                                    onNavigateToQuran = { activeTabRoute = "quran" },
+                                                    onNavigateToMore = { navController.navigate("more") { launchSingleTop = true } },
                                                  )
                                                  }
                                             }
@@ -473,6 +460,15 @@ class MainActivity : ComponentActivity() {
                                              onOpenDhikr = { navController.navigate("adhkar_detail/$it") }
                                          )
                                      }
+                                     composable("more") {
+                                        MoreScreen(
+                                            onBack = { navController.popBackStack() },
+                                            onOpenDhikr = { navController.navigate("dhikr") { launchSingleTop = true } },
+                                            onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
+                                            onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
+                                            onOpenSaved = { navController.navigate("bookmarks") { launchSingleTop = true } },
+                                        )
+                                    }
                                      composable("prayer_times") {
                                         io.github.sammynashed.emran.ui.screens.PrayerTimesScreen(
                                             viewModel = viewModel,
@@ -502,7 +498,37 @@ class MainActivity : ComponentActivity() {
                                         label = "DockAlpha"
                                     )
                                     
-                                    if (dockAlpha > 0f) {
+                                    if (dockAlpha > 0f && skyScreen) {
+                                        val ar = currentLanguage == "ar"
+                                        GlassDock(
+                                            tabs = listOf(
+                                                DockTab(
+                                                    "home", if (ar) "الرئيسية" else "Home",
+                                                    Icons.Outlined.Home, Icons.Filled.Home,
+                                                    Modifier.testTag("nav_home").tourTarget("nav_home"),
+                                                ),
+                                                DockTab(
+                                                    "quran", if (ar) "القرآن" else "Quran",
+                                                    Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Filled.MenuBook,
+                                                    Modifier.testTag("nav_quran").tourTarget("nav_quran"),
+                                                ),
+                                                DockTab(
+                                                    "finetune", if (ar) "الإعدادات" else "Settings",
+                                                    Icons.Outlined.Settings, Icons.Filled.Settings,
+                                                    Modifier.testTag("nav_finetune").tourTarget("nav_finetune"),
+                                                ),
+                                            ),
+                                            selectedKey = activeTabRoute,
+                                            onSelect = { key ->
+                                                activeTabRoute = key
+                                                if (currentRoute != "home") navController.popBackStack("home", false)
+                                            },
+                                            modifier = Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
+                                                .graphicsLayer(alpha = dockAlpha),
+                                        )
+                                    } else if (dockAlpha > 0f) {
                                         Box(
                                             modifier = Modifier
                                                 .align(Alignment.BottomCenter)
@@ -584,6 +610,26 @@ class MainActivity : ComponentActivity() {
         } // outer CompositionLocalProvider closing
     } // setContent closing
 } // onCreate closing
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyDesignDebugExtras(intent)
+    }
+
+    /** Lets a developer pin the sky's hour or the glass tier from adb; see [SkyDebug]. */
+    private fun applyDesignDebugExtras(intent: android.content.Intent?) {
+        if (intent == null) return
+        if (intent.hasExtra("SKY_DEBUG_MIN")) {
+            SkyDebug.minuteOfDay = intent.getIntExtra("SKY_DEBUG_MIN", -1).takeIf { it in 0..1439 }
+        }
+        if (intent.hasExtra("LANG_DEBUG")) {
+            SkyDebug.language = intent.getStringExtra("LANG_DEBUG")?.takeIf { it == "ar" || it == "en" }
+        }
+        if (intent.hasExtra("GLASS_TIER")) {
+            SkyDebug.glassTier = runCatching { GlassTier.valueOf(intent.getStringExtra("GLASS_TIER").orEmpty()) }.getOrNull()
+        }
+    }
 
     override fun onStart() {
         super.onStart()
