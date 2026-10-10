@@ -1487,38 +1487,39 @@ fun QuranScreen(
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
-                                        
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = if (lang == "ar") "السرعة" else "Speed",
-                                                color = currentTheme.textColor.copy(alpha = 0.6f),
-                                                fontSize = 11.sp
+                                    }
+                                    // The speed gets a line of its own: ten levels need the width.
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text(
+                                            text = if (lang == "ar") "السرعة" else "Speed",
+                                            color = currentTheme.textColor.copy(alpha = 0.6f),
+                                            fontSize = 11.sp
+                                        )
+                                        Slider(
+                                            value = autoScrollSpeed.toFloat(),
+                                            onValueChange = { autoScrollSpeed = it.toInt().coerceIn(1, 10) },
+                                            valueRange = 1f..10f,
+                                            steps = 8,
+                                            modifier = Modifier.weight(1f),
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = currentTheme.ornament,
+                                                activeTrackColor = currentTheme.ornament,
+                                                inactiveTrackColor = currentTheme.textColor.copy(alpha = 0.15f),
+                                                activeTickColor = currentTheme.backgroundColor.copy(alpha = 0.7f),
+                                                inactiveTickColor = currentTheme.ornament.copy(alpha = 0.7f),
                                             )
-                                            Slider(
-                                                value = autoScrollSpeed.toFloat(),
-                                                onValueChange = { autoScrollSpeed = it.toInt().coerceIn(1, 10) },
-                                                valueRange = 1f..10f,
-                                                steps = 8,
-                                                modifier = Modifier.width(130.dp),
-                                                colors = SliderDefaults.colors(
-                                                    thumbColor = currentTheme.ornament,
-                                                    activeTrackColor = currentTheme.ornament,
-                                                    inactiveTrackColor = currentTheme.textColor.copy(alpha = 0.15f),
-                                                    activeTickColor = currentTheme.backgroundColor.copy(alpha = 0.7f),
-                                                    inactiveTickColor = currentTheme.ornament.copy(alpha = 0.7f),
-                                                )
-                                            )
-                                            val speedLabel = if (lang == "ar") autoScrollSpeed.toString().map { arabicDigits[it.digitToInt()] }.joinToString("") else autoScrollSpeed.toString()
-                                            Text(
-                                                text = speedLabel,
-                                                color = currentTheme.textColor,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                                        )
+                                        val speedLabel = if (lang == "ar") autoScrollSpeed.toString().map { arabicDigits[it.digitToInt()] }.joinToString("") else autoScrollSpeed.toString()
+                                        Text(
+                                            text = speedLabel,
+                                            color = currentTheme.textColor,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                             }
