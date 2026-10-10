@@ -553,118 +553,30 @@ fun QuranScreen(
                 var pendingHifz by remember { mutableStateOf<Boolean?>(null) }
                 val bookmarkedChapterId by viewModel.bookmarkedChapterId.collectAsState()
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 56.dp),
-                    verticalArrangement = Arrangement.Top,
-                ) {
-                    // Same eyebrow + title header as Settings, so the tab does not
-                    // open as a floating pair of cards on an empty screen.
-                    Text(
-                        text = if (lang == "ar") "عِمران" else "EMRAN",
-                        color = AppTheme.colors.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        // Letter-spacing pulls Arabic letters apart, so it is Latin-only.
-                        letterSpacing = if (lang == "ar") 0.sp else 4.sp,
-                    )
-                    Text(
-                        text = if (lang == "ar") "القرآن الكريم" else "Qur'an",
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 32.sp,
-                        modifier = Modifier.padding(bottom = 40.dp),
-                    )
-                    Text(
-                        text = if (lang == "ar") "كيف تريد أن تقرأ؟" else "How would you like to read?",
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(bottom = 16.dp),
-                    )
-
-                    // One target for the tour to spotlight both ways of reading.
-                    Column(modifier = Modifier.tourTarget("quran_mode_cards")) {
-                    QuranModeCard(
-                        title = if (lang == "ar") "تلاوة" else "Tilawah",
-                        subtitle = if (lang == "ar") {
-                            "اقرأ المصحف كاملًا، مع أحكام التجويد ملوّنة."
-                        } else {
-                            "Read the mushaf, with the tajweed rules coloured in."
+                // The picker is a screen of its own on the sky (not a pop-up), so Back must
+                // close it and return to the two ways of reading.
+                if (pendingHifz == null) {
+                    QuranModesPage(
+                        lang = lang,
+                        resumeChapter = state.chapters.find { it.id == bookmarkedChapterId },
+                        onTilawah = { pendingHifz = false },
+                        onHifz = { pendingHifz = true },
+                        onResume = { chapter ->
+                            hifzMode = false
+                            viewModel.loadSurah(chapter)
                         },
-                        icon = Icons.Default.MenuBook,
-                        accent = AppTheme.colors.primary,
-                        modifier = Modifier.testTag("mode_card_tilawah"),
-                        onClick = { pendingHifz = false },
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    QuranModeCard(
-                        title = if (lang == "ar") "حفظ" else "Hifz",
-                        subtitle = if (lang == "ar") {
-                            "تلاوة من الحفظ — تظهر الكلمات كلما تلوتها."
-                        } else {
-                            "Recite from memory - words appear as you say them."
-                        },
-                        icon = Icons.Default.Mic,
-                        accent = AppTheme.colors.secondary,
-                        modifier = Modifier.testTag("mode_card_hifz"),
-                        onClick = { pendingHifz = true },
-                    )
-                    }
-
-                    // Resume was on the screen this replaced. Dropping it would
-                    // quietly cost a feature, so it stays - smaller, because it
-                    // is a shortcut rather than a third way to read.
-                    if (bookmarkedChapterId != -1) {
-                        val bookmarked = state.chapters.find { it.id == bookmarkedChapterId }
-                        if (bookmarked != null) {
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        hifzMode = false
-                                        viewModel.loadSurah(bookmarked)
-                                    }
-                                    .testTag("bookmark_resume_card")
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Default.BookmarkAdded,
-                                    contentDescription = null,
-                                    tint = AppTheme.colors.primary,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = (
-                                        if (lang == "ar") "متابعة: " else "Resume: "
-                                        ) + bookmarked.transliteration,
-                                    color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 14.sp,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                pendingHifz?.let { wantsHifz ->
-                    SurahSelectorDialog(
-                        currentChapter = null,
+                } else {
+                    BackHandler { pendingHifz = null }
+                    SurahPicker(
+                        lang = lang,
                         allChapters = state.chapters,
                         onSelect = { selected ->
-                            hifzMode = wantsHifz
+                            hifzMode = pendingHifz == true
                             viewModel.loadSurah(selected)
                             pendingHifz = null
                         },
-                        onDismiss = { pendingHifz = null },
-                        currentTheme = currentTheme,
-                        lang = lang,
+                        onBack = { pendingHifz = null },
                     )
                 }
             }
@@ -1251,41 +1163,37 @@ fun QuranScreen(
                         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                         modifier = Modifier.align(Alignment.BottomCenter)
                     ) {
+                        // Page-toned and nearly opaque: the Qur'an text must never show through
+                        // the controls, so this is a quiet panel in the page's own colours.
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(start = 14.dp, end = 14.dp, bottom = 18.dp)
                                 .border(
                                     width = 1.dp,
-                                    color = if (currentTheme == QuranThemeMode.DAY) Color(0xFFC4B49F) else Color.White.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(24.dp)
+                                    color = currentTheme.textColor.copy(alpha = 0.14f),
+                                    shape = RoundedCornerShape(30.dp)
                                 ),
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(30.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (currentTheme == QuranThemeMode.DAY) 
-                                    Color(0xFFFBF5EE).copy(alpha = 0.95f) else Color(0xFF1E2129).copy(alpha = 0.95f)
+                                containerColor = androidx.compose.ui.graphics.lerp(
+                                    currentTheme.backgroundColor, currentTheme.textColor, 0.07f,
+                                ).copy(alpha = 0.97f)
                             ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
+                            // Rarely used options stay folded away: calm by default.
+                            var moreTools by remember { mutableStateOf(false) }
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(
-                                    text = if (lang == "ar") "أدوات التلاوة" else "TILAWAH TOOLS",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = currentTheme.textColor.copy(alpha = 0.5f),
-                                    letterSpacing = 1.sp,
-                                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                                )
-                                
                                 // The colour key. The colouring itself is
                                 // always on; what a reader still needs is a way
                                 // to find out what a colour is telling them.
-                                Row(
+                                if (moreTools) Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.End,
                                 ) {
@@ -1302,11 +1210,12 @@ fun QuranScreen(
                                 // as the other reading tools, so entering Hifz
                                 // mode adds to the page rather than replacing it.
                                 if (hifzMode) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Row(
+                                    // Stacked, never side by side: three controls in one row left the
+                                    // last one a sliver wide, and its label wrapped letter by letter
+                                    // into a column hundreds of pixels tall.
+                                    Column(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
                                         Button(
                                             onClick = {
@@ -1327,7 +1236,12 @@ fun QuranScreen(
                                                     ) { }
                                                 }
                                             },
-                                            shape = RoundedCornerShape(14.dp),
+                                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                                            shape = RoundedCornerShape(50),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = currentTheme.textColor,
+                                                contentColor = currentTheme.backgroundColor,
+                                            ),
                                         ) {
                                             Text(
                                                 text = when {
@@ -1338,15 +1252,23 @@ fun QuranScreen(
                                                     lang == "ar" -> "ابدأ التلاوة"
                                                     else -> "Start reciting"
                                                 },
-                                                fontSize = 13.sp,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
                                             )
                                         }
 
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                        ) {
                                         Text(
                                             text = "${hifz.revealed.size + hifz.unsure.size} / ${hifzWordTotal}",
                                             color = currentTheme.textColor.copy(alpha = 0.7f),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            softWrap = false,
                                         )
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1355,6 +1277,8 @@ fun QuranScreen(
                                                     text = if (lang == "ar") "من جديد" else "Start over",
                                                     color = currentTheme.textColor.copy(alpha = 0.8f),
                                                     fontSize = 13.sp,
+                                                    maxLines = 1,
+                                                    softWrap = false,
                                                 )
                                             }
                                             TextButton(onClick = { hifz.revealAllKeys(hifzWordKeys) }) {
@@ -1362,8 +1286,11 @@ fun QuranScreen(
                                                     text = if (lang == "ar") "إظهار الكل" else "Reveal all",
                                                     color = currentTheme.textColor.copy(alpha = 0.8f),
                                                     fontSize = 13.sp,
+                                                    maxLines = 1,
+                                                    softWrap = false,
                                                 )
                                             }
+                                        }
                                         }
                                     }
                                     hifz.problem?.let { msg ->
@@ -1393,7 +1320,7 @@ fun QuranScreen(
                                             onClick = { if (fontSizeMultiplier > 0.8f) fontSizeMultiplier -= 0.1f },
                                             modifier = Modifier.size(36.dp)
                                         ) {
-                                            Text("A-", color = currentTheme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            Text("\u200EA-\u200E", color = currentTheme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         }
                                         Text(
                                             text = "${(fontSizeMultiplier * 100).toInt()}%",
@@ -1406,7 +1333,7 @@ fun QuranScreen(
                                             onClick = { if (fontSizeMultiplier < 2.5f) fontSizeMultiplier += 0.1f },
                                             modifier = Modifier.size(36.dp)
                                         ) {
-                                            Text("A+", color = currentTheme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                            Text("\u200EA+\u200E", color = currentTheme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                     
@@ -1441,7 +1368,22 @@ fun QuranScreen(
                                     }
                                 }
                                 
-                                Row(
+                                TextButton(
+                                    onClick = { moreTools = !moreTools },
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                ) {
+                                    Text(
+                                        text = if (moreTools) {
+                                            if (lang == "ar") "أقل" else "Fewer options"
+                                        } else {
+                                            if (lang == "ar") "خيارات أكثر" else "More options"
+                                        },
+                                        color = currentTheme.textColor.copy(alpha = 0.7f),
+                                        fontSize = 13.sp,
+                                    )
+                                }
+
+                                if (moreTools) Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
@@ -1501,7 +1443,7 @@ fun QuranScreen(
                                     }
                                 }
                                 
-                                if (!isPaginatedMode) {
+                                if (moreTools && !isPaginatedMode) {
                                     HorizontalDivider(color = currentTheme.textColor.copy(alpha = 0.1f))
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -1814,60 +1756,6 @@ private fun TajweedLegendDialog(
  * enough that a fast reciter is never waiting for the page to catch up.
  */
 private const val FADE_STEP = 0.08f
-
-/**
- * One of the two ways into the Qur'an.
- *
- * Deliberately large and stated in full: the difference between reading and
- * reciting from memory is the difference between two very different sessions,
- * and it is worth a sentence rather than an icon the reader has to decode.
- */
-@Composable
-private fun QuranModeCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.14f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.22f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(26.dp))
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    subtitle,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                )
-            }
-        }
-    }
-}
 
 /** Long enough to take the page in before it empties. */
 private const val HIFZ_INTRO_HOLD_MS = 1_000L

@@ -277,7 +277,12 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // Screens already redesigned live on the sky; the rest keep their old
                         // background until their stage (the sky is white-on-bright unfriendly to them).
+                        // The Quran tab is on the sky for its front pages (how to read, which surah);
+                        // the reader itself keeps its page colours, so it is not a sky screen.
+                        val quranState by quranViewModel.uiState.collectAsState()
                         val skyScreen = (currentRoute == "home" && activeTabRoute == "home") ||
+                            (currentRoute == "home" && activeTabRoute == "quran" &&
+                                quranState !is io.github.sammynashed.emran.ui.viewmodel.QuranUiState.SuccessVerses) ||
                             currentRoute == "prayer_times" || currentRoute == "more"
                         SkyHost(
                             viewModel = viewModel,

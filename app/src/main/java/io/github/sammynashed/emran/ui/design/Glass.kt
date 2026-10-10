@@ -133,6 +133,12 @@ fun GlassPanel(
     cornerRadius: Dp = Radius.row,
     /** Scales the white tint: 1 is normal, lower is clearer glass. */
     tint: Float = 1f,
+    /**
+     * False for panes that scroll (long lists): they keep the tint and the rim but skip the
+     * bent-sky backdrop, because a copy of the sky aligned once at layout would drift out of
+     * register as the row moves.
+     */
+    lens: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val sky = LocalSky.current
@@ -141,7 +147,7 @@ fun GlassPanel(
     val radiusPx = with(density) { cornerRadius.toPx() }
     val tier = currentGlassTier()
     // A shader that fails to compile on some GPU must cost the lens, never the app.
-    val lens = remember(tier) {
+    val lensEffect = remember(tier) {
         if (tier == GlassTier.LENS && Build.VERSION.SDK_INT >= 33) runCatching { LensEffect() }.getOrNull() else null
     }
     var origin by remember { mutableStateOf(Offset.Zero) }
@@ -150,20 +156,20 @@ fun GlassPanel(
 
     Box(
         modifier = modifier
-            .onGloballyPositioned { origin = it.positionInRoot() }
+            .then(if (lens) Modifier.onGloballyPositioned { origin = it.positionInRoot() } else Modifier)
             // Drawn before the clip, so the soft shadow can fall outside the glass.
-            .drawBehind { drawGlassShadow(sky, radiusPx, density.density) }
+            .then(if (lens) Modifier.drawBehind { drawGlassShadow(sky, radiusPx, density.density) } else Modifier)
             .clip(RoundedCornerShape(cornerRadius)),
     ) {
         // 1. The sky behind the glass, blurred and (on API 33+) bent at the edges.
-        Box(
+        if (lens) Box(
             Modifier
                 .matchParentSize()
                 .graphicsLayer {
                     clip = true
                     renderEffect = when (tier) {
                         GlassTier.LENS -> (if (Build.VERSION.SDK_INT >= 33)
-                            lens?.let { runCatching { it.effect(size.width, size.height, radiusPx, density.density) }.getOrNull() }
+                            lensEffect?.let { runCatching { it.effect(size.width, size.height, radiusPx, density.density) }.getOrNull() }
                         else null)
                             ?: BlurEffect(2.5f * density.density, 2.5f * density.density, TileMode.Clamp)
                         GlassTier.BLUR -> BlurEffect(2.5f * density.density, 2.5f * density.density, TileMode.Clamp)
