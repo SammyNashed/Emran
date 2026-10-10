@@ -1,0 +1,8 @@
+KFGQPC Uthmanic Script HAFS, version 22, and the accompanying Uthmani Hafs text
+© King Fahd Glorious Qur'an Printing Complex (مجمع الملك فهد لطباعة المصحف الشريف), Madinah.
+
+Used in Emran's muṣḥaf pages, unmodified, with the Complex's own Qur'an text.
+Source: https://qurancomplex.gov.sa  (font files as mirrored at https://github.com/nuqayah/qpc-fonts)
+Terms: https://dm.qurancomplex.gov.sa/copyright-2/
+
+The surah title frame was drawn for Emran.

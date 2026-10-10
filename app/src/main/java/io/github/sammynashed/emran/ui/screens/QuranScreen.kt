@@ -34,6 +34,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
@@ -71,10 +72,16 @@ import io.github.sammynashed.emran.ui.localization.Text
 import io.github.sammynashed.emran.ui.viewmodel.QuranUiState
 import io.github.sammynashed.emran.ui.viewmodel.QuranViewModel
 
-enum class QuranThemeMode(val backgroundColor: Color, val textColor: Color, val label: String) {
-    DAY(Color(0xFFF4E8DC), Color(0xFF202020), "day_mode"),
-    NIGHT(Color(0xFF12141A), Color(0xFFE4E6E8), "night_mode"),
-    AMOLED(Color.Black, Color(0xFFD0D0D0), "amoled_black")
+/**
+ * The three page finishes. Paper is a warm printed-page cream with ink-black text;
+ * Night is warm charcoal with parchment text (not blue-grey, which reads as a screen);
+ * AMOLED is true black with softened text so it does not glare. [ornament] is the
+ * gilt of the frame, title cartouches and āyah rosettes.
+ */
+enum class QuranThemeMode(val backgroundColor: Color, val textColor: Color, val label: String, val ornament: Color) {
+    DAY(Color(0xFFF7EFDF), Color(0xFF1E1912), "day_mode", Color(0xFFA9844A)),
+    NIGHT(Color(0xFF16130F), Color(0xFFE8E0CF), "night_mode", Color(0xFFB59A64)),
+    AMOLED(Color.Black, Color(0xFFCBC6BC), "amoled_black", Color(0xFF8A7650))
 }
 
 /**
@@ -264,23 +271,20 @@ fun SurahSelectorDialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
         modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .heightIn(max = 550.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .border(
-                width = 1.dp,
-                color = if (currentTheme == QuranThemeMode.DAY) Color(0xFFC4B49F) else Color(0xFFFFD700).copy(alpha = 0.3f),
-                shape = RoundedCornerShape(24.dp)
-            ),
+            .fillMaxWidth(0.94f)
+            .heightIn(max = 600.dp)
+            .clip(RoundedCornerShape(24.dp)),
         confirmButton = {},
         dismissButton = {},
-        containerColor = if (currentTheme == QuranThemeMode.DAY) Color(0xFFFBF5EE) else Color(0xFF1E2129),
+        // The page's own paper, so choosing a surah never leaves the muṣḥaf.
+        containerColor = androidx.compose.ui.graphics.lerp(currentTheme.backgroundColor, currentTheme.textColor, 0.04f),
         title = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = if (lang == "ar") "اختر السورة" else "Select Surah",
                     color = currentTheme.textColor,
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
+                    fontFamily = SurahNameFontFamily,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
@@ -303,7 +307,7 @@ fun SurahSelectorDialog(
                         unfocusedContainerColor = currentTheme.textColor.copy(alpha = 0.05f),
                         focusedTextColor = currentTheme.textColor,
                         unfocusedTextColor = currentTheme.textColor,
-                        cursorColor = AppTheme.colors.primary,
+                        cursorColor = currentTheme.ornament,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
@@ -312,7 +316,12 @@ fun SurahSelectorDialog(
             }
         },
         text = {
+            // Opens at the surah being read, not at al-Fātiḥah.
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+                initialFirstVisibleItemIndex = (filteredChapters.indexOfFirst { it.id == currentChapter?.id } - 1).coerceAtLeast(0)
+            )
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -323,12 +332,12 @@ fun SurahSelectorDialog(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isSelected) AppTheme.colors.primary.copy(alpha = 0.2f)
+                                if (isSelected) currentTheme.ornament.copy(alpha = 0.14f)
                                 else Color.Transparent
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) AppTheme.colors.primary.copy(alpha = 0.5f) else Color.Transparent,
+                                color = if (isSelected) currentTheme.ornament.copy(alpha = 0.6f) else Color.Transparent,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { onSelect(chapter) }
@@ -338,26 +347,26 @@ fun SurahSelectorDialog(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f, fill = false)
+                            modifier = Modifier.weight(1f)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .background(
-                                        if (isSelected) AppTheme.colors.primary else currentTheme.textColor.copy(alpha = 0.1f),
+                                        if (isSelected) currentTheme.ornament else currentTheme.textColor.copy(alpha = 0.08f),
                                         CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = chapter.id.toString(),
-                                    color = if (isSelected) Color.White else currentTheme.textColor,
+                                    color = if (isSelected) currentTheme.backgroundColor else currentTheme.textColor,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = chapter.transliteration,
                                     color = currentTheme.textColor,
@@ -366,8 +375,10 @@ fun SurahSelectorDialog(
                                 )
                                 Text(
                                     text = surahMetaLabel(chapter.type, chapter.total_verses, lang),
-                                    color = currentTheme.textColor.copy(alpha = 0.5f),
-                                    fontSize = 12.sp
+                                    color = currentTheme.textColor.copy(alpha = 0.55f),
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -376,8 +387,9 @@ fun SurahSelectorDialog(
                             maxLines = 1,
                             softWrap = false,
                             fontFamily = SurahNameFontFamily,
-                            fontSize = 21.sp,
-                            color = if (isSelected) AppTheme.colors.primary else currentTheme.textColor,
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(start = 8.dp),
+                            color = if (isSelected) currentTheme.ornament else currentTheme.textColor,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -606,6 +618,12 @@ fun QuranScreen(
 
                 // Controls visibility toggled via single tap for immersive experience
                 var isControlsVisible by remember { mutableStateOf(true) }
+                // Shown on arrival so they can be found, then out of the way: the page is
+                // what matters. A tap brings them back. Hifz keeps them, it needs Start.
+                LaunchedEffect(Unit) {
+                    delay(2600)
+                    if (!hifzMode) isControlsVisible = false
+                }
                 var showSurahSelector by remember { mutableStateOf(false) }
                 var showRecitationSheet by remember { mutableStateOf(false) }
                 val recitationContext = androidx.compose.ui.platform.LocalContext.current
@@ -627,10 +645,13 @@ fun QuranScreen(
                             )
                         }
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    // The page owns the whole screen; the bars float over it, so showing or
+                    // hiding them never re-lays-out the page underneath.
+                    Box(modifier = Modifier.fillMaxSize()) {
                         // IMMERSIVE TOP BAR
-                        AnimatedVisibility(
+                        androidx.compose.animation.AnimatedVisibility(
                             visible = isControlsVisible,
+                            modifier = Modifier.zIndex(1f),
                             enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                             exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
                         ) {
@@ -646,8 +667,9 @@ fun QuranScreen(
                                         Text(
                                             text = state.chapter.name,
                                             color = animatedTextColor,
+                                            fontFamily = SurahNameFontFamily,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 20.sp
+                                            fontSize = 22.sp
                                         )
                                         Icon(
                                             imageVector = Icons.Default.ArrowDropDown,
@@ -681,7 +703,7 @@ fun QuranScreen(
                                                 else -> "Switch to Hifz mode"
                                             },
                                             tint = if (hifzMode) {
-                                                AppTheme.colors.primary
+                                                currentTheme.ornament
                                             } else {
                                                 animatedTextColor
                                             },
@@ -702,21 +724,35 @@ fun QuranScreen(
                                         )
                                     }
                                 },
-                                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                colors = TopAppBarDefaults.topAppBarColors(containerColor = animatedBackgroundColor),
+                                // The reader already sits below the status bar; a second inset left an empty band.
+                                windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
+                                // Opaque, with a hairline in the page's ornament colour: the page
+                                // never ghosts through the bar.
+                                modifier = Modifier.drawBehind {
+                                    drawLine(
+                                        currentTheme.ornament.copy(alpha = 0.45f),
+                                        start = Offset(0f, size.height - 0.5.dp.toPx()),
+                                        end = Offset(size.width, size.height - 0.5.dp.toPx()),
+                                        strokeWidth = 1.dp.toPx(),
+                                    )
+                                },
                             )
                         }
 
                         // PAGE BOUNDARIES BORDER FOR AUTHENTIC PHYSICAL MUSHAF FEEL
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .mushafBorder(
-                                    color = when (currentTheme) {
-                                        QuranThemeMode.DAY -> Color(0xFFC4B49F)
-                                        QuranThemeMode.NIGHT -> Color(0xFFFFD700)
-                                        QuranThemeMode.AMOLED -> Color(0xFF333333)
-                                    }
+                                .fillMaxSize()
+                                .then(
+                                    // The printed page draws its own frame.
+                                    if (isPaginatedMode) Modifier else Modifier.mushafBorder(
+                                        color = when (currentTheme) {
+                                            QuranThemeMode.DAY -> Color(0xFFC4B49F)
+                                            QuranThemeMode.NIGHT -> Color(0xFFFFD700)
+                                            QuranThemeMode.AMOLED -> Color(0xFF333333)
+                                        }
+                                    )
                                 )
                                 .pointerInput(Unit) {
                                     detectTapGestures(
@@ -801,6 +837,26 @@ fun QuranScreen(
                                             val versesInPage = pages[pageIndex]
                                             val actualPageNum = sortedPageKeys.getOrNull(pageIndex) ?: 1
 
+                                            // The printed page: fifteen justified lines on the
+                                            // Madinah layout. Flowing text below is only the
+                                            // fallback for a missing layout file.
+                                            if (mushafLayoutAvailable()) {
+                                                MushafPageView(
+                                                    pageNumber = actualPageNum,
+                                                    loadedVerses = versesInPage,
+                                                    theme = currentTheme,
+                                                    tajweed = tajweedEnabled,
+                                                    hifzSurah = if (hifzMode || sweeping) state.chapter.id else null,
+                                                    revealed = hifzShown,
+                                                    fading = hifz.fading,
+                                                    current = hifzCurrent,
+                                                    highlight = currentTheme.ornament.copy(alpha = 0.28f),
+                                                    arabicDigits = arabicDigits,
+                                                    zoom = fontSizeMultiplier.coerceAtLeast(1f),
+                                                )
+                                                return@HorizontalPager
+                                            }
+
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxSize()
@@ -826,7 +882,7 @@ fun QuranScreen(
                                                         revealed = hifzShown,
                                                         fading = hifz.fading,
                                                         current = hifzCurrent,
-                                                        highlight = AppTheme.colors.primary.copy(alpha = 0.18f),
+                                                        highlight = currentTheme.ornament.copy(alpha = 0.18f),
                                                         arabicDigits = arabicDigits,
                                                         currentTheme = currentTheme,
                                                     )
@@ -881,7 +937,7 @@ fun QuranScreen(
                                                         revealed = hifzShown,
                                                         fading = hifz.fading,
                                                         current = hifzCurrent,
-                                                        highlight = AppTheme.colors.primary.copy(alpha = 0.18f),
+                                                        highlight = currentTheme.ornament.copy(alpha = 0.18f),
                                                         modifier = Modifier.fillMaxWidth(),
                                                     )
                                                     Spacer(modifier = Modifier.height(16.dp))
@@ -948,7 +1004,7 @@ fun QuranScreen(
                                                         label = "dot_height"
                                                     )
                                                     val color by animateColorAsState(
-                                                        targetValue = if (isSelected) AppTheme.colors.primary else Color.White.copy(alpha = 0.35f),
+                                                        targetValue = if (isSelected) currentTheme.ornament else Color.White.copy(alpha = 0.35f),
                                                         label = "dot_color"
                                                     )
                                                     Box(
@@ -1084,7 +1140,7 @@ fun QuranScreen(
                                                         revealed = hifzShown,
                                                         fading = hifz.fading,
                                                         current = hifzCurrent,
-                                                        highlight = AppTheme.colors.primary.copy(alpha = 0.18f),
+                                                        highlight = currentTheme.ornament.copy(alpha = 0.18f),
                                                         modifier = Modifier.fillMaxWidth(),
                                                     )
                                                 Spacer(modifier = Modifier.height(16.dp))
@@ -1178,7 +1234,7 @@ fun QuranScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = androidx.compose.ui.graphics.lerp(
                                     currentTheme.backgroundColor, currentTheme.textColor, 0.07f,
-                                ).copy(alpha = 0.97f)
+                                )
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
@@ -1318,7 +1374,7 @@ fun QuranScreen(
                                     ) {
                                         IconButton(
                                             onClick = { if (fontSizeMultiplier > 0.8f) fontSizeMultiplier -= 0.1f },
-                                            modifier = Modifier.size(36.dp)
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Text("\u200EA-\u200E", color = currentTheme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         }
@@ -1331,38 +1387,52 @@ fun QuranScreen(
                                         )
                                         IconButton(
                                             onClick = { if (fontSizeMultiplier < 2.5f) fontSizeMultiplier += 0.1f },
-                                            modifier = Modifier.size(36.dp)
+                                            modifier = Modifier.size(48.dp)
                                         ) {
                                             Text("\u200EA+\u200E", color = currentTheme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                     
+                                    // Each choice is a tiny page in its own colours, with its name
+                                    // under it: no guessing what a dark circle means.
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         QuranThemeMode.entries.forEach { mode ->
                                             val isSelected = currentTheme == mode
-                                            Box(
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
                                                 modifier = Modifier
-                                                    .size(32.dp)
-                                                    .clip(CircleShape)
-                                                    .background(mode.backgroundColor)
-                                                    .border(
-                                                        width = if (isSelected) 2.dp else 1.dp,
-                                                        color = if (isSelected) AppTheme.colors.primary else currentTheme.textColor.copy(alpha = 0.2f),
-                                                        shape = CircleShape
-                                                    )
-                                                    .clickable { currentTheme = mode },
-                                                contentAlignment = Alignment.Center
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .clickable { currentTheme = mode }
+                                                    .padding(2.dp),
                                             ) {
-                                                if (isSelected) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(10.dp)
-                                                            .background(AppTheme.colors.primary, CircleShape)
-                                                    )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = 38.dp, height = 46.dp)
+                                                        .clip(RoundedCornerShape(7.dp))
+                                                        .background(mode.backgroundColor)
+                                                        .border(
+                                                            width = if (isSelected) 2.dp else 1.dp,
+                                                            color = if (isSelected) currentTheme.ornament else currentTheme.textColor.copy(alpha = 0.22f),
+                                                            shape = RoundedCornerShape(7.dp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text("بِسۡمِ", fontFamily = MushafFontFamily, fontSize = 15.sp, color = mode.textColor)
                                                 }
+                                                Text(
+                                                    text = when (mode) {
+                                                        QuranThemeMode.DAY -> if (lang == "ar") "نهاري" else "Day"
+                                                        QuranThemeMode.NIGHT -> if (lang == "ar") "ليلي" else "Night"
+                                                        QuranThemeMode.AMOLED -> if (lang == "ar") "أسود" else "Black"
+                                                    },
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = currentTheme.textColor.copy(alpha = if (isSelected) 0.95f else 0.6f),
+                                                    modifier = Modifier.padding(top = 3.dp),
+                                                )
                                             }
                                         }
                                     }
@@ -1393,7 +1463,7 @@ fun QuranScreen(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isContinuous) AppTheme.colors.primary else currentTheme.textColor.copy(alpha = 0.05f),
+                                            containerColor = if (isContinuous) currentTheme.ornament else currentTheme.textColor.copy(alpha = 0.05f),
                                             contentColor = if (isContinuous) Color.White else currentTheme.textColor
                                         ),
                                         contentPadding = PaddingValues(vertical = 8.dp)
@@ -1420,7 +1490,7 @@ fun QuranScreen(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isPaginatedMode) AppTheme.colors.primary.copy(alpha = 0.8f) else currentTheme.textColor.copy(alpha = 0.05f),
+                                            containerColor = if (isPaginatedMode) currentTheme.ornament.copy(alpha = 0.8f) else currentTheme.textColor.copy(alpha = 0.05f),
                                             contentColor = if (isPaginatedMode) Color.White else currentTheme.textColor
                                         ),
                                         contentPadding = PaddingValues(vertical = 8.dp)
@@ -1454,14 +1524,14 @@ fun QuranScreen(
                                             IconButton(
                                                 onClick = { isAutoScrolling = !isAutoScrolling },
                                                 colors = IconButtonDefaults.iconButtonColors(
-                                                    containerColor = if (isAutoScrolling) Color(0xFF4CAF50) else AppTheme.colors.primary.copy(alpha = 0.1f)
+                                                    containerColor = if (isAutoScrolling) currentTheme.ornament else currentTheme.ornament.copy(alpha = 0.1f)
                                                 ),
                                                 modifier = Modifier.size(36.dp)
                                             ) {
                                                 Icon(
                                                     imageVector = if (isAutoScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
                                                     contentDescription = "Auto Scroll",
-                                                    tint = if (isAutoScrolling) Color.White else AppTheme.colors.primary,
+                                                    tint = if (isAutoScrolling) Color.White else currentTheme.ornament,
                                                     modifier = Modifier.size(18.dp)
                                                 )
                                             }
@@ -1490,8 +1560,8 @@ fun QuranScreen(
                                                 steps = 3,
                                                 modifier = Modifier.width(100.dp),
                                                 colors = SliderDefaults.colors(
-                                                    thumbColor = AppTheme.colors.primary,
-                                                    activeTrackColor = AppTheme.colors.primary
+                                                    thumbColor = currentTheme.ornament,
+                                                    activeTrackColor = currentTheme.ornament
                                                 )
                                             )
                                             val speedLabel = when (autoScrollSpeed) {
