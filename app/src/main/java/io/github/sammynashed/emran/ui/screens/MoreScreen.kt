@@ -24,7 +24,6 @@ import io.github.sammynashed.emran.ui.tour.tourTarget
 @Composable
 fun MoreScreen(
     onBack: () -> Unit,
-    onOpenDhikr: () -> Unit,
     onOpenAdhkar: () -> Unit,
     onOpenHadith: () -> Unit,
     onOpenSaved: () -> Unit,
@@ -41,20 +40,15 @@ fun MoreScreen(
         Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
             GlassRow(
                 title = if (ar) "الأذكار" else "Adhkar",
+                enterIndex = 0,
                 subtitle = if (ar) "أذكار الصباح والمساء" else "Morning & evening",
                 icon = Icons.AutoMirrored.Outlined.MenuBook,
                 onClick = onOpenAdhkar,
                 modifier = Modifier.tourTarget("home_widget_adhkar"),
             )
             GlassRow(
-                title = if (ar) "التسبيح" else "Dhikr",
-                subtitle = if (ar) "العدّاد والأوراد" else "Counter and litanies",
-                icon = ImageVector.vectorResource(id = R.drawable.ic_misbaha),
-                onClick = onOpenDhikr,
-                modifier = Modifier.tourTarget("home_widget_dhikr"),
-            )
-            GlassRow(
                 title = if (ar) "الأحاديث" else "Hadith",
+                enterIndex = 1,
                 subtitle = if (ar) "كتب السنة" else "Books of Sunnah",
                 icon = Icons.Outlined.AutoStories,
                 onClick = onOpenHadith,
@@ -62,6 +56,7 @@ fun MoreScreen(
             )
             GlassRow(
                 title = if (ar) "المحفوظات" else "Saved",
+                enterIndex = 2,
                 subtitle = if (ar) "علاماتك المرجعية" else "Your bookmarks",
                 icon = Icons.Outlined.BookmarkBorder,
                 onClick = onOpenSaved,

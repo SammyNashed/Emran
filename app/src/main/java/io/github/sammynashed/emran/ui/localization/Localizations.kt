@@ -124,8 +124,8 @@ object Localizations {
             "ar" to "قضاء"
         ),
         "dhikr" to mapOf(
-            "en" to "Dhikr",
-            "ar" to "الأذكار"
+            "en" to "Tasbeeh",
+            "ar" to "التسبيح"
         ),
         "depth_memo" to mapOf(
             "en" to "Depth & Memorization",

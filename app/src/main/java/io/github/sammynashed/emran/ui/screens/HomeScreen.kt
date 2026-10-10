@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Schedule
@@ -17,7 +16,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import io.github.sammynashed.emran.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sammynashed.emran.ui.design.DayArc
@@ -42,7 +44,7 @@ fun HomeScreen(
     viewModel: PrayerViewModel,
     onNavigateToPrayers: () -> Unit,
     onNavigateToQibla: () -> Unit,
-    onNavigateToQuran: () -> Unit,
+    onNavigateToTasbeeh: () -> Unit,
     onNavigateToMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -87,23 +89,28 @@ fun HomeScreen(
         Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
             GlassRow(
                 title = if (ar) "مواقيت الصلاة" else "Prayer Times",
+                enterIndex = 0,
                 icon = Icons.Outlined.Schedule,
                 onClick = onNavigateToPrayers,
                 modifier = Modifier.tourTarget("today_prayers_widget_card"),
             )
             GlassRow(
                 title = if (ar) "القبلة" else "Qibla",
+                enterIndex = 1,
                 icon = Icons.Outlined.Explore,
                 onClick = onNavigateToQibla,
                 modifier = Modifier.tourTarget("home_widget_qibla"),
             )
             GlassRow(
-                title = if (ar) "القرآن" else "Quran",
-                icon = Icons.AutoMirrored.Outlined.MenuBook,
-                onClick = onNavigateToQuran,
+                title = if (ar) "التسبيح" else "Tasbeeh",
+                enterIndex = 2,
+                icon = ImageVector.vectorResource(id = R.drawable.ic_misbaha),
+                onClick = onNavigateToTasbeeh,
+                modifier = Modifier.tourTarget("home_widget_dhikr"),
             )
             GlassRow(
                 title = if (ar) "المزيد" else "More",
+                enterIndex = 3,
                 icon = Icons.Outlined.MoreHoriz,
                 onClick = onNavigateToMore,
             )

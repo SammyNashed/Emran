@@ -139,6 +139,11 @@ fun GlassPanel(
      * register as the row moves.
      */
     lens: Boolean = true,
+    /**
+     * Where this pane's top-left sits in the root, when it MOVES by a graphics layer (the dock's
+     * sliding lens). Layout-based positioning would not see the move, so the owner supplies it.
+     */
+    skyOrigin: (() -> Offset)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val sky = LocalSky.current
@@ -176,7 +181,10 @@ fun GlassPanel(
                         GlassTier.FLAT -> null
                     }
                 }
-                .drawBehind { translate(-origin.x, -origin.y) { drawSkyTexture(skyLayer, sky, skySize, clock.value) } },
+                .drawBehind {
+                    val o = skyOrigin?.invoke() ?: origin
+                    translate(-o.x, -o.y) { drawSkyTexture(skyLayer, sky, skySize, clock.value) }
+                },
         )
         // 2. Tint, top-light and the specular rim.
         Box(

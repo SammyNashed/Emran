@@ -57,6 +57,7 @@ import io.github.sammynashed.emran.ui.components.liquidGlassCard
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import io.github.sammynashed.emran.ui.viewmodel.QuranViewModel
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.graphics.vector.path
@@ -353,20 +354,45 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     startDestination = initialRoute,
                                     modifier = Modifier.fillMaxSize(),
-                                    enterTransition = { androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(150)) },
-                                    exitTransition = { androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150)) },
-                                    popEnterTransition = { androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(150)) },
-                                    popExitTransition = { androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150)) }
+                                    // Screens move like iOS: the new one slides in from the edge while the old
+                                    // one recedes; going back is the reverse. Soft deceleration, no bounce.
+                                    enterTransition = {
+                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, easing = NavEase)) +
+                                            slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start,
+                                                androidx.compose.animation.core.tween(400, easing = NavEase), initialOffset = { it / 5 })
+                                    },
+                                    exitTransition = {
+                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) +
+                                            androidx.compose.animation.scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(400, easing = NavEase))
+                                    },
+                                    popEnterTransition = {
+                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, easing = NavEase)) +
+                                            androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(400, easing = NavEase))
+                                    },
+                                    popExitTransition = {
+                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) +
+                                            slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End,
+                                                androidx.compose.animation.core.tween(340, easing = NavEase), targetOffset = { it / 5 })
+                                    },
                                 ) {
                                     composable("home") {
-                                        when (activeTabRoute) {
+                                        androidx.compose.animation.AnimatedContent(
+                                            targetState = activeTabRoute,
+                                            transitionSpec = {
+                                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, delayMillis = 60, easing = NavEase)) +
+                                                    androidx.compose.animation.scaleIn(initialScale = 0.965f, animationSpec = androidx.compose.animation.core.tween(380, easing = NavEase))) togetherWith
+                                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
+                                            },
+                                            label = "tabs",
+                                        ) { tab ->
+                                        when (tab) {
                                             "home" -> {
                                                 Box(modifier = Modifier.fillMaxSize()) {
                                                 HomeScreen(
                                                     viewModel = viewModel,
                                                     onNavigateToPrayers = { navController.navigate("prayer_times") { launchSingleTop = true } },
                                                     onNavigateToQibla = { navController.navigate("compass") { launchSingleTop = true } },
-                                                    onNavigateToQuran = { activeTabRoute = "quran" },
+                                                    onNavigateToTasbeeh = { navController.navigate("dhikr") { launchSingleTop = true } },
                                                     onNavigateToMore = { navController.navigate("more") { launchSingleTop = true } },
                                                  )
                                                  }
@@ -384,6 +410,7 @@ class MainActivity : ComponentActivity() {
                                                     onOpenAcknowledgements = { navController.navigate("testers") }
                                                 )
                                             }
+                                        }
                                         }
                                     }
                                      composable("adhkar") {
@@ -469,7 +496,6 @@ class MainActivity : ComponentActivity() {
                                      composable("more") {
                                         MoreScreen(
                                             onBack = { navController.popBackStack() },
-                                            onOpenDhikr = { navController.navigate("dhikr") { launchSingleTop = true } },
                                             onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
                                             onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
                                             onOpenSaved = { navController.navigate("bookmarks") { launchSingleTop = true } },
@@ -1070,3 +1096,6 @@ private fun LandscapeSideDock(
         }
     }
 }
+
+/** The curve every screen move uses: quick off the mark, long soft landing (Material "emphasized decelerate"). */
+private val NavEase = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
