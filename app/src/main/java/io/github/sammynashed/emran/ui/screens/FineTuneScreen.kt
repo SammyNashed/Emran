@@ -65,6 +65,15 @@ import io.github.sammynashed.emran.data.LocationPreset
 import io.github.sammynashed.emran.data.LocationPresets
 import io.github.sammynashed.emran.data.PrayerTimeCalculator
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
+import io.github.sammynashed.emran.ui.design.GlassDivider
+import io.github.sammynashed.emran.ui.design.GlassGroup
+import io.github.sammynashed.emran.ui.design.GlassSectionLabel
+import io.github.sammynashed.emran.ui.design.GlassSegmented
+import io.github.sammynashed.emran.ui.design.GlassTile
+import io.github.sammynashed.emran.ui.design.LocalSky
+import io.github.sammynashed.emran.ui.design.SettingsRow
+import io.github.sammynashed.emran.ui.design.Space
+import io.github.sammynashed.emran.ui.design.glassEntrance
 import io.github.sammynashed.emran.ui.theme.AppTheme
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import java.time.LocalDate
@@ -101,7 +110,6 @@ fun FineTuneScreen(
     var showMethodDialog by remember { mutableStateOf(false) }
     var showSchoolDialog by remember { mutableStateOf(false) }
     var showHighLatDialog by remember { mutableStateOf(false) }
-    var showThemeModeDialog by remember { mutableStateOf(false) }
     var showAdhanDialog by remember { mutableStateOf(false) }
     var showOffsetsGroup by remember { mutableStateOf(false) }
     var locationSearchQuery by remember { mutableStateOf("") }
@@ -110,10 +118,8 @@ fun FineTuneScreen(
     var showNotificationPrecisionDialog by remember { mutableStateOf(false) }
     var showCalculationSettingsDialog by remember { mutableStateOf(false) }
     var showCustomizationDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
     var showAboutEmranDialog by remember { mutableStateOf(false) }
     var showAboutDeveloperDialog by remember { mutableStateOf(false) }
-    var showDevUpdatesDialog by remember { mutableStateOf(false) }
     var showOpenSourceDialog by remember { mutableStateOf(false) }
     var showPrivacyFirstDialog by remember { mutableStateOf(false) }
     var showVersionDialog by remember { mutableStateOf(false) }
@@ -136,8 +142,6 @@ fun FineTuneScreen(
             showSchoolDialog = false
         } else if (showHighLatDialog) {
             showHighLatDialog = false
-        } else if (showThemeModeDialog) {
-            showThemeModeDialog = false
         } else if (showAdhanDialog) {
             showAdhanDialog = false
         } else if (showLocationPopup) {
@@ -148,14 +152,10 @@ fun FineTuneScreen(
             showCalculationSettingsDialog = false
         } else if (showCustomizationDialog) {
             showCustomizationDialog = false
-        } else if (showLanguageDialog) {
-            showLanguageDialog = false
         } else if (showAboutEmranDialog) {
             showAboutEmranDialog = false
         } else if (showAboutDeveloperDialog) {
             showAboutDeveloperDialog = false
-        } else if (showDevUpdatesDialog) {
-            showDevUpdatesDialog = false
         } else if (showOpenSourceDialog) {
             showOpenSourceDialog = false
         } else if (showPrivacyFirstDialog) {
@@ -339,446 +339,225 @@ fun FineTuneScreen(
         )
     }
 
-    val listState = rememberLazyListState()
-    // Settings has nothing to "refresh": every row reads live state from the ViewModel.
-    // (An earlier pull-to-refresh here swallowed scrolls near the top, then waited 1.5 s
-    // and reported "Settings refreshed" without doing anything.)
+    // The page: everything that matters is on one screen, nothing to hunt for. Frequent things
+    // (the adhan, the language) are one tap or fewer; the rest sit in four short groups.
+    val sky = LocalSky.current
+    val ar = lang == "ar"
+    var showAboutMenu by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
+        modifier = modifier.fillMaxSize()
     ) {
-        LazyColumn(
-            state = listState,
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 168.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Space.screen)
+                .padding(bottom = 124.dp),
         ) {
-        // Premium Editorial Header
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = if (lang == "ar") "عِمران" else "EMRAN",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AppTheme.colors.primary,
-                    letterSpacing = 4.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = if (lang == "ar") "الإعدادات" else "Settings",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 32.sp
-                )
-            }
-        }
+            Text(
+                text = if (ar) "الإعدادات" else "Settings",
+                color = sky.ink,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = Space.sm, bottom = Space.md, start = 4.dp),
+            )
 
-        // Shown only when something will stop the adhan reaching the user.
-        if (!health.allGood) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color(0xFFFFB74D).copy(alpha = 0.12f))
-                        .border(1.dp, Color(0xFFFFB74D).copy(alpha = 0.4f), RoundedCornerShape(18.dp))
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            showNotificationPrecisionDialog = true
-                        }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Alarm, contentDescription = null, tint = Color(0xFFFFB74D), modifier = Modifier.size(26.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (lang == "ar") "قد لا يصلك الأذان" else "The adhan may not reach you",
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (lang == "ar") "${health.problems} إعدادات تحتاج إلى تفعيل. اضغط للإصلاح."
-                            else "${health.problems} setting${if (health.problems > 1) "s" else ""} need attention. Tap to fix.",
-                            color = Color.White.copy(alpha = 0.65f),
-                            fontSize = 12.sp
-                        )
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.White.copy(alpha = 0.4f))
-                }
-            }
-        }
-
-        // --- PRAYER SECTION ---
-        item {
-            SettingsSectionHeader(title = if (lang == "ar") "مواقيت الصلاة" else "Prayer")
-        }
-
-        // 1. Adhan Notifications
-        item {
+            // --- Prayer ---
             val adhanLabel = when (currentAdhanFromFlow) {
-                "AL_AQSA" -> if (lang == "ar") "أذان المسجد الأقصى" else "Al-Aqsa Adhan"
-                "MAKKAH" -> if (lang == "ar") "أذان مكة المكرمة" else "Makkah Adhan"
-                "MADINAH" -> if (lang == "ar") "أذان المدينة المنورة" else "Madinah Adhan"
-                "default" -> if (lang == "ar") "الصوت الافتراضي للنظام" else "Android System Default"
-                "ahmad_alnafees" -> if (lang == "ar") "أحمد النفيس" else "Ahmad Alnafys"
-                "mishary_alafasy" -> if (lang == "ar") "مشاري راشد العفاسي" else "Mshary Rashed Alaafasy"
-                "saad_alghamdi" -> if (lang == "ar") "سعد الغامدي" else "Saad Alghamdy"
+                "AL_AQSA" -> if (ar) "المسجد الأقصى" else "Al-Aqsa"
+                "MAKKAH" -> if (ar) "مكة المكرمة" else "Makkah"
+                "MADINAH" -> if (ar) "المدينة المنورة" else "Madinah"
+                "default" -> if (ar) "صوت النظام" else "System sound"
+                "ahmad_alnafees" -> if (ar) "أحمد النفيس" else "Ahmad Alnafys"
+                "mishary_alafasy" -> if (ar) "مشاري العفاسي" else "Mishary Alafasy"
+                "saad_alghamdi" -> if (ar) "سعد الغامدي" else "Saad Alghamdy"
                 else -> currentAdhanFromFlow
             }
-            PremiumSettingsRow(
-                title = if (lang == "ar") "أصوات الأذان والتنبيهات" else "Adhan Notifications",
-                subtitle = adhanLabel,
-                leadingIcon = Icons.Default.Notifications,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showAdhanDialog = true
-                }
-            )
-        }
-
-        // 2. Notification Precision
-        item {
-            val precisionSubtitle = if (health.allGood) {
-                if (lang == "ar") "كل شيء جاهز ✅ التنبيهات ستصل في وقتها" else "All set ✅ Adhan will arrive on time"
-            } else {
-                if (lang == "ar") "${health.problems} إعدادات تمنع وصول التنبيه ⚠️ اضغط للإصلاح"
-                else "${health.problems} setting${if (health.problems > 1) "s" else ""} may block the adhan ⚠️ Tap to fix"
+            val methodLabel = methods.find { it.first == activeMethod }?.second ?: activeMethod
+            GlassSectionLabel(if (ar) "الصلاة" else "PRAYER")
+            GlassGroup(Modifier.glassEntrance(0)) {
+                SettingsRow(
+                    icon = Icons.Default.Notifications,
+                    title = if (ar) "صوت الأذان" else "Adhan sound",
+                    value = adhanLabel,
+                    onClick = { showAdhanDialog = true },
+                )
+                GlassDivider()
+                SettingsRow(
+                    icon = Icons.Default.Explore,
+                    title = if (ar) "طريقة الحساب" else "Calculation",
+                    value = LocationPresets.getLocalizedName(activeLocationName, lang),
+                    onClick = { showCalculationSettingsDialog = true },
+                )
+                GlassDivider()
+                SettingsRow(
+                    icon = Icons.Default.Alarm,
+                    title = if (ar) "وصول التنبيه" else "Reliable alerts",
+                    onClick = { showNotificationPrecisionDialog = true },
+                    trailing = {
+                        val ok = health.allGood
+                        val dot = if (ok) Color(0xFF5BD58A) else Color(0xFFFFB74D)
+                        Box(Modifier.size(9.dp).background(dot, CircleShape))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (ok) (if (ar) "جاهز" else "All set")
+                            else (if (ar) "يحتاج انتباهك" else "Needs attention"),
+                            color = sky.ink,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null, tint = sky.inkSoft, modifier = Modifier.size(22.dp),
+                        )
+                    },
+                )
             }
 
-            PremiumSettingsRow(
-                title = if (lang == "ar") "دقة التنبيهات والاشعارات" else "Notification Precision",
-                subtitle = precisionSubtitle,
-                leadingIcon = Icons.Default.Alarm,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showNotificationPrecisionDialog = true
+            // --- App ---
+            Spacer(Modifier.height(Space.lg))
+            GlassSectionLabel(if (ar) "التطبيق" else "APP")
+            GlassGroup(Modifier.glassEntrance(1)) {
+                SettingsRow(
+                    icon = Icons.Default.Language,
+                    title = if (ar) "اللغة" else "Language",
+                    onClick = null,
+                    trailing = {
+                        GlassSegmented(
+                            options = listOf("en" to "English", "ar" to "العربية"),
+                            selectedKey = lang,
+                            onSelect = { viewModel.setCurrentLanguage(it) },
+                            modifier = Modifier.width(188.dp),
+                        )
+                    },
+                )
+                GlassDivider()
+                SettingsRow(
+                    icon = Icons.Default.Palette,
+                    title = if (ar) "ألوان الودجات والأيقونة" else "Widget colours & icon",
+                    onClick = { showCustomizationDialog = true },
+                )
+            }
+
+            // --- Help & about: six tiles ---
+            Spacer(Modifier.height(Space.lg))
+            GlassSectionLabel(if (ar) "المساعدة" else "HELP")
+            val waMessage = { text: String ->
+                try {
+                    val url = "https://wa.me/963986157471?text=" + URLEncoder.encode(text, "UTF-8")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (e: Exception) {
+                    Toast.makeText(context, if (ar) "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
                 }
-            )
-        }
-
-        // 3. Prayer Calculation Method
-        item {
-            val curLabel = methods.find { it.first == activeMethod }?.second ?: activeMethod
-            PremiumSettingsRow(
-                title = if (lang == "ar") "طريقة حساب مواقيت الصلاة" else "Prayer Calculation Method",
-                subtitle = LocationPresets.getLocalizedName(activeLocationName, lang) + " • " + curLabel,
-                leadingIcon = Icons.Default.Explore,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showCalculationSettingsDialog = true
-                }
-            )
-        }
-
-        // --- PERSONALIZATION SECTION ---
-        item {
-            SettingsSectionHeader(title = if (lang == "ar") "التخصيص الشخصي" else "Personalization")
-        }
-
-        // 1. Customization (Theme, App Icon)
-        item {
-            val activeThemeLabel = themePresetsList.find { it.first == activeThemePreset }?.second ?: activeThemePreset
-            val activeIconLabel = themePresetsList.find { it.first == activeAppIconPreset }?.second ?: activeAppIconPreset
-            PremiumSettingsRow(
-                title = if (lang == "ar") "تخصيص المظهر والأيقونة" else "Customization",
-                subtitle = if (lang == "ar") "المظهر: $activeThemeLabel • الأيقونة: $activeIconLabel" else "Theme: $activeThemeLabel • Icon: $activeIconLabel",
-                leadingIcon = Icons.Default.Palette,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showCustomizationDialog = true
-                }
-            )
-        }
-
-        // 2. Light / dark mode
-        item {
-            val activeModeLabel = themeModes.find { it.first == activeThemeMode }?.second ?: activeThemeMode
-            PremiumSettingsRow(
-                title = if (lang == "ar") "الوضع الليلي والنهاري" else "Appearance",
-                subtitle = activeModeLabel,
-                leadingIcon = when (activeThemeMode) {
-                    "LIGHT" -> Icons.Default.LightMode
-                    "DARK" -> Icons.Default.DarkMode
-                    else -> Icons.Default.BrightnessAuto
-                },
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showThemeModeDialog = true
-                }
-            )
-        }
-
-        // 3. Language
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "لغة التطبيق" else "Language",
-                subtitle = if (lang == "ar") "العربية" else "English",
-                leadingIcon = Icons.Default.Language,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showLanguageDialog = true
-                }
-            )
-        }
-
-        // --- SUPPORT SECTION ---
-        item {
-            SettingsSectionHeader(title = if (lang == "ar") "الدعم والمجتمع" else "Support")
-        }
-
-        // 1. Report an Issue
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "الإبلاغ عن مشكلة" else "Report an Issue",
-                subtitle = if (lang == "ar") "تواصل مباشر مع المطور لحل أي خلل" else "Direct message with developer Sammy Nashed",
-                leadingIcon = Icons.Default.BugReport,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val textMsg = if (lang == "ar") "السلام عليكم، واجهتني مشكلة في تطبيق عمران: " else "Assalamu Alaikum Sammy, I found an issue in Emran app: "
-                    try {
-                        val url = "https://wa.me/963986157471?text=" + URLEncoder.encode(textMsg, "UTF-8")
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    } catch (e: Exception) {
-                        Toast.makeText(context, if (lang == "ar") "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
-        }
-
-        // 2. Suggest a Feature
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "اقتراح ميزة جديدة" else "Suggest a Feature",
-                subtitle = if (lang == "ar") "شارك أفكارك وساهم في بناء مستقبل عمران" else "Participate in shaping the future of Emran",
-                leadingIcon = Icons.Default.Lightbulb,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val textMsg = if (lang == "ar") "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: "
-                    try {
-                        val url = "https://wa.me/963986157471?text=" + URLEncoder.encode(textMsg, "UTF-8")
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    } catch (e: Exception) {
-                        Toast.makeText(context, if (lang == "ar") "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
-        }
-
-        // 3. Replay Interactive Tour
-        item {
+            }
             val tourManager = io.github.sammynashed.emran.ui.tour.LocalTourManager.current
-            PremiumSettingsRow(
-                title = if (lang == "ar") "إعادة جولة التطبيق التفاعلية" else "Replay Interactive Tour",
-                subtitle = if (lang == "ar") "أعد استكشاف ميزات عمران التوجيهية" else "Rediscover Emran's interactive guide and tutorial",
-                leadingIcon = Icons.Default.Navigation,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (onReplayTour != null) {
-                        onReplayTour()
-                    } else {
-                        tourManager?.restartTour()
-                    }
-                }
-            )
-        }
-
-        // --- ABOUT SECTION & SIGNATURE ---
-        item {
-            SettingsSectionHeader(title = if (lang == "ar") "حول عِمران" else "About")
-        }
-
-        // 1. About Emran Description
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "حول تطبيق عِمران" else "About Emran",
-                subtitle = if (lang == "ar") "تعرّف على رسالة وهدف التطبيق السامية" else "The open-source companion designed for the soul",
-                leadingIcon = Icons.Default.Info,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showAboutEmranDialog = true
-                }
-            )
-        }
-
-        // 1b. About Developer
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "حول المطور" else "About Developer",
-                subtitle = if (lang == "ar") "تواصل وتعرف على مطور التطبيق" else "Connect with the developer Sammy Nashed",
-                leadingIcon = Icons.Default.Person,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showAboutDeveloperDialog = true
-                }
-            )
-        }
-
-        // 2. Development Updates
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "تحديثات التطوير المستمرة" else "Development Updates",
-                subtitle = if (lang == "ar") "تابع سجل التغييرات وخارطة الطريق" else "Chronological update history (Active Maintenance)",
-                leadingIcon = Icons.Default.Update,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showDevUpdatesDialog = true
-                }
-            )
-        }
-
-        // 3. Open Source Transparency
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "مشروع مفتوح المصدر" else "Open Source",
-                subtitle = if (lang == "ar") "تصفّح الكود البرمجي والتراخيص والمساهمين" else "Code repository, licensing, and contributions",
-                leadingIcon = Icons.Default.Code,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showOpenSourceDialog = true
-                }
-            )
-        }
-
-        // 4. Privacy First
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "الخصوصية أولاً ودائماً" else "Privacy First",
-                subtitle = if (lang == "ar") "لا تتبع ولا إعلانات، ويعمل دون إنترنت" else "Fully offline. No ads, no data collected. Optional downloads only",
-                leadingIcon = Icons.Default.Security,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showPrivacyFirstDialog = true
-                }
-            )
-        }
-
-        // 5. Acknowledgements
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "لوحة الشكر والتقدير" else "Acknowledgements",
-                subtitle = if (lang == "ar") "شكر خاص للمختبرين الأوائل والمجتمع" else "Gratitude to testers and community feedback",
-                leadingIcon = Icons.Default.Star,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onOpenAcknowledgements()
-                }
-            )
-        }
-
-        // 5b. Check for updates (only when tapped; nothing here runs in the background)
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "التحقق من التحديثات" else "Check for Updates",
-                subtitle = when {
-                    updateChecking -> if (lang == "ar") "جارٍ التحقق…" else "Checking…"
-                    updateResult is UpdateChecker.Result.UpToDate ->
-                        if (lang == "ar") "أنت تستخدم أحدث إصدار" else "You have the latest version"
-                    updateResult is UpdateChecker.Result.Offline ->
-                        if (lang == "ar") "تعذّر التحقق، تأكد من اتصالك بالإنترنت" else "Couldn't check. Is your internet on?"
-                    updateResult is UpdateChecker.Result.Failed ->
-                        if (lang == "ar") "تعذّر التحقق الآن، حاول لاحقاً" else "Couldn't check right now. Try again later"
-                    else -> if (lang == "ar") "اضغط للتحقق من وجود إصدار جديد" else "Tap to see if a newer version is out"
-                },
-                leadingIcon = Icons.Default.SystemUpdate,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    if (!updateChecking) {
-                        updateChecking = true
-                        updateScope.launch {
-                            val r = UpdateChecker.check(lang == "ar")
-                            updateResult = r
-                            updateChecking = false
-                            if (r is UpdateChecker.Result.Available) showUpdateDialog = true
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.md), modifier = Modifier.fillMaxWidth()) {
+                GlassTile(
+                    icon = Icons.Default.BugReport,
+                    label = if (ar) "الإبلاغ عن مشكلة" else "Report an issue",
+                    onClick = { waMessage(if (ar) "السلام عليكم، واجهتني مشكلة في تطبيق عمران: " else "Assalamu Alaikum Sammy, I found an issue in Emran app: ") },
+                    modifier = Modifier.weight(1f), enterIndex = 2,
+                )
+                GlassTile(
+                    icon = Icons.Default.Lightbulb,
+                    label = if (ar) "اقتراح ميزة" else "Suggest a feature",
+                    onClick = { waMessage(if (ar) "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: ") },
+                    modifier = Modifier.weight(1f), enterIndex = 3,
+                )
+                GlassTile(
+                    icon = Icons.Default.Navigation,
+                    label = if (ar) "جولة في التطبيق" else "Replay the tour",
+                    onClick = { if (onReplayTour != null) onReplayTour() else tourManager?.restartTour() },
+                    modifier = Modifier.weight(1f), enterIndex = 4,
+                )
+            }
+            Spacer(Modifier.height(Space.sm))
+            Row(horizontalArrangement = Arrangement.spacedBy(Space.md), modifier = Modifier.fillMaxWidth()) {
+                GlassTile(
+                    icon = Icons.Default.SystemUpdate,
+                    label = when {
+                        updateChecking -> if (ar) "جارٍ التحقق…" else "Checking…"
+                        updateResult is UpdateChecker.Result.UpToDate -> if (ar) "أنت على آخر إصدار" else "You're up to date"
+                        updateResult is UpdateChecker.Result.Offline || updateResult is UpdateChecker.Result.Failed ->
+                            if (ar) "تعذّر التحقق" else "Couldn't check"
+                        else -> if (ar) "التحقق من التحديثات" else "Check for updates"
+                    },
+                    onClick = {
+                        if (!updateChecking) {
+                            updateChecking = true
+                            updateScope.launch {
+                                val r = UpdateChecker.check(ar)
+                                updateResult = r
+                                updateChecking = false
+                                if (r is UpdateChecker.Result.Available) showUpdateDialog = true
+                            }
                         }
-                    }
-                }
-            )
-        }
-
-        // 6. Version Detail
-        item {
-            PremiumSettingsRow(
-                title = if (lang == "ar") "إصدار التطبيق والتقنيات" else "Version",
-                subtitle = "v${BuildConfig.VERSION_NAME} • Built with care",
-                leadingIcon = Icons.Default.PhoneAndroid,
-                iconTint = AppTheme.colors.secondary,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    showVersionDialog = true
-                }
-            )
-        }
-
-        // Elegant minimal brand sign-off
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 40.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .background(AppTheme.colors.primary.copy(alpha = 0.25f), CircleShape)
+                    },
+                    modifier = Modifier.weight(1f), enterIndex = 5,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = if (lang == "ar") "عِمران" else "EMRAN",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 4.sp,
-                    color = Color.White.copy(alpha = 0.25f)
+                GlassTile(
+                    icon = Icons.Default.Star,
+                    label = if (ar) "الشكر والتقدير" else "Thanks",
+                    onClick = onOpenAcknowledgements,
+                    modifier = Modifier.weight(1f), enterIndex = 6,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = if (lang == "ar") "صُنع بحب وإخلاص كصدقة جارية" else "Sustainably crafted with care & devotion",
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.15f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "v${BuildConfig.VERSION_NAME}",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.12f)
+                GlassTile(
+                    icon = Icons.Default.Info,
+                    label = if (ar) "حول عِمران" else "About",
+                    onClick = { showAboutMenu = true },
+                    modifier = Modifier.weight(1f), enterIndex = 7,
                 )
             }
         }
-    }
 
     // ==========================================
     // ============ DIALOGS & OVERLAYS ==========
     // ==========================================
+
+    // About: one tap from the page, then a short list.
+    if (showAboutMenu) {
+        EmranAlertDialog(
+            onDismissRequest = { showAboutMenu = false },
+            title = {
+                Text(
+                    text = if (ar) "حول عِمران" else "About",
+                    color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(
+                        Triple(Icons.Default.Info, if (ar) "عن التطبيق" else "About Emran") { showAboutEmranDialog = true },
+                        Triple(Icons.Default.Person, if (ar) "المطوّر" else "Developer") { showAboutDeveloperDialog = true },
+                        Triple(Icons.Default.Code, if (ar) "مفتوح المصدر" else "Open source") { showOpenSourceDialog = true },
+                        Triple(Icons.Default.Security, if (ar) "الخصوصية" else "Privacy") { showPrivacyFirstDialog = true },
+                        Triple(Icons.Default.PhoneAndroid, if (ar) "الإصدار" else "Version  v${BuildConfig.VERSION_NAME}") { showVersionDialog = true },
+                    ).forEach { (icon, label, open) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { showAboutMenu = false; open() }
+                                .padding(horizontal = 8.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(14.dp))
+                            Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutMenu = false }) {
+                    Text(if (ar) "إغلاق" else "Close", color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
+            shape = RoundedCornerShape(28.dp),
+        )
+    }
 
     // 1. NOTIFICATION PRECISION CALIBRATION DIALOG
     if (showNotificationPrecisionDialog) {
@@ -906,7 +685,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "حسناً" else "DONE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -1137,7 +916,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -1490,68 +1269,6 @@ fun FineTuneScreen(
         }
     }
 
-    // 4. LANGUAGE SELECTOR DIALOG
-    if (showLanguageDialog) {
-        EmranAlertDialog(
-            onDismissRequest = { showLanguageDialog = false },
-            title = {
-                Text(
-                    text = if (lang == "ar") "لغة التطبيق" else "APP LANGUAGE",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val currentSelection = lang
-                    val langOptions = listOf("en" to "English (UK/US)", "ar" to "العربية (Arabic)")
-
-                    langOptions.forEach { (code, label) ->
-                        val isSelected = currentSelection == code
-                        val isSelectedBg = if (isSelected) AppTheme.colors.primary.copy(alpha = 0.12f) else Color.Transparent
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(isSelectedBg)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    viewModel.setCurrentLanguage(code)
-                                    showLanguageDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) Color.White else AppTheme.colors.onBackground,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
-                            if (isSelected) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = AppTheme.colors.primary, modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
-                    Text(if (lang == "ar") "إلغاء" else "CANCEL", color = AppTheme.colors.grayMuted)
-                }
-            },
-            containerColor = Color(0xFF131018),
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
 
     // 5. ABOUT EMRAN IMMERSIVE DIALOG
     if (showAboutEmranDialog) {
@@ -1626,7 +1343,7 @@ fun FineTuneScreen(
                     )
 
                     val featuresList = listOf(
-                        "🕌 " + (if (lang == "ar") "عجلة أوقات الصلوات" else "Prayer Times Wheel"),
+                        "🌅 " + (if (lang == "ar") "سماء حيّة تتبع أوقات الصلاة" else "A living sky that follows the prayers"),
                         "🔔 " + (if (lang == "ar") "تنبيهات الأذان الدقيقة" else "Precise Adhan Alerts"),
                         "📖 " + (if (lang == "ar") "مصحف لقراءة القرآن الكريم" else "Integrated Quran Reader"),
                         "🧭 " + (if (lang == "ar") "بوصلة القبلة الدقيقة" else "Qibla Compass"),
@@ -1655,7 +1372,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -1724,140 +1441,11 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
 
-    // 6. DEVELOPMENT UPDATES IMMERSIVE DIALOG
-    if (showDevUpdatesDialog) {
-        EmranAlertDialog(
-            onDismissRequest = { showDevUpdatesDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Update, contentDescription = null, tint = AppTheme.colors.secondary, modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (lang == "ar") "سجل تحديثات التطوير" else "DEVELOPMENT TIMELINE",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(440.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = if (lang == "ar") "خارطة الطريق وسجل الاصدارات البرمجية النشطة لعمران:" else "Chronological releases & active software updates for Emran:",
-                        color = AppTheme.colors.grayMuted,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-
-                    // Timeline updates.
-                    //
-                    // Two releases, because there have only ever been two: v1.0.0
-                    // shipped as "Emad", and everything since is v2.0.0. Written
-                    // for the person reading it, so it lists what changed for
-                    // them, not how it was built.
-                    val updates = listOf(
-                        Triple(
-                            "v2.0.0",
-                            if (lang == "ar") "التحديث الكبير (عمران)" else "The Emran Overhaul",
-                            listOf(
-                                if (lang == "ar") "اسم جديد وهوية جديدة: عمران." else "A new name and a new identity: Emran.",
-                                if (lang == "ar") "مصحف كامل بجميع السور الـ١١٤ للقراءة دون إنترنت، بالتنقّل بالسورة أو الجزء أو الصفحة، مع البحث والعلامات المرجعية." else "A complete Mushaf: all 114 surahs offline, browsable by surah, juz or page, with search and bookmarks.",
-                                if (lang == "ar") "تتبّع قراءتك للقرآن سورةً بسورة، وعدّ ختماتك الكاملة، ولا تُحتسب السورة مرتين." else "Your Quran reading now tracks itself surah by surah and counts every khatmah you complete.",
-                                if (lang == "ar") "مكتبة أذكار من ٥٥ ذكراً للصباح والمساء وبعد الصلاة وقبل النوم وعند الاستيقاظ، كلٌّ بمصدره وفضله." else "An adhkar library of 55 supplications for morning, evening, after prayer, before sleep and on waking, each with its source and virtue.",
-                                if (lang == "ar") "وضع المسبحة داخل الأذكار: اضغط على الذكر ليبدأ العدّ، ويتقدّم تلقائياً إلى الذكر التالي عند بلوغ عدد تكراره." else "Masbaha mode in adhkar: tap a dhikr to start counting, and it moves to the next one when you reach its repetition.",
-                                if (lang == "ar") "مسبحة رقمية مستقلة بأهداف مخصصة وعدّ للأشواط واهتزاز خفيف مع كل ضغطة للعدّ دون النظر إلى الشاشة." else "A standalone digital masbaha with custom targets, lap counting and a gentle buzz per count so you can tally without looking.",
-                                if (lang == "ar") "ودجات للشاشة الرئيسية: صلوات اليوم، بوصلة الصلاة الدائرية، العدّ التنازلي الحيّ، سلسلة الأيام، التاريخ الهجري، وتقدّم القرآن." else "Home-screen widgets: today's prayers, the circular prayer compass, a live ticking countdown, your streak, the Hijri date and Quran progress.",
-                                if (lang == "ar") "واجهة عربية كاملة من اليمين إلى اليسار، في التطبيق وفي الودجات." else "A full Arabic interface, right to left, across the app and the widgets.",
-                                if (lang == "ar") "٢٠ سمة لونية بأيقونات مطابقة للتطبيق، وأوضاع فاتح وداكن أو حسب النظام." else "20 colour themes with matching app icons, in light, dark or follow-system.",
-                                if (lang == "ar") "اثنتا عشرة طريقة معتمدة لحساب المواقيت، مع ضبط يدوي لكل صلاة وقواعد خاصة بالمناطق شمال خط العرض العالي." else "Twelve recognised calculation methods, per-prayer manual tuning, and rules for high-latitude regions where the sun never reaches the angle.",
-                                if (lang == "ar") "أصوات أذان متعددة بأصوات مشاري العفاسي وسعد الغامدي وأحمد النفيس." else "A choice of adhan voices: Mishary Alafasy, Saad Al-Ghamdi and Ahmad Al-Nafees.",
-                                if (lang == "ar") "جولة تعريفية تفاعلية عند أول تشغيل ترشدك عبر التطبيق خطوة بخطوة." else "An interactive guided tour on first launch that walks you through the app step by step.",
-                                if (lang == "ar") "تحديد موقعك بضغطة واحدة عند الإعداد، ويبقى على جهازك ولا يُطلب منك مرة أخرى." else "One-tap location during setup. It stays on your device and you are never asked again.",
-                                if (lang == "ar") "١٧ مهمة روحية و٨ مقامات ترتقي فيها، مع شارات تُفتح مع الاستمرار." else "17 spiritual quests and 8 ranks to climb, with badges that unlock as you keep going.",
-                                if (lang == "ar") "احتفال بالإنجازات عند بلوغ ٧ و٣٠ و١٠٠ يوم متتالٍ وما بعدها، يظهر في الودجة أيضاً." else "Milestone celebrations at 7, 30, 100 consecutive days and beyond, shown on your widget too.",
-                                if (lang == "ar") "بوصلة قبلة أدقّ بدمج حسّاسات الجهاز وتصحيح الانحراف المغناطيسي، مع إرشاد للمعايرة." else "A more accurate Qibla compass, correcting for magnetic declination with live calibration guidance.",
-                                if (lang == "ar") "تصميم زجاجي جديد وخطوط أوضح في كل شاشة." else "A new glass design and clearer type throughout."
-                            )
-                        ),
-                        Triple(
-                            if (lang == "ar") "الإصلاحات" else "Fixes",
-                            if (lang == "ar") "ما تم إصلاحه في هذا الإصدار" else "Repaired in this release",
-                            listOf(
-                                if (lang == "ar") "مواقيت الصلاة تتبع الآن مدينتك المختارة عند السفر، بدل توقيت الجهاز." else "Prayer times now follow the city you chose when you travel, instead of your phone's own clock.",
-                                if (lang == "ar") "المواقيت صحيحة عند تغيّر التوقيت الصيفي، ولم تعد تنزاح ساعة مرتين في السنة." else "Times stay correct when daylight saving changes, instead of drifting by an hour twice a year.",
-                                if (lang == "ar") "لم تعد تنبيهات الأذان تتكرّر، وتُعاد جدولتها تلقائياً بعد إعادة تشغيل الهاتف." else "Adhan notifications no longer arrive twice, and reschedule themselves after a restart.",
-                                if (lang == "ar") "تتحدّث الودجات فوراً عند تغيير السمة أو الوضع الفاتح والداكن." else "Widgets update immediately when you change theme or switch between light and dark.",
-                                if (lang == "ar") "عدد الأذكار يظهر الآن في كل التصنيفات بالعربية والإنجليزية على حدّ سواء." else "Adhkar counts now show on every category, in Arabic and English alike.",
-                                if (lang == "ar") "لم تعد الأذكار تعرض لغتين معاً؛ تظهر بلغة التطبيق فقط." else "Adhkar no longer show two languages at once — you see them in the app's language only.",
-                                if (lang == "ar") "أزرار المسبحة وشاشات الإعداد تظهر بالكامل على كل أحجام الشاشات." else "Masbaha controls and setup screens now fit every screen size instead of running off the bottom.",
-                                if (lang == "ar") "البسملة وأسماء السور تُعرض بخط المصحف الصحيح بدل خط النظام." else "The basmala and surah names now render in proper Mushaf script instead of falling back to the system font."
-                            )
-                        ),
-                        Triple(
-                            "v1.0.0",
-                            if (lang == "ar") "الإصدار الأول (باسم عماد)" else "Initial Release (as Emad)",
-                            listOf(
-                                if (lang == "ar") "سجل الصلوات اليومي مع العدّ التنازلي للصلاة القادمة." else "The daily prayer ledger, with a countdown to the next prayer.",
-                                if (lang == "ar") "مِصهر القضاء لحساب الصلوات الفائتة وتتبّع سدادها." else "The Qada Forge, for working out missed prayers and clearing them.",
-                                if (lang == "ar") "بوصلة القبلة." else "The Qibla compass.",
-                                if (lang == "ar") "١٩ سمة لونية بأيقونات مطابقة." else "19 colour themes with matching app icons.",
-                                if (lang == "ar") "الإنجازات ومستويات الاستمرارية." else "Achievements and consistency tiers.",
-                                if (lang == "ar") "يعمل بالكامل دون إنترنت، وكل شيء يبقى على جهازك." else "Fully offline, with everything kept on your device."
-                            )
-                        )
-                    )
-
-                    updates.forEach { (version, date, points) ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.02f))
-                                .border(1.dp, Color.White.copy(alpha = 0.04f), RoundedCornerShape(12.dp))
-                                .padding(14.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = version, color = AppTheme.colors.secondary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text(text = date, color = AppTheme.colors.grayMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            points.forEach { pt ->
-                                Row(
-                                    modifier = Modifier.padding(vertical = 2.dp),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Text(text = "• ", color = AppTheme.colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    Text(text = pt, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, lineHeight = 15.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDevUpdatesDialog = false }) {
-                    Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = Color(0xFF131018),
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
 
     // 7. OPEN SOURCE TRANSPARENCY DIALOG
     if (showOpenSourceDialog) {
@@ -1982,7 +1570,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2058,7 +1646,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "حسناً، أثق بعمران" else "I TRUST EMRAN", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2106,7 +1694,7 @@ fun FineTuneScreen(
                         Text(if (lang == "ar") "لاحقاً" else "LATER", color = Color.White.copy(alpha = 0.6f))
                     }
                 },
-                containerColor = Color(0xFF131018),
+                containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
                 shape = RoundedCornerShape(24.dp)
             )
         }
@@ -2234,7 +1822,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2394,7 +1982,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.secondary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2441,7 +2029,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إلغاء" else "CANCEL", color = AppTheme.colors.grayMuted)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2506,7 +2094,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -2571,84 +2159,11 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }
 
-    // 14a. NESTED APPEARANCE (LIGHT / DARK) SELECTOR DIALOG
-    if (showThemeModeDialog) {
-        EmranAlertDialog(
-            onDismissRequest = { showThemeModeDialog = false },
-            title = {
-                Text(
-                    text = if (lang == "ar") "الوضع الليلي والنهاري" else "APPEARANCE",
-                    color = AppTheme.colors.onBackground,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.sp
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    themeModes.forEach { (key, label) ->
-                        val isSelected = activeThemeMode == key
-                        val isSelectedBg = if (isSelected) AppTheme.colors.primary.copy(alpha = 0.12f) else Color.Transparent
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(isSelectedBg)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    viewModel.setThemeMode(key)
-                                    showThemeModeDialog = false
-                                }
-                                .padding(vertical = 12.dp, horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = label,
-                                color = AppTheme.colors.onBackground,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Selected",
-                                    tint = AppTheme.colors.primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = if (lang == "ar")
-                            "تحتفظ كل سِمة بألوانها المميزة في الوضعين."
-                        else
-                            "Each of the 20 presets keeps its own accent colours in either mode.",
-                        color = AppTheme.colors.grayMuted,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showThemeModeDialog = false }) {
-                    Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = AppTheme.colors.surface,
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
 
     // 14b. NESTED HIGH-LATITUDE RULE SELECTOR DIALOG
     if (showHighLatDialog) {
@@ -2719,7 +2234,7 @@ fun FineTuneScreen(
                     Text(if (lang == "ar") "إغلاق" else "CLOSE", color = AppTheme.colors.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF131018),
+            containerColor = Color(0xFF0E1A2B).copy(alpha = 0.96f),
             shape = RoundedCornerShape(24.dp)
         )
     }

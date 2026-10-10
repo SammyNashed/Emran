@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -278,6 +279,9 @@ fun GlassDock(
         cornerRadius = 36.dp,
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+          // A Box made INSIDE the Ltr provider, so its children start at the left even in Arabic
+          // (a Box made outside would place the lens from the right edge, off the dock).
+          Box(Modifier.fillMaxSize()) {
             // The tabs as they rest: soft ink, outline icons.
             DockRow(visual, selIndex, magnified = false, sky = sky, onSelect = onSelect, interactive = true)
 
@@ -332,6 +336,7 @@ fun GlassDock(
                     )
                 }
             }
+          }
         }
     }
 }
@@ -424,5 +429,235 @@ fun ScreenHeader(title: String, onBack: () -> Unit, modifier: Modifier = Modifie
         GlassBackButton(onBack)
         Spacer(Modifier.width(Space.lg))
         Text(title, color = sky.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// Settings building blocks: a grouped list in glass, an inline switch, and square tiles.
+// ---------------------------------------------------------------------------------------
+
+/** A small caps label above a group. */
+@Composable
+fun GlassSectionLabel(text: String, modifier: Modifier = Modifier) {
+    val sky = LocalSky.current
+    Text(
+        text,
+        color = sky.inkSoft,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        // Letter-spacing breaks the joins between Arabic letters, so only Latin gets it.
+        letterSpacing = if (io.github.sammynashed.emran.ui.localization.LocalAppLanguage.current == "ar") 0.sp else 1.2.sp,
+        modifier = modifier.padding(start = 6.dp, bottom = 8.dp),
+    )
+}
+
+/** One pane of glass holding several rows, like an iOS grouped list. */
+@Composable
+fun GlassGroup(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    GlassPanel(modifier = modifier.fillMaxWidth(), cornerRadius = Radius.row) {
+        Column(Modifier.fillMaxWidth()) { content() }
+    }
+}
+
+/** A hairline between two rows of a [GlassGroup]. */
+@Composable
+fun GlassDivider() {
+    val sky = LocalSky.current
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 66.dp, end = 18.dp)
+            .height(0.7.dp)
+            .background(sky.ink.copy(alpha = 0.14f)),
+    )
+}
+
+/**
+ * A row of a [GlassGroup]: icon in a soft disc, title, a value on the far side, and either a
+ * chevron or whatever [trailing] draws. The row brightens under a finger.
+ */
+@Composable
+fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    value: String? = null,
+    chevron: Boolean = true,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val sky = LocalSky.current
+    val haptic = LocalHapticFeedback.current
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val wash by animateFloatAsState(if (pressed) 0.12f else 0f, tween(120), label = "wash")
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBehind { drawRect(sky.ink.copy(alpha = wash)) }
+            .then(
+                if (onClick != null) Modifier.clickable(interactionSource = source, indication = null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                } else Modifier,
+            )
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(sky.ink.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, contentDescription = null, tint = sky.ink, modifier = Modifier.size(21.dp)) }
+        Spacer(Modifier.width(14.dp))
+        Text(
+            title,
+            color = sky.ink,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+        Spacer(Modifier.weight(1f))
+        if (value != null) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                value,
+                color = sky.inkSoft,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 160.dp),
+            )
+        }
+        if (trailing != null) trailing()
+        else if (chevron) {
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = sky.inkSoft,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+/**
+ * An inline choice between a few options. The selected one sits in a glass pill that slides
+ * (with a little spring) to wherever you tap, so a change is seen the moment it happens.
+ */
+@Composable
+fun GlassSegmented(
+    options: List<Pair<String, String>>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val sky = LocalSky.current
+    val haptic = LocalHapticFeedback.current
+    val n = options.size
+    val selIndex = options.indexOfFirst { it.first == selectedKey }.coerceAtLeast(0)
+    val pos by animateFloatAsState(
+        targetValue = selIndex.toFloat(),
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 260f),
+        label = "segment",
+    )
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+            modifier
+                .height(40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(sky.ink.copy(alpha = 0.10f)),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(1f / n)
+                    .padding(3.dp)
+                    .graphicsLayer { translationX = pos * size.width }
+                    .clip(RoundedCornerShape(17.dp))
+                    .background(sky.ink.copy(alpha = 0.22f))
+                    .drawBehind {
+                        drawRoundRect(
+                            sky.ink.copy(alpha = 0.55f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()),
+                        )
+                    },
+            )
+            Row(Modifier.fillMaxSize()) {
+                options.forEachIndexed { i, (key, label) ->
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                                if (key != selectedKey) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onSelect(key)
+                                }
+                            }
+                            .semantics { role = Role.RadioButton; this.selected = key == selectedKey },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            label,
+                            color = if (i == selIndex) sky.ink else sky.inkSoft,
+                            fontSize = 14.sp,
+                            fontWeight = if (i == selIndex) FontWeight.SemiBold else FontWeight.Medium,
+                            bypassNumerals = true,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A square-ish glass tile: icon over a short label. For actions that need no explanation. */
+@Composable
+fun GlassTile(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enterIndex: Int? = null,
+) {
+    val sky = LocalSky.current
+    val haptic = LocalHapticFeedback.current
+    val (source, scale) = rememberPress()
+    val pressed by source.collectIsPressedAsState()
+    val glow by animateFloatAsState(
+        targetValue = if (pressed) 1.9f else 1f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 420f),
+        label = "tileGlow",
+    )
+    GlassPanel(
+        modifier = modifier
+            .then(if (enterIndex != null) Modifier.glassEntrance(enterIndex) else Modifier)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(interactionSource = source, indication = null) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
+        cornerRadius = 22.dp,
+        tint = glow,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(min = 76.dp).padding(vertical = 10.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+        ) {
+            Icon(icon, contentDescription = null, tint = sky.ink, modifier = Modifier.size(24.dp))
+            Text(
+                label,
+                color = sky.ink,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 15.sp,
+            )
+        }
     }
 }

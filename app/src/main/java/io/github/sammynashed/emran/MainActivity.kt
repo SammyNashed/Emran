@@ -285,6 +285,7 @@ class MainActivity : ComponentActivity() {
                         val skyScreen = (currentRoute == "home" && activeTabRoute == "home") ||
                             (currentRoute == "home" && activeTabRoute == "quran" &&
                                 quranState !is io.github.sammynashed.emran.ui.viewmodel.QuranUiState.SuccessVerses) ||
+                            (currentRoute == "home" && activeTabRoute == "finetune") ||
                             currentRoute == "prayer_times" || currentRoute == "more"
                         SkyHost(
                             viewModel = viewModel,
