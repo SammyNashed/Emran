@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- DEBUG ONLY. Cleartext allows the localhost test server used to exercise
+         the model download over `adb reverse` while the release URL does not
+         exist yet. The release build is unaffected and still declares no
+         INTERNET permission. -->
+    <application
+        android:usesCleartextTraffic="true"
+        tools:ignore="UnusedAttribute">
+
+        <!-- DEBUG ONLY. Runs the full download -> verify -> Arabic -> assess
+             pipeline and logs it, because MIUI refuses to install a separate
+             instrumentation package over USB. Not present in release. -->
+        <receiver
+            android:name=".recitation.PipelineCheckReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="io.github.sammynashed.emran.RUN_PIPELINE_CHECK" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

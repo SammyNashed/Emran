@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The adhan and notification sounds are looked up by name at runtime:
+      resources.getIdentifier(soundKey, "raw", packageName)
+  Resource shrinking only sees static R.raw.* references, so to it every one
+  of these is unused and it removes them. The build then installs fine and
+  reports "Sound resource not found" the moment a sound is chosen.
+
+  Keeping the whole folder is deliberate: the set is chosen by the user at
+  runtime, so there is no subset that is provably safe to drop.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/*" />

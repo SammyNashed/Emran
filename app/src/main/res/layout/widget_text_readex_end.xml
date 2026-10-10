@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Text host for widgets that need a bundled font.
+
+  Glance's FontFamily resolves against *system* family names, so an app font is
+  unreachable from Glance Text. A RemoteViews layout, however, is inflated with
+  this app's resources, so android:fontFamily here does work. FontText drives
+  this via AndroidRemoteViews.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_font_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="@font/readex_pro"
+    android:includeFontPadding="false"
+    android:gravity="end|center_vertical"
+    android:maxLines="1"
+    android:ellipsize="end"
+    android:textStyle="normal"
+    android:textSize="14sp"
+    android:textColor="#FFFFFF" />

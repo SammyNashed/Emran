@@ -1,0 +1,9 @@
+v2.0.0
+
+Fixed: prayer times and adhan alarms were an hour wrong during daylight saving
+time for 77 of the 164 bundled cities. Locations are now stored as IANA time
+zones and resolved per date.
+
+New: high-latitude rules, seven more calculation conventions plus a Custom mode,
+light theme for all 20 presets, and an expanded Adhkar collection (55 entries,
+each with transliteration and a cited source).

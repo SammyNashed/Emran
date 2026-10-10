@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vector approximation of the astrolabe dial, for the widget picker only.
+
+  The real widget draws its dial into a Bitmap at runtime (arcs, ticks and the
+  progress head cannot be expressed in Glance), and a preview layout has no
+  runtime, so the picker gets this static stand-in: same ring, same accent
+  sweep, same six prayer dots.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- outer track -->
+    <path
+        android:pathData="M50,6 A44,44 0 1,1 49.9,6"
+        android:strokeColor="#22FFFFFF"
+        android:strokeWidth="1.5"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- accent sweep, roughly two thirds round -->
+    <path
+        android:pathData="M50,6 A44,44 0 1,1 6.6,57.6"
+        android:strokeColor="#6460FF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- inner ring -->
+    <path
+        android:pathData="M50,18 A32,32 0 1,1 49.9,18"
+        android:strokeColor="#14FFFFFF"
+        android:strokeWidth="1"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- six prayer dots at 60 degree intervals on the track -->
+    <path android:pathData="M50,3.5 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" android:fillColor="#66FFFFFF" />
+    <path android:pathData="M88.1,28 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" android:fillColor="#66FFFFFF" />
+    <path android:pathData="M88.1,72 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" android:fillColor="#66FFFFFF" />
+    <path android:pathData="M50,96.5 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" android:fillColor="#66FFFFFF" />
+    <path android:pathData="M11.9,72 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" android:fillColor="#66FFFFFF" />
+
+    <!-- the next prayer, enlarged with a halo -->
+    <path android:pathData="M11.9,28 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" android:fillColor="#446460FF" />
+    <path android:pathData="M11.9,28 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" android:fillColor="#6460FF" />
+
+    <!-- progress head -->
+    <path android:pathData="M6.6,57.6 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" android:fillColor="#FFFFFF" />
+</vector>

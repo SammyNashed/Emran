@@ -1,0 +1,122 @@
+[
+ {
+  "id": "nawawi40",
+  "titleEn": "Forty Hadith of an-Nawawi",
+  "titleAr": "الأربعون النووية",
+  "bundled": true,
+  "chapters": 1,
+  "hadiths": 42,
+  "bytes": 17279,
+  "sha256": "43d0ba25b7f5116dfd196be6136fbd58e0215351acad2b40adaecf56da232f89"
+ },
+ {
+  "id": "qudsi40",
+  "titleEn": "Forty Hadith Qudsi",
+  "titleAr": "الأربعون القدسية",
+  "bundled": true,
+  "chapters": 1,
+  "hadiths": 40,
+  "bytes": 19110,
+  "sha256": "d84b9147d1a67646652faadd4ee2f886cb52386f79d7a46269e71faac790182e"
+ },
+ {
+  "id": "riyad",
+  "titleEn": "Riyad as-Salihin",
+  "titleAr": "رياض الصالحين",
+  "bundled": true,
+  "chapters": 20,
+  "hadiths": 1896,
+  "bytes": 521021,
+  "sha256": "da3d8d8b83300575138be7c6764b4795b72a743fe5b7c1c272f69ddf839d94ab"
+ },
+ {
+  "id": "bukhari",
+  "titleEn": "Sahih al-Bukhari",
+  "titleAr": "صحيح البخاري",
+  "bundled": false,
+  "chapters": 97,
+  "hadiths": 7277,
+  "bytes": 2766276,
+  "sha256": "14af524f131ec2eaa7a403090a6b17d5f63366a1687922510e899f4468c08133"
+ },
+ {
+  "id": "muslim",
+  "titleEn": "Sahih Muslim",
+  "titleAr": "صحيح مسلم",
+  "bundled": false,
+  "chapters": 57,
+  "hadiths": 7459,
+  "bytes": 2129011,
+  "sha256": "b1339664c1cb21a29fc07bf6048a9705473a962a6de9491c2547779c688056a2"
+ },
+ {
+  "id": "abudawud",
+  "titleEn": "Sunan Abi Dawud",
+  "titleAr": "سنن أبي داود",
+  "bundled": false,
+  "chapters": 43,
+  "hadiths": 5276,
+  "bytes": 1586358,
+  "sha256": "3c46e74cd697a08e2a9d117f8e8e7db39250ea3aa5d13d589ffa2b26da6e8e11"
+ },
+ {
+  "id": "tirmidhi",
+  "titleEn": "Jami' at-Tirmidhi",
+  "titleAr": "جامع الترمذي",
+  "bundled": false,
+  "chapters": 49,
+  "hadiths": 4053,
+  "bytes": 1429845,
+  "sha256": "97247dc3a991b6b19fe6904cedcad2d22f44a6a34db1cff0ba0565fd7484a6ac"
+ },
+ {
+  "id": "nasai",
+  "titleEn": "Sunan an-Nasa'i",
+  "titleAr": "سنن النسائي",
+  "bundled": false,
+  "chapters": 51,
+  "hadiths": 5768,
+  "bytes": 1345254,
+  "sha256": "7cfa9f606010b54532fcfc80988a0a67833b36a4709abf83cfc6a6aa04500ecb"
+ },
+ {
+  "id": "ibnmajah",
+  "titleEn": "Sunan Ibn Majah",
+  "titleAr": "سنن ابن ماجه",
+  "bundled": false,
+  "chapters": 38,
+  "hadiths": 4345,
+  "bytes": 1083897,
+  "sha256": "f7721ec3202e819806961808ffb773e66135bf27d1d11e4a8890d8a928ed0271"
+ },
+ {
+  "id": "malik",
+  "titleEn": "Muwatta Malik",
+  "titleAr": "موطأ مالك",
+  "bundled": false,
+  "chapters": 61,
+  "hadiths": 1985,
+  "bytes": 711788,
+  "sha256": "19b9bb6b719d14df6c114c7e259fbfdf23f9d0868ef7f7f53081c38747d9e061"
+ },
+ {
+  "id": "darimi",
+  "titleEn": "Sunan ad-Darimi",
+  "titleAr": "سنن الدارمي",
+  "bundled": false,
+  "chapters": 24,
+  "hadiths": 3406,
+  "bytes": 463342,
+  "sha256": "29338d368f27bbf3a73a029d1bd86c83e7ecf429aca34abefd2a1820e34813bb"
+ },
+ {
+  "id": "bulugh",
+  "titleEn": "Bulugh al-Maram",
+  "titleAr": "بلوغ المرام",
+  "bundled": false,
+  "chapters": 16,
+  "hadiths": 1767,
+  "bytes": 474491,
+  "sha256": "47f7f66cf066ffbf15aed8ddaf4ee620b3273d68e9e30e1f63360bef56a735a7"
+ }
+]

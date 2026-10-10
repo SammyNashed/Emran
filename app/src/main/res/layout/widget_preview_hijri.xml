@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_glass_preview_bg"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="14dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="17" android:textColor="#FFFFFF" android:textSize="34sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Ramadan" android:textColor="#6460FF" android:textSize="14sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="1447 AH" android:textColor="#8AFFFFFF" android:textSize="11sp" />
+</LinearLayout>

@@ -1,0 +1,13 @@
+{
+  "testers": [
+    { "id": "ahmad-homsi",    "nameEn": "Ahmad Homsi",    "nameAr": "أحمد حمصي",  "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" },
+    { "id": "khaled-al-mamo", "nameEn": "Khaled Al-Mamo", "nameAr": "خالد المامو", "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" },
+    { "id": "walid-jreid",    "nameEn": "Walid Jreid",    "nameAr": null,          "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" }
+  ],
+  "reviews": [
+    { "testerId": "ahmad-homsi",    "textAr": "أكتر شي عجبني بعمران هو شمولية الميزات واجتماعها بمكان واحد.", "textEn": null },
+    { "testerId": "khaled-al-mamo", "textAr": "أكتر شي استفدت منه هو أوقات الصلاة والتنبيهات.",            "textEn": null },
+    { "testerId": "ahmad-homsi",    "textAr": "عمران تطبيق بيضيف شي جميل ومفيد للشباب بهالوقت.",            "textEn": null },
+    { "testerId": "khaled-al-mamo", "textAr": "مفيد وبوصل للمعلومة بسرعة بدون تعقيد.",                       "textEn": null }
+  ]
+}

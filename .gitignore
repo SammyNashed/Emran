@@ -1,0 +1,42 @@
+*.iml
+.gradle
+.kotlin
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Signing material -- never commit these.
+*.jks
+*.keystore
+debug.keystore
+keystore.properties
+
+# Build outputs
+/app/build
+*.apk
+*.aab
+
+# Scratch / working files. Emran's repo root is kept clean; one-off migration
+# scripts belong in tools/ or outside the repo entirely.
+/scratch/
+*.patch.tmp
+fix_*.py
+fix_*.js
+check_*.py
+check_*.js
+undo_*.js
+
+/build/
+/app/build/
+*.apk
+settings.gradle.kts.ratl-backup

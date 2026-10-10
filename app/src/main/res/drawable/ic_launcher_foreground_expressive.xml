@@ -1,0 +1,128 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Rounded Rectangle Backdrop matching the Onboarding logo backdrop (clipping / shape) -->
+    <path
+        android:pathData="M 38,20 H 70 A 18,18 0 0 1 88,38 V 70 A 18,18 0 0 1 70,88 H 38 A 18,18 0 0 1 20,70 V 38 A 18,18 0 0 1 38,20 Z"
+        android:fillColor="#0A0A0A" />
+
+    <!-- Gradient Filled Background Path with 15% opacity to match the onboarding background alpha and white border -->
+    <path
+        android:pathData="M 38,20 H 70 A 18,18 0 0 1 88,38 V 70 A 18,18 0 0 1 70,88 H 38 A 18,18 0 0 1 20,70 V 38 A 18,18 0 0 1 38,20 Z"
+        android:fillAlpha="0.15"
+        android:strokeWidth="1.0"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.15">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="20"
+                android:endX="54"
+                android:endY="88"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 5 Pillars Logo (each 6px wide, spaced by 4px, centered horizontally) -->
+    <!-- Pillar 1: left=31, right=37, top=51, bottom=73, radius=3 -->
+    <path
+        android:pathData="M 31,73 L 31,54 A 3,3 0 0 1 37,54 L 37,73 Z"
+        android:strokeWidth="0.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.25">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="34"
+                android:startY="51"
+                android:endX="34"
+                android:endY="73"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Pillar 2: left=41, right=47, top=43, bottom=73, radius=3 -->
+    <path
+        android:pathData="M 41,73 L 41,46 A 3,3 0 0 1 47,46 L 47,73 Z"
+        android:strokeWidth="0.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.25">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="44"
+                android:startY="43"
+                android:endX="44"
+                android:endY="73"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Pillar 3: left=51, right=57, top=35, bottom=73, radius=3 -->
+    <path
+        android:pathData="M 51,73 L 51,38 A 3,3 0 0 1 57,38 L 57,73 Z"
+        android:strokeWidth="0.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.25">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="35"
+                android:endX="54"
+                android:endY="73"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Pillar 4: left=61, right=67, top=43, bottom=73, radius=3 -->
+    <path
+        android:pathData="M 61,73 L 61,46 A 3,3 0 0 1 67,46 L 67,73 Z"
+        android:strokeWidth="0.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.25">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="64"
+                android:startY="43"
+                android:endX="64"
+                android:endY="73"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Pillar 5: left=71, right=77, top=51, bottom=73, radius=3 -->
+    <path
+        android:pathData="M 71,73 L 71,54 A 3,3 0 0 1 77,54 L 77,73 Z"
+        android:strokeWidth="0.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.25">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="74"
+                android:startY="51"
+                android:endX="74"
+                android:endY="73"
+                android:type="linear">
+                <item android:color="#6366F1" android:offset="0.0" />
+                <item android:color="#F97316" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

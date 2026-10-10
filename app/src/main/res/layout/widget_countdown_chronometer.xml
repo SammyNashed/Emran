@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A real ticking countdown for the widget.
+
+  Glance cannot re-render on a timer, so a countdown drawn as Glance Text
+  freezes the moment it is written. Chronometer is the one View the system
+  itself ticks once a second while visible, at no battery cost.
+
+  The font matters here too: RemoteViews layouts are inflated with *this app's*
+  resources, so android:fontFamily can point at a bundled font even though
+  Glance's own FontFamily cannot. This is why the countdown is in Outfit while
+  ordinary Glance text is not.
+-->
+<Chronometer xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_chronometer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="@font/outfit"
+    android:includeFontPadding="false"
+    android:gravity="center"
+    android:maxLines="1"
+    android:textStyle="bold"
+    android:textSize="20sp"
+    android:textColor="#FFFFFF" />

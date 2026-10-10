@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Emran</string>
+    <string name="widget_desc_next_prayer">The next prayer and its time</string>
+    <string name="widget_desc_today_five">Today&#8217;s five prayers, with the next one highlighted</string>
+    <string name="widget_desc_streak">Your consecutive days of complete prayers</string>
+    <string name="widget_desc_hijri">Today&#8217;s Hijri date</string>
+    <string name="widget_desc_today_v2">The prayer compass from the home screen</string>
+    <string name="widget_desc_countdown">A live countdown to the next prayer</string>
+    <string name="widget_desc_combined">Next prayer, streak and Hijri date in one tile</string>
+    <string name="widget_desc_quran">Your progress through the Mushaf</string>
+</resources>

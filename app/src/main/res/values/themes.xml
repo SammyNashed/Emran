@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Emran renders its entire UI with Jetpack Compose, so this platform theme only
+      needs to provide a chrome-less window for MainActivity to draw into. The actual
+      colour system lives in ui/theme/Theme.kt (see EmranTheme).
+    -->
+    <style name="Theme.Emran" parent="android:Theme.DeviceDefault.NoActionBar" />
+</resources>
