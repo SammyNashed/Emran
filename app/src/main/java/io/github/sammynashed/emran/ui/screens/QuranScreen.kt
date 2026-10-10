@@ -420,7 +420,17 @@ fun QuranScreen(
     val allChapters by viewModel.allChapters.collectAsState()
 
     val lang = LocalAppLanguage.current
-    var fontSizeMultiplier by remember { mutableStateOf(1f) }
+    // One size: the printed page is set as large as the screen allows, and the old
+    // flowing fallback below only appears if the layout file is missing.
+    val fontSizeMultiplier = 1f
+
+    // Parse the muṣḥaf text while the reader is still choosing a surah, so the page
+    // (and every surah sharing it) is complete on its first frame.
+    val mushafContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { MushafSource.load(mushafContext) }
+    }
+    val surahNames = remember(allChapters) { allChapters.associate { it.id to it.name } }
     // Tajweed colouring is part of how Emran renders the Qur'an, not a
     // preference. A reader learns the rules by seeing them applied, and a
     // switch that turns them off mostly serves people who already know them.
@@ -746,7 +756,7 @@ fun QuranScreen(
                                 .fillMaxSize()
                                 .then(
                                     // The printed page draws its own frame.
-                                    if (isPaginatedMode) Modifier else Modifier.mushafBorder(
+                                    if (isPaginatedMode || mushafLayoutAvailable()) Modifier else Modifier.mushafBorder(
                                         color = when (currentTheme) {
                                             QuranThemeMode.DAY -> Color(0xFFC4B49F)
                                             QuranThemeMode.NIGHT -> Color(0xFFFFD700)
@@ -852,7 +862,8 @@ fun QuranScreen(
                                                     current = hifzCurrent,
                                                     highlight = currentTheme.ornament.copy(alpha = 0.28f),
                                                     arabicDigits = arabicDigits,
-                                                    zoom = fontSizeMultiplier.coerceAtLeast(1f),
+                                                    surahNames = surahNames + (state.chapter.id to state.chapter.name),
+                                                    onlySurah = if (isContinuous) null else state.chapter.id,
                                                 )
                                                 return@HorizontalPager
                                             }
@@ -957,65 +968,6 @@ fun QuranScreen(
                                             }
                                         }
 
-                                        // Dots Indicator for swiping pages
-                                        var showIndicators by remember { mutableStateOf(false) }
-                                        LaunchedEffect(pagerState.isScrollInProgress) {
-                                            if (pagerState.isScrollInProgress) {
-                                                showIndicators = true
-                                            } else {
-                                                delay(1500)
-                                                showIndicators = false
-                                            }
-                                        }
-
-                                        val indicatorAlpha by animateFloatAsState(
-                                            targetValue = if (showIndicators && !isContinuous) 1f else 0f,
-                                            animationSpec = tween(500),
-                                            label = "indicator_alpha"
-                                        )
-
-                                        if (!isContinuous && indicatorAlpha > 0f) {
-                                            val totalDots = pages.size
-                                            val isLarge = totalDots > 20
-                                            val inactiveSize = if (isLarge) 3.dp else 4.dp
-                                            val activeWidth = if (isLarge) 7.dp else 9.dp
-                                            val activeHeight = if (isLarge) 3.dp else 4.dp
-                                            val dotSpacing = if (isLarge) 3.dp else 5.dp
-
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(dotSpacing),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier
-                                                    .align(Alignment.BottomCenter)
-                                                    .padding(bottom = 60.dp)
-                                                    .graphicsLayer(alpha = indicatorAlpha)
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(Color.Black.copy(alpha = 0.5f))
-                                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                                            ) {
-                                                for (iteration in 0 until totalDots) {
-                                                    val isSelected = pagerState.currentPage == iteration
-                                                    val sizeWidth by animateDpAsState(
-                                                        targetValue = if (isSelected) activeWidth else inactiveSize,
-                                                        label = "dot_width"
-                                                    )
-                                                    val sizeHeight by animateDpAsState(
-                                                        targetValue = if (isSelected) activeHeight else inactiveSize,
-                                                        label = "dot_height"
-                                                    )
-                                                    val color by animateColorAsState(
-                                                        targetValue = if (isSelected) currentTheme.ornament else Color.White.copy(alpha = 0.35f),
-                                                        label = "dot_color"
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(width = sizeWidth, height = sizeHeight)
-                                                            .clip(CircleShape)
-                                                            .background(color)
-                                                    )
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                             } else {
@@ -1082,10 +1034,31 @@ fun QuranScreen(
                                 LazyColumn(
                                     state = lazyListState,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(top = 16.dp, bottom = 140.dp)
+                                    contentPadding = if (mushafLayoutAvailable()) PaddingValues(0.dp) else PaddingValues(top = 16.dp, bottom = 140.dp)
                                 ) {
                                     itemsIndexed(scrollPages) { pageIndex, versesInPage ->
                                         val actualPageNum = sortedPageKeys.getOrNull(pageIndex) ?: 1
+
+                                        // Scrolling, the pages are the same printed pages,
+                                        // one under the other, each a screen tall.
+                                        if (mushafLayoutAvailable()) {
+                                            MushafPageView(
+                                                pageNumber = actualPageNum,
+                                                loadedVerses = versesInPage,
+                                                theme = currentTheme,
+                                                tajweed = tajweedEnabled,
+                                                hifzSurah = if (hifzMode || sweeping) state.chapter.id else null,
+                                                revealed = hifzShown,
+                                                fading = hifz.fading,
+                                                current = hifzCurrent,
+                                                highlight = currentTheme.ornament.copy(alpha = 0.28f),
+                                                arabicDigits = arabicDigits,
+                                                surahNames = surahNames + (state.chapter.id to state.chapter.name),
+                                                onlySurah = if (isContinuous) null else state.chapter.id,
+                                                modifier = Modifier.fillParentMaxHeight(),
+                                            )
+                                            return@itemsIndexed
+                                        }
 
                                         Column(
                                             modifier = Modifier
@@ -1364,39 +1337,12 @@ fun QuranScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .background(currentTheme.textColor.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = { if (fontSizeMultiplier > 0.8f) fontSizeMultiplier -= 0.1f },
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Text("\u200EA-\u200E", color = currentTheme.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                        Text(
-                                            text = "${(fontSizeMultiplier * 100).toInt()}%",
-                                            color = currentTheme.textColor,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 8.dp)
-                                        )
-                                        IconButton(
-                                            onClick = { if (fontSizeMultiplier < 2.5f) fontSizeMultiplier += 0.1f },
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Text("\u200EA+\u200E", color = currentTheme.textColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                    
                                     // Each choice is a tiny page in its own colours, with its name
                                     // under it: no guessing what a dark circle means.
                                     Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(22.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         QuranThemeMode.entries.forEach { mode ->
@@ -1561,7 +1507,10 @@ fun QuranScreen(
                                                 modifier = Modifier.width(100.dp),
                                                 colors = SliderDefaults.colors(
                                                     thumbColor = currentTheme.ornament,
-                                                    activeTrackColor = currentTheme.ornament
+                                                    activeTrackColor = currentTheme.ornament,
+                                                    inactiveTrackColor = currentTheme.textColor.copy(alpha = 0.15f),
+                                                    activeTickColor = currentTheme.backgroundColor.copy(alpha = 0.7f),
+                                                    inactiveTickColor = currentTheme.ornament.copy(alpha = 0.7f),
                                                 )
                                             )
                                             val speedLabel = when (autoScrollSpeed) {

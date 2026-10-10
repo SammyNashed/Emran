@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -107,7 +105,13 @@ fun MushafPageView(
     current: Int?,
     highlight: Color,
     arabicDigits: List<Char>,
-    zoom: Float,
+    /**
+     * Arabic surah names by number, from the chapter list the reader already holds, so
+     * titles are right on the very first frame (the full text is parsed in the background).
+     */
+    surahNames: Map<Int, String>,
+    /** Isolated reading: only this surah's lines are drawn, the rest of the page stays blank. */
+    onlySurah: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -122,14 +126,19 @@ fun MushafPageView(
     val loadedWords = remember(loadedVerses) {
         loadedVerses.associate { (it.chapterId to it.id) to MushafSource.words(it.text) }
     }
-    val slots = remember(lines, source, nextFirst, loadedWords) {
+    fun nameOf(s: Int): String = surahNames[s] ?: source?.nameOf(s).orEmpty()
+    val slots = remember(lines, source, nextFirst, loadedWords, onlySurah) {
         val data = source
         buildSlots(
             lines, nextFirst,
             wordsOf = { s, a -> data?.wordsOf(s, a) ?: loadedWords[s to a].orEmpty() },
             rub = { s, a -> data?.isRub(s, a) == true },
             sajda = { s, a -> data?.sajdaWord(s, a) ?: -1 },
-        )
+        ).map { slot ->
+            // A surah always starts on a fresh line, so a line belongs to one surah only:
+            // isolating a surah blanks whole lines and the page keeps its geometry.
+            if (onlySurah == null || slot.surah == null || slot.surah == onlySurah) slot else Slot.Blank
+        }
     }
     val special = pageNumber <= 2
     val dark = theme != QuranThemeMode.DAY
@@ -190,14 +199,12 @@ fun MushafPageView(
                 }
             }
 
-            val largePrint = zoom > 1.05f
-            val printSp = fontSp * (1f + (zoom - 1f) * 2f).coerceAtMost(2.6f)
             val draw = DrawParams(ink, ornament, dark, tajweed, hifzSurah, revealed, fading, current, highlight)
 
             Column(Modifier.fillMaxSize()) {
                 // Running head: the surah on the right, the juzʾ on the left.
                 RunningHead(
-                    right = source?.nameOf(firstSurahOf(lines))?.let { "سورة $it" } ?: "",
+                    right = nameOf(firstSurahOf(lines)).takeIf { it.isNotEmpty() }?.let { "سورة $it" } ?: "",
                     left = "الجزء ${juzOf(pageNumber).toArabic(arabicDigits)}",
                     color = ornament,
                     height = stripH,
@@ -209,74 +216,45 @@ fun MushafPageView(
                         .weight(1f)
                         .fillMaxWidth()
                         .drawBehind {
-                            if (!largePrint) {
-                                // A fine double rule around the text block, as on the printed page.
-                                val i1 = 5.dp.toPx()
-                                val i2 = 8.dp.toPx()
-                                drawRoundRect(
-                                    ornament.copy(alpha = 0.55f),
-                                    topLeft = Offset(i1, 0f), size = Size(size.width - i1 * 2, size.height),
-                                    cornerRadius = CornerRadius(3.dp.toPx()), style = Stroke(1.2.dp.toPx()),
-                                )
-                                drawRoundRect(
-                                    ornament.copy(alpha = 0.35f),
-                                    topLeft = Offset(i2, 3.dp.toPx()), size = Size(size.width - i2 * 2, size.height - 6.dp.toPx()),
-                                    cornerRadius = CornerRadius(2.dp.toPx()), style = Stroke(0.7.dp.toPx()),
-                                )
-                            }
+                            // A fine double rule around the text block, as on the printed page.
+                            val i1 = 5.dp.toPx()
+                            val i2 = 8.dp.toPx()
+                            drawRoundRect(
+                                ornament.copy(alpha = 0.55f),
+                                topLeft = Offset(i1, 0f), size = Size(size.width - i1 * 2, size.height),
+                                cornerRadius = CornerRadius(3.dp.toPx()), style = Stroke(1.2.dp.toPx()),
+                            )
+                            drawRoundRect(
+                                ornament.copy(alpha = 0.35f),
+                                topLeft = Offset(i2, 3.dp.toPx()), size = Size(size.width - i2 * 2, size.height - 6.dp.toPx()),
+                                cornerRadius = CornerRadius(2.dp.toPx()), style = Stroke(0.7.dp.toPx()),
+                            )
                         },
                 ) {
-                    if (largePrint) {
-                        val flow = remember(slots, printSp, areaWPx) { reflow(slots, areaWPx, printSp, density, measurer) }
-                        Column(
-                            Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = sideMargin)
-                                .padding(top = 8.dp, bottom = 120.dp),
-                        ) {
-                            flow.forEach { piece ->
-                                when (piece) {
-                                    is Flow.Header -> Box(Modifier.fillMaxWidth().height((printSp * 3.2f).dp)) {
-                                        SurahHeader(source?.nameOf(piece.surah).orEmpty(), ink, ornament)
-                                    }
-                                    Flow.Basmala -> Box(Modifier.fillMaxWidth().height((printSp * LINE_HEIGHT_EMS).dp), contentAlignment = Alignment.Center) {
-                                        Basmala(ink, printSp)
-                                    }
-                                    is Flow.Row -> MushafLine(
-                                        items = piece.items, fontSp = printSp, mode = if (piece.justify) LineMode.Justify else LineMode.Start,
-                                        params = draw, measurer = measurer,
-                                        modifier = Modifier.fillMaxWidth().height((printSp * LINE_HEIGHT_EMS).dp),
-                                    )
+                    Column(
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = sideMargin, vertical = 4.dp),
+                        verticalArrangement = if (special) Arrangement.Center else Arrangement.Top,
+                    ) {
+                        slots.forEachIndexed { i, slot ->
+                            val slotModifier = Modifier
+                                .fillMaxWidth()
+                                .then(if (special) Modifier.height(unitH * weights[i]) else Modifier.weight(weights[i]))
+                            when (slot) {
+                                is Slot.Header -> Box(slotModifier) {
+                                    SurahHeader(nameOf(slot.surah), ink, ornament)
                                 }
-                            }
-                        }
-                    } else {
-                        Column(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = sideMargin, vertical = 4.dp),
-                            verticalArrangement = if (special) Arrangement.Center else Arrangement.Top,
-                        ) {
-                            slots.forEachIndexed { i, slot ->
-                                val slotModifier = Modifier
-                                    .fillMaxWidth()
-                                    .then(if (special) Modifier.height(unitH * weights[i]) else Modifier.weight(weights[i]))
-                                when (slot) {
-                                    is Slot.Header -> Box(slotModifier) {
-                                        SurahHeader(source?.nameOf(slot.surah).orEmpty(), ink, ornament)
-                                    }
-                                    Slot.Basmala -> Box(slotModifier, contentAlignment = Alignment.Center) { Basmala(ink, fontSp) }
-                                    Slot.Blank -> Spacer(slotModifier)
-                                    is Slot.Line -> MushafLine(
-                                        items = slot.items,
-                                        fontSp = fontSp,
-                                        mode = if (special) LineMode.Centre else LineMode.Justify,
-                                        params = draw,
-                                        measurer = measurer,
-                                        modifier = slotModifier,
-                                    )
-                                }
+                                is Slot.Basmala -> Box(slotModifier, contentAlignment = Alignment.Center) { Basmala(ink, fontSp) }
+                                Slot.Blank -> Spacer(slotModifier)
+                                is Slot.Line -> MushafLine(
+                                    items = slot.items,
+                                    fontSp = fontSp,
+                                    mode = if (special) LineMode.Centre else LineMode.Justify,
+                                    params = draw,
+                                    measurer = measurer,
+                                    modifier = slotModifier,
+                                )
                             }
                         }
                     }
@@ -300,7 +278,7 @@ private const val HEADER_WEIGHT = 1.35f
 /** Smallest space between words, in ems. */
 private const val MIN_GAP_EM = 0.12f
 
-/** Space between words on a centred or start-aligned line, in ems. */
+/** Space between words on a centred line, in ems. */
 private const val NATURAL_GAP_EM = 0.28f
 
 /** Lines may be condensed this much before they are set smaller. */
@@ -333,19 +311,16 @@ private const val KIND_RUB = -2
 private const val KIND_SAJDA = -3
 
 private sealed interface Slot {
-    data class Header(val surah: Int) : Slot
-    data object Basmala : Slot
-    data object Blank : Slot
-    data class Line(val items: List<Item>) : Slot
+    /** The surah this slot belongs to, or null for an empty line. */
+    val surah: Int?
+
+    data class Header(override val surah: Int) : Slot
+    data class Basmala(override val surah: Int) : Slot
+    data object Blank : Slot { override val surah: Int? = null }
+    data class Line(val items: List<Item>) : Slot { override val surah: Int? = items.firstOrNull()?.surah }
 }
 
-private sealed interface Flow {
-    data class Header(val surah: Int) : Flow
-    data object Basmala : Flow
-    data class Row(val items: List<Item>, val justify: Boolean) : Flow
-}
-
-private enum class LineMode { Justify, Centre, Start }
+private enum class LineMode { Justify, Centre }
 
 private class DrawParams(
     val ink: Color,
@@ -500,47 +475,6 @@ private fun MushafLine(
 }
 
 /**
- * Large print: the page's words poured into lines as wide as the screen at [sp],
- * breaking only between words, with titles and basmala kept as their own lines.
- * The page's content does not change; only how many words share a line.
- */
-private fun reflow(
-    slots: List<Slot>,
-    availPx: Float,
-    sp: Float,
-    density: Density,
-    measurer: TextMeasurer,
-): List<Flow> {
-    val gap = with(density) { (sp * NATURAL_GAP_EM).sp.toPx() }
-    val out = mutableListOf<Flow>()
-    val line = mutableListOf<Item>()
-    var used = 0f
-    fun flush(justify: Boolean) {
-        if (line.isNotEmpty()) out += Flow.Row(line.toList(), justify)
-        line.clear(); used = 0f
-    }
-    slots.forEach { slot ->
-        when (slot) {
-            is Slot.Header -> { flush(false); out += Flow.Header(slot.surah) }
-            Slot.Basmala -> { flush(false); out += Flow.Basmala }
-            Slot.Blank -> Unit
-            is Slot.Line -> slot.items.forEach { item ->
-                val w = measureItem(item, sp, null, measurer).width
-                val need = if (line.isEmpty()) w else used + gap + w
-                if (need > availPx && line.isNotEmpty()) {
-                    flush(true)
-                    line += item; used = w
-                } else {
-                    line += item; used = need
-                }
-            }
-        }
-    }
-    flush(false)
-    return out
-}
-
-/**
  * Turns the page's fifteen lines into what each one shows.
  *
  * An empty line in the layout is not empty on paper: before a surah it holds the
@@ -580,7 +514,7 @@ private fun buildSlots(
                 first.ayah != 1 || first.from != 0 -> Slot.Blank
                 first.surah == 1 || first.surah == 9 -> if (remaining == 1) Slot.Header(first.surah) else Slot.Blank
                 remaining == 2 -> Slot.Header(first.surah)
-                remaining == 1 -> Slot.Basmala
+                remaining == 1 -> Slot.Basmala(first.surah)
                 else -> Slot.Blank
             }
         } else {
@@ -590,7 +524,7 @@ private fun buildSlots(
             when {
                 next == null || next.ayah != 1 || next.from != 0 -> Slot.Blank
                 i == firstTrailing -> Slot.Header(next.surah)
-                i == firstTrailing + 1 && next.surah != 1 && next.surah != 9 -> Slot.Basmala
+                i == firstTrailing + 1 && next.surah != 1 && next.surah != 9 -> Slot.Basmala(next.surah)
                 else -> Slot.Blank
             }
         }
@@ -626,6 +560,8 @@ private fun SurahHeader(name: String, ink: Color, ornament: Color) {
                 contentScale = ContentScale.FillBounds,
                 modifier = Modifier.fillMaxSize(),
             )
+            // Never "سورة" on its own.
+            if (name.isEmpty()) return@Box
             val density = LocalDensity.current
             val measurer = rememberTextMeasurer()
             val title = "سورة $name"
