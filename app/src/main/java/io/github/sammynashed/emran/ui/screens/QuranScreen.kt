@@ -640,7 +640,7 @@ fun QuranScreen(
 
                 // Auto Scroll engine state (Scroll View only)
                 var isAutoScrolling by remember { mutableStateOf(false) }
-                var autoScrollSpeed by remember { mutableStateOf(2) } // Speeds from 1 (slow) to 5 (fast)
+                var autoScrollSpeed by remember { mutableStateOf(3) } // Speeds from 1 (slow) to 10 (very fast)
 
                 val arabicDigits = remember { listOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩') }
 
@@ -1012,18 +1012,16 @@ fun QuranScreen(
                                 // Auto scroll engine tick
                                 LaunchedEffect(isAutoScrolling, autoScrollSpeed) {
                                     if (isAutoScrolling) {
+                                        // Per frame, in pixels per second, so it is smooth and has no ceiling
+                                        // from a timer: level 10 crosses a page in about two seconds.
+                                        val pxPerSec = AUTO_SCROLL_PX_PER_SEC[(autoScrollSpeed - 1).coerceIn(0, AUTO_SCROLL_PX_PER_SEC.lastIndex)]
+                                        var last = withFrameNanos { it }
                                         while (true) {
-                                            val delayMs = when (autoScrollSpeed) {
-                                                1 -> 110L
-                                                2 -> 80L
-                                                3 -> 55L
-                                                4 -> 35L
-                                                5 -> 20L
-                                                else -> 55L
-                                            }
-                                            delay(delayMs)
+                                            val now = withFrameNanos { it }
+                                            val dt = (now - last) / 1_000_000_000f
+                                            last = now
                                             try {
-                                                lazyListState.scrollBy(2f)
+                                                lazyListState.scrollBy(pxPerSec * dt)
                                             } catch (e: Exception) {
                                                 // Ignore scroll exceptions during active interactions
                                             }
@@ -1501,10 +1499,10 @@ fun QuranScreen(
                                             )
                                             Slider(
                                                 value = autoScrollSpeed.toFloat(),
-                                                onValueChange = { autoScrollSpeed = it.toInt() },
-                                                valueRange = 1f..5f,
-                                                steps = 3,
-                                                modifier = Modifier.width(100.dp),
+                                                onValueChange = { autoScrollSpeed = it.toInt().coerceIn(1, 10) },
+                                                valueRange = 1f..10f,
+                                                steps = 8,
+                                                modifier = Modifier.width(130.dp),
                                                 colors = SliderDefaults.colors(
                                                     thumbColor = currentTheme.ornament,
                                                     activeTrackColor = currentTheme.ornament,
@@ -1513,14 +1511,7 @@ fun QuranScreen(
                                                     inactiveTickColor = currentTheme.ornament.copy(alpha = 0.7f),
                                                 )
                                             )
-                                            val speedLabel = when (autoScrollSpeed) {
-                                                1 -> if (lang == "ar") "١" else "1"
-                                                2 -> if (lang == "ar") "٢" else "2"
-                                                3 -> if (lang == "ar") "٣" else "3"
-                                                4 -> if (lang == "ar") "٤" else "4"
-                                                5 -> if (lang == "ar") "٥" else "5"
-                                                else -> autoScrollSpeed.toString()
-                                            }
+                                            val speedLabel = if (lang == "ar") autoScrollSpeed.toString().map { arabicDigits[it.digitToInt()] }.joinToString("") else autoScrollSpeed.toString()
                                             Text(
                                                 text = speedLabel,
                                                 color = currentTheme.textColor,
@@ -1777,6 +1768,9 @@ private fun TajweedLegendDialog(
 private const val FADE_STEP = 0.08f
 
 /** Long enough to take the page in before it empties. */
+/** Auto-scroll speeds 1..10, in pixels per second. */
+private val AUTO_SCROLL_PX_PER_SEC = floatArrayOf(25f, 45f, 75f, 120f, 190f, 300f, 450f, 650f, 900f, 1300f)
+
 private const val HIFZ_INTRO_HOLD_MS = 1_000L
 
 /** The sweep itself: brisk, so it reads as a transition and not a wait. */
