@@ -119,7 +119,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val preferences = remember(context) { context.getSharedPreferences("emran_settings", android.content.Context.MODE_PRIVATE) }
-                var showSplash by remember { mutableStateOf(true) }
+                // Saved, so a rotation (or any recreation) never replays the splash.
+                var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
 
                 if (showSplash) {
                     SplashScreen(
