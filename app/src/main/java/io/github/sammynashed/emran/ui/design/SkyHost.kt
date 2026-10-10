@@ -1,12 +1,21 @@
 package io.github.sammynashed.emran.ui.design
 
 import android.app.Activity
+import android.content.Context
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,7 +25,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.layer.CompositingStrategy
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -44,6 +59,38 @@ object SkyDebug {
 
     /** Show the UI in "ar" or "en" without touching the saved language, or null. */
     var language by mutableStateOf<String?>(null)
+}
+
+/**
+ * The sky's clock: seconds, ~30 updates a second, only while the app is on screen.
+ *
+ * It stands still (no battery cost at all) when the user has turned animations off
+ * or battery saver is on. Readers read `.value` inside a draw lambda, so a tick
+ * redraws the sky and nothing else; no screen recomposes.
+ */
+@Composable
+fun rememberSkyClock(animate: Boolean = true): State<Float> {
+    val context = LocalContext.current
+    val owner = LocalLifecycleOwner.current
+    val time = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(owner, animate) {
+        if (!animate) return@LaunchedEffect
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            val motion = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+            val saver = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
+            if (!motion || saver) return@repeatOnLifecycle
+            var last = 0L
+            while (true) {
+                withFrameNanos { n ->
+                    if (n - last >= 33_000_000L) {
+                        last = n
+                        time.floatValue = ((n / 1_000_000_000.0) % 20000.0).toFloat()
+                    }
+                }
+            }
+        }
+    }
+    return time
 }
 
 /**
@@ -92,13 +139,44 @@ fun SkyHost(
     }
 
     var size by remember { mutableStateOf(Size.Zero) }
+    val clock = rememberSkyClock(animate = showSky)
+    val painter = remember { SkyPainter() }
+    val layer = rememberGraphicsLayer()
     Box(
         modifier = modifier
             .fillMaxSize()
-            .onSizeChanged { size = it.toSize() }
-            .drawBehind { if (showSky) drawSky(sky, this.size) },
+            .onSizeChanged { size = it.toSize() },
     ) {
-        CompositionLocalProvider(LocalSky provides sky, LocalSkySize provides size) {
+        // The sky lives in its OWN layer. Painted on the root instead, every tick would
+        // re-record the whole screen (all the text, rows and icons above it); in its own
+        // layer a tick redraws the sky and nothing else.
+        Box(
+            Modifier
+                .matchParentSize()
+                .graphicsLayer { clip = false }
+            .drawBehind {
+                if (showSky && this.size.width > 0f && this.size.height > 0f) {
+                    // One small render of the sky per tick; the window and every glass pane
+                    // scale up the same texture, so the cloud shader runs once, not eight times.
+                    val small = IntSize(
+                        (this.size.width / SKY_DOWNSCALE).toInt().coerceAtLeast(1),
+                        (this.size.height / SKY_DOWNSCALE).toInt().coerceAtLeast(1),
+                    )
+                    layer.record(this, layoutDirection, small) {
+                        painter.paint(this, sky, Size(small.width.toFloat(), small.height.toFloat()), clock.value)
+                    }
+                    layer.scaleX = this.size.width / small.width
+                    layer.scaleY = this.size.height / small.height
+                    layer.pivotOffset = Offset.Zero
+                    layer.compositingStrategy = CompositingStrategy.Offscreen
+                    drawSkyTexture(layer, sky, this.size, clock.value)
+                }
+            },
+        )
+        CompositionLocalProvider(
+            LocalSky provides sky, LocalSkySize provides size, LocalSkyTime provides clock,
+            LocalSkyLayer provides layer,
+        ) {
             content()
         }
     }

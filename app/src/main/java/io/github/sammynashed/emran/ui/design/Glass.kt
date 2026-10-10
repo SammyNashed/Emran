@@ -16,6 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
@@ -97,11 +106,12 @@ private class LensEffect {
         if (hit != null && width == w && height == h && radiusPx == r) return hit
         shader.setFloatUniform("size", width, height)
         shader.setFloatUniform("radius", radiusPx)
-        shader.setFloatUniform("bend", 16f * density)
-        shader.setFloatUniform("edge", 30f * density)
+        shader.setFloatUniform("bend", 24f * density)
+        shader.setFloatUniform("edge", 38f * density)
         val lens = android.graphics.RenderEffect.createRuntimeShaderEffect(shader, "content")
-        val blur = android.graphics.RenderEffect.createBlurEffect(2.5f * density, 2.5f * density, Shader.TileMode.CLAMP)
-        val chained = android.graphics.RenderEffect.createChainEffect(lens, blur).asComposeRenderEffect()
+        // No extra blur pass here: the sky texture is already soft, and one fewer full-pane
+        // pass per glass pane is what keeps 30 fps affordable.
+        val chained = lens.asComposeRenderEffect()
         cached = chained; w = width; h = height; r = radiusPx
         return chained
     }
@@ -136,10 +146,14 @@ fun GlassPanel(
         if (tier == GlassTier.LENS && Build.VERSION.SDK_INT >= 33) runCatching { LensEffect() }.getOrNull() else null
     }
     var origin by remember { mutableStateOf(Offset.Zero) }
+    val skyLayer = LocalSkyLayer.current
+    val clock = LocalSkyTime.current
 
     Box(
         modifier = modifier
             .onGloballyPositioned { origin = it.positionInRoot() }
+            // Drawn before the clip, so the soft shadow can fall outside the glass.
+            .drawBehind { drawGlassShadow(sky, radiusPx, density.density) }
             .clip(RoundedCornerShape(cornerRadius)),
     ) {
         // 1. The sky behind the glass, blurred and (on API 33+) bent at the edges.
@@ -157,7 +171,7 @@ fun GlassPanel(
                         GlassTier.FLAT -> null
                     }
                 }
-                .drawBehind { translate(-origin.x, -origin.y) { drawSky(sky, skySize) } },
+                .drawBehind { translate(-origin.x, -origin.y) { drawSkyTexture(skyLayer, sky, skySize, clock.value) } },
         )
         // 2. Tint, top-light and the specular rim.
         Box(
@@ -169,36 +183,85 @@ fun GlassPanel(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawGlassChrome(
+/**
+ * A soft shadow under the pane, drawn only OUTSIDE its outline (the inside is glass,
+ * and a shadow showing through it would turn it grey). On bright skies this is what
+ * lifts a clear pane off the page.
+ */
+private fun DrawScope.drawGlassShadow(sky: SkyState, radiusPx: Float, density: Float) {
+    val path = Path().apply {
+        addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(radiusPx)))
+    }
+    val shadow = lerp(Color.Black.copy(alpha = 0.34f), Color(0xFF0B1B33).copy(alpha = 0.24f), sky.darkInk)
+    clipPath(path, ClipOp.Difference) {
+        drawIntoCanvas { canvas ->
+            val paint = android.graphics.Paint().apply {
+                isAntiAlias = true
+                color = android.graphics.Color.BLACK
+                setShadowLayer(24f * density, 0f, 10f * density, shadow.toArgb())
+            }
+            canvas.nativeCanvas.drawRoundRect(0f, 0f, size.width, size.height, radiusPx, radiusPx, paint)
+        }
+    }
+}
+
+/**
+ * The body of the pane: a faint tint, a darker underside (so it has thickness), light
+ * raking across the top-left, and a bright specular rim with a darker outer edge.
+ *
+ * The tint is deliberately LIGHT. A bright tint over a bright sky made the glass
+ * milky and hid the lens effect; glass should look clear, with the weight in its edges.
+ */
+private fun DrawScope.drawGlassChrome(
     sky: SkyState,
     tint: Float,
     radiusPx: Float,
     density: Float,
 ) {
-    val a = (sky.glassAlpha * tint).coerceIn(0f, 0.7f)
-    drawRect(
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = a * 1.25f), Color.White.copy(alpha = a * 0.7f))),
-    )
-    // Light falling on the top edge.
+    val day = sky.darkInk
+    val a = ((0.13f + (0.17f - 0.13f) * day) * tint).coerceIn(0f, 0.5f)
+    // Body.
+    drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = a * 1.35f), Color.White.copy(alpha = a * 0.55f))))
+    // Underside: the glass is thicker, so slightly deeper, at the bottom.
     drawRect(
         Brush.verticalGradient(
-            0f to Color.White.copy(alpha = 0.18f * tint),
             0.45f to Color.Transparent,
+            1f to lerp(Color.Black.copy(alpha = 0.16f), Color(0xFF0B1B33).copy(alpha = 0.11f), day),
         ),
     )
-    val rim = 1.25f * density
+    // Light raking across from the top-left.
+    drawRect(
+        Brush.linearGradient(
+            0f to Color.White.copy(alpha = 0.30f * tint),
+            0.34f to Color.Transparent,
+            start = Offset.Zero,
+            end = Offset(size.width * 0.85f, size.height * 1.3f),
+        ),
+    )
+    // Dark outer edge: defines the pane against a bright sky.
+    val edge = 1f * density
+    drawRoundRect(
+        color = lerp(Color.Black.copy(alpha = 0.10f), Color(0xFF0B1B33).copy(alpha = 0.22f), day),
+        topLeft = Offset(edge / 2, edge / 2),
+        size = Size(size.width - edge, size.height - edge),
+        cornerRadius = CornerRadius(radiusPx - edge / 2),
+        style = Stroke(edge),
+    )
+    // Specular rim, just inside the edge.
+    val rim = 1.4f * density
+    val inset = edge + rim / 2
     drawRoundRect(
         brush = Brush.linearGradient(
-            0f to Color.White.copy(alpha = 0.80f),
-            0.42f to Color.White.copy(alpha = 0.16f),
-            0.58f to Color.White.copy(alpha = 0.10f),
-            1f to Color.White.copy(alpha = 0.46f),
+            0f to Color.White.copy(alpha = 0.95f),
+            0.40f to Color.White.copy(alpha = 0.20f),
+            0.60f to Color.White.copy(alpha = 0.12f),
+            1f to Color.White.copy(alpha = 0.60f),
             start = Offset.Zero,
             end = Offset(size.width, size.height),
         ),
-        topLeft = Offset(rim / 2, rim / 2),
-        size = Size(size.width - rim, size.height - rim),
-        cornerRadius = CornerRadius(radiusPx - rim / 2),
+        topLeft = Offset(inset, inset),
+        size = Size(size.width - inset * 2, size.height - inset * 2),
+        cornerRadius = CornerRadius((radiusPx - inset).coerceAtLeast(0f)),
         style = Stroke(rim),
     )
 }

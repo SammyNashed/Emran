@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -76,8 +78,8 @@ fun DayArc(
 
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val screenWidth = maxWidth
-        val radius = screenWidth * 0.40f
-        val top = 40.dp
+        val radius = screenWidth * 0.30f
+        val top = 36.dp
         val cx = maxWidth / 2
         val cy = top + radius
         val boxHeight = cy + 66.dp
@@ -95,7 +97,9 @@ fun DayArc(
         // start its children from the RIGHT edge and mirror every label off its tick.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(Modifier.fillMaxWidth().height(boxHeight)) {
-            Canvas(Modifier.fillMaxWidth().height(boxHeight)) {
+            val clock = LocalSkyTime.current
+            Canvas(Modifier.fillMaxWidth().height(boxHeight).graphicsLayer { clip = false }) {
+                val pulse = 1f + 0.10f * kotlin.math.sin(clock.value * 1.7f)
                 val r = radius.toPx()
                 val c = Offset(cx.toPx(), cy.toPx())
                 val stroke = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
@@ -138,43 +142,48 @@ fun DayArc(
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(sky.orb.copy(alpha = 0.55f), Color.Transparent),
-                        center = orbAt, radius = 34.dp.toPx(),
+                        center = orbAt, radius = 34.dp.toPx() * pulse,
                     ),
-                    radius = 34.dp.toPx(), center = orbAt,
+                    radius = 34.dp.toPx() * pulse, center = orbAt,
                 )
                 drawCircle(sky.orb, 9.dp.toPx(), orbAt)
                 drawCircle(Color.White.copy(alpha = 0.85f), 3.5.dp.toPx(), orbAt)
             }
 
-            // Labels sit just outside the arc. The two ends (Fajr, Isha) tuck under their tick so
-            // they never run off the screen; everything else is clamped inside the margins.
+            // Each name sits OUTSIDE the arc, on a zero-width anchor, and grows AWAY from it:
+            // left of the arc it ends at the anchor, right of it it starts there, at the top it
+            // is centred above its tick, and the two ends (Fajr, Isha) sit under their tick.
+            // Anchoring (rather than a fixed-width box that must be clamped to the screen)
+            // means nothing can ever push a name back onto the line. Coordinates are plain
+            // left-to-right (see the Ltr provider above); the day's direction in Arabic is
+            // already inside `point`.
+            val gap = 14.dp
             marks.forEach { m ->
-                val atEnd = m.fraction <= 0.001f || m.fraction >= 0.999f
-                val (rawX, rawY) = if (atEnd) {
-                    point(m.fraction, radius).let { it.first to (cy + 20.dp) }
-                } else {
-                    // Step further out when the orb is sitting on this prayer, so the glow never covers its name.
-                    val orbHere = abs(sky.dayFraction - m.fraction) < 0.05f
-                    point(m.fraction, radius + 24.dp + 14.dp * abs(cos(Math.PI * m.fraction)).toFloat() + (if (orbHere) 16.dp else 0.dp))
-                }
-                val px = rawX.coerceIn(36.dp, screenWidth - 36.dp)
                 val next = m.key == highlightKey
-                Box(
-                    // absoluteOffset: the arc is in plain left-to-right coordinates, and
-                    // plain offset() would mirror the labels away from their ticks in Arabic.
-                    Modifier
-                        .absoluteOffset(x = px - 36.dp, y = rawY - 9.dp)
-                        .width(72.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = if (ar) m.ar else m.name,
-                        color = if (next) sky.ink else sky.inkSoft,
-                        fontSize = 12.sp,
-                        fontWeight = if (next) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1,
-                    )
+                val atEnd = m.fraction <= 0.001f || m.fraction >= 0.999f
+                // The orb's glow is ~34 dp wide. When it sits near this prayer, slide the name a
+                // little ALONG the arc, away from the orb, so it stays right beside its own tick
+                // instead of being pushed out into the sky.
+                val orbHere = abs(sky.dayFraction - m.fraction) < 0.07f
+                val slide = if (orbHere && !atEnd) (if (sky.dayFraction > m.fraction) -0.032f else 0.032f) else 0f
+                val (ax, ay) = point((m.fraction + slide).coerceIn(0f, 1f), radius + gap)
+                val anchor = when {
+                    atEnd -> 0
+                    ax < cx - 28.dp -> -1
+                    ax > cx + 28.dp -> 1
+                    else -> 0
                 }
+                val (x, y) = when {
+                    atEnd -> point(m.fraction, radius).first to (cy + (if (orbHere) 34.dp else 20.dp))
+                    anchor == 0 -> ax to (ay - 12.dp)
+                    else -> ax to ay
+                }
+                AnchoredLabel(
+                    x = x, y = y, side = anchor,
+                    text = if (ar) m.ar else m.name,
+                    color = if (next) sky.ink else sky.inkSoft,
+                    bold = next,
+                )
             }
 
             // Next prayer, countdown, adhan time.
@@ -224,4 +233,37 @@ private fun arName(name: String) = when (name) {
     "Maghrib" -> "المغرب"
     "Isha" -> "العشاء"
     else -> name
+}
+
+/**
+ * Text placed relative to a point: [side] -1 ends at the point, 1 starts at it, 0 is centred
+ * on it. The point is where the layout says it is, with no width of its own to clamp.
+ */
+@Composable
+private fun AnchoredLabel(
+    x: androidx.compose.ui.unit.Dp,
+    y: androidx.compose.ui.unit.Dp,
+    side: Int,
+    text: String,
+    color: Color,
+    bold: Boolean,
+) {
+    Box(
+        Modifier.layout { measurable, constraints ->
+            val p = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0, maxWidth = androidx.compose.ui.unit.Constraints.Infinity))
+            layout(0, 0) {
+                val dx = when (side) { -1 -> -p.width; 1 -> 0; else -> -p.width / 2 }
+                p.place(x.roundToPx() + dx, y.roundToPx() - p.height / 2)
+            }
+        },
+    ) {
+        Text(
+            text = text,
+            color = color,
+            fontSize = 13.sp,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
 }
