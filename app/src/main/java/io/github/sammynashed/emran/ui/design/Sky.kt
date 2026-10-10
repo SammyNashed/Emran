@@ -166,12 +166,13 @@ private val STARS: List<Star> = Random(7).let { rnd ->
 val LocalSkyLayer = androidx.compose.runtime.staticCompositionLocalOf<androidx.compose.ui.graphics.layer.GraphicsLayer?> { null }
 
 /** The sky texture is drawn this many times smaller than the screen and scaled up. */
-const val SKY_DOWNSCALE = 4
+const val SKY_DOWNSCALE = 2
 
 /** Paints the sky texture into the window or a glass pane's coordinate space. */
 fun DrawScope.drawSkyTexture(layer: androidx.compose.ui.graphics.layer.GraphicsLayer?, sky: SkyState, size: Size, time: Float) {
     if (layer != null) drawLayer(layer) else drawSky(sky, size, time, withStars = false)
     drawStars(sky, size, time)
+    drawMotes(sky, size, time)
 }
 
 val LocalSkyTime = androidx.compose.runtime.staticCompositionLocalOf<State<Float>> {
@@ -283,13 +284,19 @@ half4 main(float2 frag) {
     p2.x -= time * 0.085;
     float n2 = fbm(p2 * 1.3 + float2(5.0, time * 0.02));
     float band = smoothstep(0.06, 0.42, y) * (1.0 - smoothstep(0.92, 1.0, y));
-    float far = smoothstep(0.40, 0.72, n1) * band * cloudAmt * 0.60;
-    float near = smoothstep(0.48, 0.78, n2) * band * cloudAmt;
-    float3 shade = mix(cCloud, cMid * 0.78, 0.38);
-    col = mix(col, shade, far * 0.70);
-    col = mix(col, cCloud, near * 0.88);
-    // Light catching the cloud edges.
-    col += cGlow * near * (0.10 + 0.07 * sin(time * 0.5 + uv.x * 3.0));
+    // Narrow thresholds give clouds a defined edge instead of a smear.
+    float far = smoothstep(0.43, 0.60, n1) * band * cloudAmt * 0.60;
+    float near = smoothstep(0.50, 0.64, n2) * band * cloudAmt;
+    // A second look a hair lower tells us which way each cloud faces: the side toward the
+    // horizon glow is lit, the underside sits in shade, so clouds read as volumes.
+    float n2b = fbm((base * 1.6 + float2(-time * 0.085, 0.0)) * 1.3 + float2(5.0, time * 0.02 + 0.045));
+    float lit = clamp((n2 - n2b) * 11.0, 0.0, 1.0);
+    float shd = clamp((n2b - n2) * 11.0, 0.0, 1.0);
+    float3 shade = mix(cCloud, cMid * 0.72, 0.42);
+    col = mix(col, shade, far * 0.75);
+    col = mix(col, mix(cCloud, shade, shd * 0.55), near * 0.92);
+    col += cGlow * near * lit * 0.40;
+    col += cGlow * near * (0.06 + 0.05 * sin(time * 0.5 + uv.x * 3.0));
 
     // Horizon glow that breathes.
     float2 gc = float2(res.x * 0.5, res.y);
@@ -356,5 +363,44 @@ class SkyPainter {
         sh.setFloatUniform("night", sky.stars)
         sh.setFloatUniform("cloudAmt", 0.55f + 0.45f * sky.darkInk)
         scope.drawRect(ShaderBrush(sh), size = size)
+    }
+}
+
+
+private class Mote(val x: Float, val y: Float, val speed: Float, val r: Float, val phase: Float, val a: Float)
+
+private val MOTES: List<Mote> = Random(11).let { rnd ->
+    List(46) {
+        Mote(
+            rnd.nextFloat(), rnd.nextFloat(),
+            0.012f + rnd.nextFloat() * 0.022f,   // screens per second, upward
+            1.6f + rnd.nextFloat() * 2.6f,       // dp
+            rnd.nextFloat() * 6.28f, 0.35f + rnd.nextFloat() * 0.5f,
+        )
+    }
+}
+
+/**
+ * Glowing motes drifting up through the daytime and dusk sky. Drawn at full resolution
+ * (the sky texture is soft by design), so there is always something crisp that visibly
+ * moves when there are no stars. They fade out as the night sky takes over.
+ */
+fun DrawScope.drawMotes(sky: SkyState, size: Size, time: Float) {
+    if (size.width <= 0f || size.height <= 0f) return
+    // Daylight only: gone by the time the first stars appear, so dusk never gets "bubbles".
+    val strength = (1f - sky.stars * 2.2f).coerceIn(0f, 1f)
+    if (strength < 0.03f) return
+    val tint = lerp(sky.glow, Color.White, 0.65f)
+    MOTES.forEach { m ->
+        val travel = m.y - time * m.speed
+        val fy = travel - kotlin.math.floor(travel)                      // wraps 0..1, drifting up
+        val fx = m.x + 0.025f * kotlin.math.sin(time * 0.45f + m.phase)    // a gentle sway
+        val edge = kotlin.math.min(fy, 1f - fy).coerceIn(0f, 0.12f) / 0.12f // fade near top/bottom
+        val tw = 0.7f + 0.3f * kotlin.math.sin(time * 1.3f + m.phase * 3f)
+        val c = Offset(fx * size.width, fy * size.height)
+        val r = m.r * density
+        // A tiny crisp speck with the faintest halo; no rings.
+        drawCircle(tint.copy(alpha = (m.a * 0.10f * strength * edge * tw).coerceIn(0f, 1f)), r * 1.5f, c)
+        drawCircle(tint.copy(alpha = (m.a * 0.80f * strength * edge * tw).coerceIn(0f, 1f)), r * 0.45f, c)
     }
 }

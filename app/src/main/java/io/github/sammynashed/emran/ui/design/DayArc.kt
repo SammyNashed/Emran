@@ -164,8 +164,8 @@ fun DayArc(
                 // The orb's glow is ~34 dp wide. When it sits near this prayer, slide the name a
                 // little ALONG the arc, away from the orb, so it stays right beside its own tick
                 // instead of being pushed out into the sky.
-                val orbHere = abs(sky.dayFraction - m.fraction) < 0.07f
-                val slide = if (orbHere && !atEnd) (if (sky.dayFraction > m.fraction) -0.032f else 0.032f) else 0f
+                val orbHere = abs(sky.dayFraction - m.fraction) < 0.09f
+                val slide = if (orbHere && !atEnd) (if (sky.dayFraction > m.fraction) -0.07f else 0.07f) else 0f
                 val (ax, ay) = point((m.fraction + slide).coerceIn(0f, 1f), radius + gap)
                 val anchor = when {
                     atEnd -> 0
