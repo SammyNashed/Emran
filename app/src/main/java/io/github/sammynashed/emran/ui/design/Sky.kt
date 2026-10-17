@@ -1,11 +1,7 @@
 package io.github.sammynashed.emran.ui.design
 
-import android.graphics.RuntimeShader
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Offset
@@ -13,6 +9,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import io.github.sammynashed.emran.data.PrayerTimeCalculator.PrayerTimes
@@ -138,8 +136,34 @@ object SkyEngine {
         // Text sits around the middle of the screen, so contrast is judged on `mid`.
         val darkInk = smoothBetween(palette.mid.luminance().toDouble(), 0.16, 0.32)
 
+        // Cards, the dock and the lower half of every page sit on `low`/`glow`. Once the ink
+        // turns white (before Maghrib the middle darkens while the horizon is still bright
+        // orange), those bands must be dark enough for white text, or pages wash out.
+        val whiteInk = 1f - darkInk
+        fun tame(c: Color, maxLum: Float): Color {
+            val l = c.luminance()
+            if (l <= maxLum) return c
+            val t = 1f - Math.pow((maxLum / l).toDouble(), 1 / 2.2).toFloat()
+            return lerp(c, Color.Black, t * whiteInk)
+        }
+
+        // The mirror case, every morning: from mid-Fajr until well after sunrise the middle is
+        // bright (so the ink turns dark) while the top is still deep navy, and the date, the
+        // day arc and the prayer names up there vanished. Lift the top toward the middle's
+        // colour until dark ink reads on it (luminance 0.30 gives the navy ink about 5.7:1).
+        fun lift(c: Color, minLum: Float, toward: Color): Color {
+            if (c.luminance() >= minLum || darkInk <= 0f) return c
+            var lo = 0f; var hi = 1f
+            repeat(12) {
+                val m = (lo + hi) / 2
+                if (lerp(c, toward, m).luminance() >= minLum) hi = m else lo = m
+            }
+            return lerp(c, toward, hi * darkInk)
+        }
+        val liftTarget = lerp(palette.mid, Color.White, 0.35f)
+
         return SkyState(
-            top = palette.top, mid = palette.mid, low = palette.low, glow = palette.glow,
+            top = lift(palette.top, 0.30f, liftTarget), mid = palette.mid, low = tame(palette.low, 0.12f), glow = tame(palette.glow, 0.20f),
             stars = palette.stars, dayFraction = dayFraction, sun = sun, darkInk = darkInk,
         )
     }
@@ -166,14 +190,29 @@ private val STARS: List<Star> = Random(7).let { rnd ->
 val LocalSkyLayer = androidx.compose.runtime.staticCompositionLocalOf<androidx.compose.ui.graphics.layer.GraphicsLayer?> { null }
 
 /** The sky texture is drawn this many times smaller than the screen and scaled up. */
-const val SKY_DOWNSCALE = 2
+const val SKY_DOWNSCALE = 5
 
 /** Paints the sky texture into the window or a glass pane's coordinate space. */
-fun DrawScope.drawSkyTexture(layer: androidx.compose.ui.graphics.layer.GraphicsLayer?, sky: SkyState, size: Size, time: Float) {
+fun DrawScope.drawSkyTexture(
+    layer: androidx.compose.ui.graphics.layer.GraphicsLayer?,
+    sky: SkyState,
+    size: Size,
+    time: Float,
+    /** Stars. Only the window needs them: behind glass they are blurred away anyway. */
+    detail: Boolean = true,
+) {
     if (layer != null) drawLayer(layer) else drawSky(sky, size, time, withStars = false)
-    drawStars(sky, size, time)
-    drawMotes(sky, size, time)
+    if (detail) drawStars(sky, size, time)
 }
+
+/**
+ * The sky texture's own, slower clock (a dozen updates a second). The clouds drift so slowly that this
+ * looks identical, and every glass pane that redraws the texture only redraws that often.
+ */
+val LocalSkySlowTime = androidx.compose.runtime.staticCompositionLocalOf<State<Float>> {
+    object : State<Float> { override val value: Float = 0f }
+}
+const val SKY_TEXTURE_FPS = 8f
 
 val LocalSkyTime = androidx.compose.runtime.staticCompositionLocalOf<State<Float>> {
     object : State<Float> { override val value: Float = 0f }
@@ -206,6 +245,115 @@ fun DrawScope.drawSky(sky: SkyState, size: Size, time: Float = 0f, withStars: Bo
     if (withStars) drawStars(sky, size, time)
 }
 
+/** The sky's three-colour gradient, eased like the old shader's smoothstep so the bands blend softly. */
+fun DrawScope.drawSkyGradient(sky: SkyState, size: Size) {
+    if (size.width <= 0f || size.height <= 0f) return
+    fun ease(t: Float) = t * t * (3 - 2 * t)
+    val stops = buildList {
+        for (k in 0..4) add(0.55f * k / 4f to lerp(sky.top, sky.mid, ease(k / 4f)))
+        for (k in 1..4) add(0.55f + 0.45f * k / 4f to lerp(sky.mid, sky.low, ease(k / 4f)))
+    }.toTypedArray()
+    drawRect(Brush.verticalGradient(*stops, startY = 0f, endY = size.height), size = size)
+}
+
+/** The horizon glow that breathes, added on top of the sky and clouds (exp falloff, as in the old shader). */
+fun DrawScope.drawHorizonGlow(sky: SkyState, size: Size, time: Float, additive: Boolean) {
+    if (size.width <= 0f || size.height <= 0f) return
+    val pulse = 0.32f + 0.10f * kotlin.math.sin(time * 0.6f)
+    val reach = 1.6f
+    val stops = (0..8).map { k ->
+        val f = k / 8f
+        val d = f * reach
+        f to sky.glow.copy(alpha = (pulse * kotlin.math.exp(-d * d * 3.2f)).coerceIn(0f, 1f))
+    }.toTypedArray()
+    drawRect(
+        brush = Brush.radialGradient(*stops, center = Offset(size.width * 0.5f, size.height), radius = size.width * 1.15f * reach),
+        size = size,
+        blendMode = if (additive) androidx.compose.ui.graphics.BlendMode.Plus else androidx.compose.ui.graphics.BlendMode.SrcOver,
+    )
+}
+
+/**
+ * The clouds, drawn from one baked image (res/drawable-nodpi/sky_clouds.webp, made by
+ * ~/emran-design/sky/bake_clouds.py from the same noise the old cloud shader computed live).
+ *
+ * Why an image: the live shader computed its noise on the GPU, and on many phones the GPU does that
+ * maths at reduced precision, which turned every cloud into flat rectangles ("Minecraft clouds").
+ * Scrolling a picture is something every GPU draws identically, so the sky now looks the same on
+ * every phone, and phones below Android 13 (no custom shaders) get the moving clouds too.
+ *
+ * The image is a FIELD, not a picture of clouds: R = far layer, G = near layer, B = the near layer's
+ * lit edge. Each layer is thresholded into cloud cover by a colour matrix AFTER the image is scaled
+ * up, so the edges stay clean at any magnification. Drift offsets are worked out here in double
+ * precision and wrapped to the tile, so no number ever grows with time.
+ */
+class SkyClouds private constructor(private val bitmap: android.graphics.Bitmap) {
+    private val tile = bitmap.width.toFloat()
+    private val shader = android.graphics.BitmapShader(bitmap, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+    private val matrix = android.graphics.Matrix()
+    private val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG or android.graphics.Paint.DITHER_FLAG).apply { shader = this@SkyClouds.shader }
+    private val maskPaint = android.graphics.Paint().apply { xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN) }
+    private var maskH = -1f
+
+    fun draw(canvas: android.graphics.Canvas, sky: SkyState, w: Float, h: Float, time: Double) {
+        val cloudAmt = 0.55f + 0.45f * sky.darkInk
+        val cloud = lerp(sky.glow, Color.White, 0.55f)
+        val shade = lerp(cloud, Color(sky.mid.red * 0.72f, sky.mid.green * 0.72f, sky.mid.blue * 0.72f), 0.42f)
+        canvas.saveLayer(0f, 0f, w, h, null)
+        // Far layer: 3.2 cells per screen height, drifting right at 0.045 cells/s; 16 cells per tile.
+        layer(canvas, w, h, cellPx = h / 3.2f, cellsPerTile = 16, dx = time * 0.045, dy = 0.0,
+            channel = 0, lo = 0.43f, hi = 0.66f, color = shade, alpha = cloudAmt * 0.35f * 0.75f)
+        // Near layer: 2.08 cells per screen height, drifting left (and a touch down); 8 cells per tile.
+        layer(canvas, w, h, cellPx = h / 2.08f, cellsPerTile = 8, dx = 5.0 - time * 0.1105, dy = time * 0.02,
+            channel = 1, lo = 0.50f, hi = 0.72f, color = cloud, alpha = cloudAmt * 0.55f * 0.92f)
+        // The near clouds' edge that faces the horizon glow.
+        layer(canvas, w, h, cellPx = h / 2.08f, cellsPerTile = 8, dx = 5.0 - time * 0.1105, dy = time * 0.02,
+            channel = 2, lo = 0f, hi = 1f, color = sky.glow, alpha = cloudAmt * 0.55f * 0.22f)
+        // Clouds live in a band: none at the very top, fading out just above the bottom edge.
+        if (maskH != h) {
+            maskH = h
+            val y = floatArrayOf(0f, 0.06f, 0.15f, 0.24f, 0.33f, 0.42f, 0.92f, 0.96f, 1f)
+            val a = floatArrayOf(0f, 0f, 0.156f, 0.5f, 0.844f, 1f, 1f, 0.5f, 0f)
+            maskPaint.shader = android.graphics.LinearGradient(0f, 0f, 0f, h, IntArray(a.size) { android.graphics.Color.argb((a[it] * 255).toInt(), 0, 0, 0) }, y, android.graphics.Shader.TileMode.CLAMP)
+        }
+        canvas.drawRect(0f, 0f, w, h, maskPaint)
+        canvas.restore()
+    }
+
+    private fun layer(
+        canvas: android.graphics.Canvas, w: Float, h: Float, cellPx: Float, cellsPerTile: Int,
+        dx: Double, dy: Double, channel: Int, lo: Float, hi: Float, color: Color, alpha: Float,
+    ) {
+        val scale = cellPx * cellsPerTile / tile
+        // Offset in cells, wrapped to one tile in double precision, then turned into pixels.
+        fun wrap(v: Double) = (Math.floorMod((v * 1_000_000.0).toLong(), cellsPerTile * 1_000_000L) / 1_000_000.0).toFloat()
+        matrix.setScale(scale, scale)
+        // The aspect-corrected shader coordinate is (x / h, y / h) * cells, so moving the noise by +d cells
+        // moves the picture by -d cells on screen.
+        matrix.postTranslate(-wrap(dx) * cellPx, -wrap(dy) * cellPx)
+        shader.setLocalMatrix(matrix)
+        // Field value v (0..255) in the chosen channel -> alpha = clamp((v/255 - lo) / (hi - lo)); colour fixed.
+        val k = 1f / (hi - lo)
+        val m = FloatArray(20)
+        m[4] = color.red * 255f; m[9] = color.green * 255f; m[14] = color.blue * 255f
+        m[15 + channel] = k
+        m[19] = -lo * 255f * k
+        paint.colorFilter = android.graphics.ColorMatrixColorFilter(m)
+        paint.alpha = (alpha.coerceIn(0f, 1f) * 255f).toInt()
+        canvas.drawRect(0f, 0f, w, h, paint)
+    }
+
+    companion object {
+        @Volatile private var cached: SkyClouds? = null
+        fun get(context: android.content.Context): SkyClouds? = cached ?: synchronized(this) {
+            cached ?: runCatching {
+                val opts = android.graphics.BitmapFactory.Options().apply { inScaled = false; inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888 }
+                SkyClouds(android.graphics.BitmapFactory.decodeResource(context.resources, io.github.sammynashed.emran.R.drawable.sky_clouds, opts))
+            }.onFailure { android.util.Log.e("SkyClouds", "cloud image failed to load", it) }.getOrNull().also { cached = it }
+        }
+    }
+}
+
 /** Twinkling stars, drawn at full resolution (they would wash out in the low-res sky texture). */
 fun DrawScope.drawStars(sky: SkyState, size: Size, time: Float) {
     if (size.width <= 0f || size.height <= 0f) return
@@ -221,186 +369,51 @@ fun DrawScope.drawStars(sky: SkyState, size: Size, time: Float) {
     }
 }
 
+// The living sky, kept calm so text reads on it: the gradient, soft slow clouds and a
+// breathing horizon glow, all in the colours of the current prayer time. Drawn on the GPU.
 
-// The living sky: the gradient, drifting clouds, twinkling stars and a breathing
-// horizon glow, all in the colours of the current prayer time. Drawn on the GPU.
-private const val SKY_AGSL = """
-uniform float2 res;
-uniform float time;
-uniform float3 cTop;
-uniform float3 cMid;
-uniform float3 cLow;
-uniform float3 cGlow;
-uniform float3 cCloud;
-uniform float night;
-uniform float cloudAmt;
 
-float hash(float2 p) {
-    p = fract(p * float2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
-}
-float noise(float2 p) {
-    float2 i = floor(p);
-    float2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float a = hash(i);
-    float b = hash(i + float2(1.0, 0.0));
-    float c = hash(i + float2(0.0, 1.0));
-    float d = hash(i + float2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
-float fbm(float2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-        v += a * noise(p);
-        p *= 2.02;
-        a *= 0.5;
-    }
-    return v;
-}
-float segDist(float2 p, float2 a, float2 b) {
-    float2 pa = p - a;
-    float2 ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h);
-}
+/**
+ * "Calm sky": the plain gradient with no clouds, for anyone who wants the quietest screen. Read inside draw lambdas, so flipping it redraws the sky at once.
+ */
+object SkySettings {
+    private val calmState = androidx.compose.runtime.mutableStateOf(false)
+    var calm: Boolean
+        get() = calmState.value
+        private set(v) { calmState.value = v }
+    private var loaded = false
 
-half4 main(float2 frag) {
-    float2 uv = frag / res;
-    float y = uv.y;
-    float aspect = res.x / res.y;
-    float3 col = (y < 0.55)
-        ? mix(cTop, cMid, smoothstep(0.0, 0.55, y))
-        : mix(cMid, cLow, smoothstep(0.55, 1.0, y));
+    private fun prefs(context: android.content.Context) =
+        context.applicationContext.getSharedPreferences("emran_ui", android.content.Context.MODE_PRIVATE)
 
-    // Two cloud layers drifting in opposite directions, so the sky has depth.
-    float2 base = float2(uv.x * aspect, uv.y);
-    float2 p1 = base * 3.2;
-    p1.x += time * 0.045;
-    float n1 = fbm(p1 + fbm(p1 * 0.6 + time * 0.03));
-    float2 p2 = base * 1.6;
-    p2.x -= time * 0.085;
-    float n2 = fbm(p2 * 1.3 + float2(5.0, time * 0.02));
-    float band = smoothstep(0.06, 0.42, y) * (1.0 - smoothstep(0.92, 1.0, y));
-    // Narrow thresholds give clouds a defined edge instead of a smear.
-    float far = smoothstep(0.43, 0.60, n1) * band * cloudAmt * 0.60;
-    float near = smoothstep(0.50, 0.64, n2) * band * cloudAmt;
-    // A second look a hair lower tells us which way each cloud faces: the side toward the
-    // horizon glow is lit, the underside sits in shade, so clouds read as volumes.
-    float n2b = fbm((base * 1.6 + float2(-time * 0.085, 0.0)) * 1.3 + float2(5.0, time * 0.02 + 0.045));
-    float lit = clamp((n2 - n2b) * 11.0, 0.0, 1.0);
-    float shd = clamp((n2b - n2) * 11.0, 0.0, 1.0);
-    float3 shade = mix(cCloud, cMid * 0.72, 0.42);
-    col = mix(col, shade, far * 0.75);
-    col = mix(col, mix(cCloud, shade, shd * 0.55), near * 0.92);
-    col += cGlow * near * lit * 0.40;
-    col += cGlow * near * (0.06 + 0.05 * sin(time * 0.5 + uv.x * 3.0));
-
-    // Horizon glow that breathes.
-    float2 gc = float2(res.x * 0.5, res.y);
-    float d = length((frag - gc) / (res.x * 1.15));
-    float g = exp(-d * d * 3.2) * (0.32 + 0.10 * sin(time * 0.6));
-    col += cGlow * g;
-
-    // Soft rays fanning up from the horizon in daylight and at dusk.
-    float2 q = float2((uv.x - 0.5) * aspect, 1.12 - uv.y);
-    float ang = atan(q.x, q.y);
-    float ray = pow(noise(float2(ang * 6.5, time * 0.10)), 2.4);
-    float fall = smoothstep(1.15, 0.0, length(q));
-    col += cGlow * ray * fall * (1.0 - night) * 0.20;
-
-    // Night: a slow aurora ribbon and, every so often, a shooting star.
-    if (night > 0.15) {
-        float w = sin(uv.x * 5.0 + time * 0.40) * 0.055 + sin(uv.x * 11.0 - time * 0.55) * 0.022;
-        float yy = uv.y - (0.24 + w);
-        float ribbon = exp(-yy * yy * 150.0);
-        float flick = 0.55 + 0.45 * noise(float2(uv.x * 7.0 + time * 0.35, time * 0.25));
-        float3 aur = mix(float3(0.12, 0.95, 0.70), float3(0.58, 0.36, 0.98), clamp(uv.x + 0.15 * sin(time * 0.3), 0.0, 1.0));
-        col += aur * ribbon * flick * 0.34 * night;
-
-        float cyc = 11.0;
-        float id = floor(time / cyc);
-        float k = fract(time / cyc) / 0.085;
-        if (k < 1.0) {
-            float2 s0 = float2((0.12 + 0.55 * hash(float2(id, 1.0))) * aspect, 0.06 + 0.16 * hash(float2(id, 2.0)));
-            float2 dir = normalize(float2(1.0, 0.5));
-            float2 head = s0 + dir * k * 0.42;
-            float dd = segDist(base, head - dir * 0.11, head);
-            col += float3(1.0) * smoothstep(0.0055, 0.0, dd) * (1.0 - k) * night;
-        }
+    fun ensureLoaded(context: android.content.Context) {
+        if (loaded) return
+        loaded = true
+        calm = prefs(context).getBoolean("calm_sky", false)
     }
 
-    // A little noise so the long gradients never band.
-    col += (hash(frag) - 0.5) * (1.4 / 255.0);
-    return half4(half3(clamp(col, 0.0, 1.0)), 1.0);
+    fun set(context: android.content.Context, value: Boolean) {
+        loaded = true
+        calm = value
+        prefs(context).edit().putBoolean("calm_sky", value).apply()
+    }
 }
-"""
 
 /**
  * Owns one sky shader. Each place that paints the sky (the window, and every glass
  * panel's own copy behind it) gets its own painter, so uniforms never clash.
  */
-class SkyPainter {
-    private val shader: RuntimeShader? =
-        if (Build.VERSION.SDK_INT >= 33) runCatching { RuntimeShader(SKY_AGSL) }.getOrNull() else null
+class SkyPainter(context: android.content.Context) {
+    private val clouds = SkyClouds.get(context)
 
     fun paint(scope: DrawScope, sky: SkyState, size: Size, time: Float) {
         if (size.width <= 0f || size.height <= 0f) return
-        val sh = shader
-        if (sh != null && Build.VERSION.SDK_INT >= 33 && runCatching { paintShader(scope, sh, sky, size, time) }.isSuccess) return
-        scope.drawSky(sky, size, time, withStars = false)
-    }
-
-    @RequiresApi(33)
-    private fun paintShader(scope: DrawScope, sh: RuntimeShader, sky: SkyState, size: Size, time: Float) {
-        fun rgb(name: String, c: Color) = sh.setFloatUniform(name, c.red, c.green, c.blue)
-        sh.setFloatUniform("res", size.width, size.height)
-        sh.setFloatUniform("time", time)
-        rgb("cTop", sky.top); rgb("cMid", sky.mid); rgb("cLow", sky.low); rgb("cGlow", sky.glow)
-        rgb("cCloud", lerp(sky.glow, Color.White, 0.55f))
-        sh.setFloatUniform("night", sky.stars)
-        sh.setFloatUniform("cloudAmt", 0.55f + 0.45f * sky.darkInk)
-        scope.drawRect(ShaderBrush(sh), size = size)
-    }
-}
-
-
-private class Mote(val x: Float, val y: Float, val speed: Float, val r: Float, val phase: Float, val a: Float)
-
-private val MOTES: List<Mote> = Random(11).let { rnd ->
-    List(46) {
-        Mote(
-            rnd.nextFloat(), rnd.nextFloat(),
-            0.012f + rnd.nextFloat() * 0.022f,   // screens per second, upward
-            1.6f + rnd.nextFloat() * 2.6f,       // dp
-            rnd.nextFloat() * 6.28f, 0.35f + rnd.nextFloat() * 0.5f,
-        )
-    }
-}
-
-/**
- * Glowing motes drifting up through the daytime and dusk sky. Drawn at full resolution
- * (the sky texture is soft by design), so there is always something crisp that visibly
- * moves when there are no stars. They fade out as the night sky takes over.
- */
-fun DrawScope.drawMotes(sky: SkyState, size: Size, time: Float) {
-    if (size.width <= 0f || size.height <= 0f) return
-    // Daylight only: gone by the time the first stars appear, so dusk never gets "bubbles".
-    val strength = (1f - sky.stars * 2.2f).coerceIn(0f, 1f)
-    if (strength < 0.03f) return
-    val tint = lerp(sky.glow, Color.White, 0.65f)
-    MOTES.forEach { m ->
-        val travel = m.y - time * m.speed
-        val fy = travel - kotlin.math.floor(travel)                      // wraps 0..1, drifting up
-        val fx = m.x + 0.025f * kotlin.math.sin(time * 0.45f + m.phase)    // a gentle sway
-        val edge = kotlin.math.min(fy, 1f - fy).coerceIn(0f, 0.12f) / 0.12f // fade near top/bottom
-        val tw = 0.7f + 0.3f * kotlin.math.sin(time * 1.3f + m.phase * 3f)
-        val c = Offset(fx * size.width, fy * size.height)
-        val r = m.r * density
-        // A tiny crisp speck with the faintest halo; no rings.
-        drawCircle(tint.copy(alpha = (m.a * 0.10f * strength * edge * tw).coerceIn(0f, 1f)), r * 1.5f, c)
-        drawCircle(tint.copy(alpha = (m.a * 0.80f * strength * edge * tw).coerceIn(0f, 1f)), r * 0.45f, c)
+        if (SkySettings.calm || clouds == null) {
+            scope.drawSky(sky, size, time, withStars = false)
+            return
+        }
+        scope.drawSkyGradient(sky, size)
+        scope.drawIntoCanvas { clouds.draw(it.nativeCanvas, sky, size.width, size.height, time.toDouble()) }
+        scope.drawHorizonGlow(sky, size, time, additive = true)
     }
 }

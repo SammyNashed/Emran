@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -22,6 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -112,6 +117,13 @@ fun MushafPageView(
     surahNames: Map<Int, String>,
     /** Isolated reading: only this surah's lines are drawn, the rest of the page stays blank. */
     onlySurah: Int? = null,
+    /** (surah, ayah) to mark with a soft band: the ayah a search led here. */
+    focusAyah: Pair<Int, Int>? = null,
+    /**
+     * A tap on a word or rosette that is showing: (surah, ayah). Returns true when it was
+     * used, so the reader's own tap (show / hide the bars) does not fire as well.
+     */
+    onAyahTap: ((surah: Int, ayah: Int) -> Boolean)? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -199,7 +211,13 @@ fun MushafPageView(
                 }
             }
 
-            val draw = DrawParams(ink, ornament, dark, tajweed, hifzSurah, revealed, fading, current, highlight)
+            // The band fades in, so the eye catches it arriving rather than finding it already there.
+            val focusIn = remember(focusAyah) { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(focusAyah) { if (focusAyah != null) focusIn.animateTo(1f, androidx.compose.animation.core.tween(700)) }
+            val draw = DrawParams(
+                ink, ornament, dark, tajweed, hifzSurah, revealed, fading, current, highlight,
+                focus = focusAyah, focusColor = ornament.copy(alpha = (if (dark) 0.26f else 0.20f) * focusIn.value),
+            )
 
             Column(Modifier.fillMaxSize()) {
                 // Running head: the surah on the right, the juzʾ on the left.
@@ -253,6 +271,7 @@ fun MushafPageView(
                                     mode = if (special) LineMode.Centre else LineMode.Justify,
                                     params = draw,
                                     measurer = measurer,
+                                    onAyahTap = onAyahTap,
                                     modifier = slotModifier,
                                 )
                             }
@@ -293,7 +312,7 @@ private val JUZ_STARTS = intArrayOf(
     302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
 )
 
-private fun juzOf(page: Int): Int = JUZ_STARTS.indexOfLast { page >= it } + 1
+internal fun juzOf(page: Int): Int = JUZ_STARTS.indexOfLast { page >= it } + 1
 
 private fun firstSurahOf(lines: List<List<MushafLayout.Run>>): Int =
     lines.firstOrNull { it.isNotEmpty() }?.first()?.surah ?: 1
@@ -332,6 +351,8 @@ private class DrawParams(
     val fading: Map<Int, Float>,
     val current: Int?,
     val highlight: Color,
+    val focus: Pair<Int, Int>? = null,
+    val focusColor: Color = Color.Transparent,
 )
 
 private fun mushafStyle(sp: Float) = TextStyle(
@@ -406,14 +427,30 @@ private fun MushafLine(
     mode: LineMode,
     params: DrawParams,
     measurer: TextMeasurer,
+    onAyahTap: ((Int, Int) -> Boolean)?,
     modifier: Modifier,
 ) {
     val density = LocalDensity.current
+    // Where each word that is actually showing was drawn, filled by the draw pass (so a hidden
+    // Hifz word can never be tapped). x from, x to, and the item; a word's box takes in half the
+    // gap on each side, so a tap between two words still lands on one of them.
+    val hits = remember(items) { ArrayList<Triple<Float, Float, Item>>(items.size) }
+    val tap by androidx.compose.runtime.rememberUpdatedState(onAyahTap)
+    val tapModifier = if (onAyahTap == null) Modifier else Modifier.pointerInput(items) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+            val x = up.position.x
+            val hit = hits.firstOrNull { x >= it.first && x <= it.second }?.third ?: return@awaitEachGesture
+            if (tap?.invoke(hit.surah, hit.ayah) == true) up.consume()
+        }
+    }
     // Measured once per line and colour scheme. Hifz state is applied in the draw pass.
     val laid = remember(items, fontSp, params.tajweed, params.dark, params.ink, params.ornament) {
         items.map { measureItem(it, fontSp, params, measurer) }
     }
-    Canvas(modifier) {
+    Canvas(modifier.then(tapModifier)) {
+        hits.clear()
         if (laid.isEmpty()) return@Canvas
         val em = with(density) { fontSp.sp.toPx() }
         val avail = size.width
@@ -466,6 +503,17 @@ private fun MushafLine(
                     )
                 }
             }
+            // The searched-for (or opened) ayah, only where its words show: one continuous band under its words (each word's box
+            // reaches half a gap either side, so neighbours meet).
+            if (p.focus != null && item.surah == p.focus.first && item.ayah == p.focus.second && item.word != KIND_RUB) {
+                val bandH = layout.size.height * scaleY * 0.92f
+                drawRect(
+                    p.focusColor,
+                    topLeft = Offset(x - gap / 2f, cy - bandH / 2f),
+                    size = Size(w + gap, bandH),
+                )
+            }
+            if (item.word != KIND_RUB) hits += Triple(x - gap / 2f, x + w + gap / 2f, item)
             val top = cy - layout.size.height / 2f
             withTransform({ scale(scaleX, scaleY, pivot = Offset(x, cy)) }) {
                 drawText(layout, topLeft = Offset(x - word.left, top), alpha = alpha)

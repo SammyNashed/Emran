@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.provider.Settings
+
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -33,7 +33,7 @@ class PrayerScheduleWorker(
                 ?: PrayerTimeCalculator.DEFAULT_ZONE_ID
             val zone = PrayerTimeCalculator.safeZone(zoneIdString)
 
-            val methodStr = preferences.getString("calculation_method", "EGYPTIAN") ?: "EGYPTIAN"
+            val methodStr = preferences.getString("calculation_method", "MWL") ?: "MWL"
             val schoolStr = preferences.getString("asr_school", "SHAFII") ?: "SHAFII"
             val ruleStr = preferences.getString("high_latitude_rule", "AUTOMATIC") ?: "AUTOMATIC"
 
@@ -48,6 +48,9 @@ class PrayerScheduleWorker(
 
             scheduleForDate(today, offsets, lat, lon, zoneIdString, methodStr, schoolStr, ruleStr)
             scheduleForDate(tomorrow, offsets, lat, lon, zoneIdString, methodStr, schoolStr, ruleStr)
+
+            // The morning/evening adhkar reminders ride along with every re-arm of the adhan alarms.
+            runCatching { AdhkarReminders.scheduleAll(applicationContext) }
 
             // Trigger Widget Update pipeline
             io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(applicationContext)
@@ -69,7 +72,7 @@ class PrayerScheduleWorker(
         schoolStr: String,
         ruleStr: String
     ) {
-        val methodEnum = try { PrayerTimeCalculator.CalculationMethod.valueOf(methodStr) } catch(e: Exception) { PrayerTimeCalculator.CalculationMethod.EGYPTIAN }
+        val methodEnum = try { PrayerTimeCalculator.CalculationMethod.valueOf(methodStr) } catch(e: Exception) { PrayerTimeCalculator.CalculationMethod.MWL }
         val schoolEnum = try { PrayerTimeCalculator.AsrSchool.valueOf(schoolStr) } catch(e: Exception) { PrayerTimeCalculator.AsrSchool.SHAFII }
         val ruleEnum = try { PrayerTimeCalculator.HighLatitudeRule.valueOf(ruleStr) } catch(e: Exception) { PrayerTimeCalculator.HighLatitudeRule.AUTOMATIC }
 
@@ -114,11 +117,7 @@ class PrayerScheduleWorker(
         val alarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         for ((name, prayer) in prayers) {
-            val isEnabled = if (name == "Sunrise") {
-                preferences.getBoolean("notif_Fajr", true)
-            } else {
-                preferences.getBoolean("notif_$name", true)
-            }
+            val isEnabled = PrayerAlarmReceiver.isAdhanEnabled(applicationContext, name)
 
             val requestCode = (date.hashCode() + name.hashCode()).hashCode()
             val intent = Intent(applicationContext, PrayerAlarmReceiver::class.java).apply {

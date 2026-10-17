@@ -7,32 +7,17 @@ import ai.ratl.core.Engine
 import ai.ratl.core.Session
 import ai.ratl.core.WordStatus
 import android.content.Context
-import android.net.Uri
 import java.io.File
 
 /**
  * Emran's integration of RATL, the on-device Quran recitation assessment engine.
  *
- * ## Why the model is not bundled, and not downloaded
+ * ## The model ships inside the app
  *
- * Emran declares **no `INTERNET` permission**. That is a manifest-level
- * guarantee, not a policy promise, and it is the strongest privacy claim the app
- * makes - so this feature must not weaken it. An in-app download is therefore
- * off the table entirely: it would require `INTERNET` and change what the
- * operating system permits Emran to do.
- *
- * Bundling the ~31 MB model in the APK was the alternative, and it was rejected
- * too: it makes every user carry the model whether or not they ever check a
- * recitation, and it is stored twice on disk (once in the APK, once extracted
- * for the runtime to open by path).
- *
- * Instead the model is **optional and user-supplied**. The user downloads it
- * once in a browser and imports it through the system file picker, which needs
- * no permission at all. Emran stays offline by construction; the recitation
- * checker simply stays dormant until someone chooses to enable it.
- *
- * Because Emran cannot reach the network, recitation audio provably cannot leave
- * the device. That is enforced by the OS, not by this class promising it.
+ * The ~31 MB model is bundled in the APK (assets/ratl/model/). It used to be an optional download from
+ * GitHub, but GitHub's download servers are unreachable from Syria without a VPN, so for most users the
+ * Hifz mode could never start. On the first Hifz session the model is copied out of the APK (the engine
+ * opens it by path) and its SHA-256 is checked before it is used. Recitation audio never leaves the phone.
  */
 class RecitationAssessor(private val context: Context) {
 
@@ -42,65 +27,37 @@ class RecitationAssessor(private val context: Context) {
     private val modelFile: File get() = File(modelDir, MODEL_NAME)
     private val vocabFile: File get() = File(modelDir, "vocab.json")
 
-    /** True once a verified model has been imported. */
+    /** True once the bundled model has been copied out and verified. */
     val isInstalled: Boolean
         get() = modelFile.isFile && modelFile.length() > 0 && vocabFile.isFile
 
     val isLoaded: Boolean get() = engine != null
 
-    /** Size on disk of the imported model, or 0. */
-    fun installedBytes(): Long = if (isInstalled) modelFile.length() + vocabFile.length() else 0L
-
     /**
-     * Import the model from a user-chosen file.
-     *
-     * The hash is verified before the file is accepted: RATL identifies a model
-     * by its SHA-256 and reports it in every assessment, so an altered or
-     * truncated file must be refused here rather than produce quietly wrong
-     * results later.
+     * Copy the bundled model out of the APK, once, verifying its hash before it is accepted: RATL identifies a
+     * model by its SHA-256, so a truncated copy (a full disk, a killed app) must be refused, not half-used.
      */
-    fun importModel(uri: Uri): Result<Unit> = runCatching {
+    @Synchronized
+    fun installBundled() {
+        if (isInstalled) return
+        modelDir.mkdirs()
         val tmp = File(modelDir, "$MODEL_NAME.part")
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        context.assets.open(BUNDLED_MODEL).use { input ->
             tmp.outputStream().use { out -> input.copyTo(out, 1 shl 16) }
-        } ?: error("Could not open the selected file.")
-
-        val actual = RatlAndroid.sha256(tmp)
-        if (actual != MODEL_SHA256) {
+        }
+        if (RatlAndroid.sha256(tmp) != MODEL_SHA256) {
             tmp.delete()
-            error(
-                "That file does not match the expected RATL model.\n" +
-                    "Expected ${MODEL_SHA256.take(12)}…, got ${actual.take(12)}…",
-            )
+            error("The recitation model could not be prepared. Please free some storage and try again.")
         }
         if (!tmp.renameTo(modelFile)) {
             tmp.delete()
-            error("Could not save the model.")
+            error("The recitation model could not be saved.")
         }
-        // The vocabulary is small and fixed, and ships with the app so only one
-        // file has to be imported.
         context.assets.open("ratl/vocab.json").use { input ->
             vocabFile.outputStream().use { out -> input.copyTo(out) }
         }
-    }
-
-    /**
-     * Install a model from a file already on disk, verifying it first.
-     *
-     * Shared by the download path and the file-picker path so verification
-     * cannot be bypassed by whichever one is added later.
-     *
-     * @return true if the file matched the expected hash and was installed
-     */
-    fun installFrom(source: File): Boolean {
-        if (!source.isFile || source.length() <= 0L) return false
-        if (RatlAndroid.sha256(source) != MODEL_SHA256) return false
-        modelDir.mkdirs()
-        source.copyTo(modelFile, overwrite = true)
-        context.assets.open("ratl/vocab.json").use { input ->
-            vocabFile.outputStream().use { out -> input.copyTo(out) }
-        }
-        return isInstalled
+        // A half-finished download from the old in-app downloader would otherwise sit there forever (up to 31 MB).
+        runCatching { File(context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "ratl-model.part").delete() }
     }
 
     /**
@@ -116,17 +73,10 @@ class RecitationAssessor(private val context: Context) {
         return File(base, "hifz-audio").apply { mkdirs() }
     }
 
-    /** Remove the imported model and free the space. */
-    fun removeModel() {
-        release()
-        modelFile.delete()
-        vocabFile.delete()
-    }
-
     /** Load the engine. Call off the main thread - it reads ~31 MB. */
     fun load(): Engine {
         engine?.let { return it }
-        check(isInstalled) { "The recitation model has not been added yet." }
+        installBundled()
         // RATL defaults to ONE thread because its G5 benchmark is specified
         // single-threaded (SPEC 7.2) - a rule about what figure may be
         // reported, not a limit of the engine. On a phone one thread decodes
@@ -172,32 +122,9 @@ class RecitationAssessor(private val context: Context) {
         const val MODEL_NAME = "ratl-align-v1-e2e-fp32.onnx"
         const val MODEL_SHA256 =
             "95a01016aa1383bf60d28edfe5eaf6baecb65b71280cc5085b67ce05545d2798"
-        const val MODEL_SIZE_MB = 31
 
-        /** Where a user can obtain the model, shown as text for manual import. */
-        const val MODEL_SOURCE = "github.com/SammyNashed/ratl/releases"
-
-        /**
-         * The release asset [ModelDownloader] fetches.
-         *
-         * This is a contract with the RATL repository, not a free-form link.
-         * The tag and asset name are the ones RATL's own
-         * `docs/MODEL_DISTRIBUTION.md` publishes as the distribution channel;
-         * rename either side and every install of Emran loses the in-app
-         * download at once. The SHA-256 in [MODEL_SHA256] pins the contents, so
-         * republishing different bytes under the same tag fails verification
-         * rather than shipping silently.
-         *
-         * `vocab.json` is attached to the same release for other integrators.
-         * Emran does not fetch it - it ships in `assets/ratl/`, because a
-         * 35-token file is not worth a second request that can fail.
-         *
-         * HTTPS and a real host, deliberately: the previous value pointed at
-         * `127.0.0.1` over `adb reverse`, which could only ever work with a
-         * developer machine on the other end of a USB cable.
-         */
-        const val MODEL_URL =
-            "https://github.com/SammyNashed/ratl/releases/download/v1.0.0/" + MODEL_NAME
+        /** The model inside the APK. */
+        const val BUNDLED_MODEL = "ratl/model/$MODEL_NAME"
 
         /** RATL requires exactly this rate. */
         const val SAMPLE_RATE = 16_000

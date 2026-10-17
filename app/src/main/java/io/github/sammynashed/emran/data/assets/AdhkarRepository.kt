@@ -110,7 +110,15 @@ object AdhkarRepository {
         return categoryCache
     }
 
+    /**
+     * Every folder: the user's own ("أذكاري", see [MyAdhkar]) first, then the bundled ones. The
+     * user's folder is rebuilt on each call, so edits show everywhere (bookmarks, search) at once.
+     */
     suspend fun loadAdhkar(context: Context): List<AdhkarFolder> = withContext(Dispatchers.IO) {
+        listOf(MyAdhkar.folder(context)) + loadBundled(context)
+    }
+
+    private suspend fun loadBundled(context: Context): List<AdhkarFolder> = withContext(Dispatchers.IO) {
         if (cache.isNotEmpty()) return@withContext cache
 
         try {

@@ -5,13 +5,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceModifier
-import androidx.glance.background
-import androidx.glance.appwidget.cornerRadius
+
 import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.padding
+
 import androidx.glance.text.FontWeight
 import androidx.glance.text.TextStyle
 import androidx.glance.text.TextAlign
@@ -101,65 +97,3 @@ object Glass {
         if (rtl) Alignment.End else Alignment.Start
 }
 
-/**
- * The frosted pane every widget sits on: hairline edge, translucent tinted
- * body, accent wash.
- */
-@Composable
-fun GlassPane(
-    modifier: GlanceModifier = GlanceModifier,
-    contentPadding: Dp = 16.dp,
-    contentAlignment: Alignment = Alignment.TopStart,
-    content: @Composable () -> Unit
-) {
-    val colors = EmranGlanceTheme.colors
-    val pane = colors.backgroundRaw.copy(alpha = Glass.Alpha.PANE)
-    val edge = colors.textPrimaryRaw.copy(alpha = Glass.Alpha.EDGE)
-    val wash = colors.accentRaw.copy(alpha = Glass.Alpha.WASH)
-
-    // Outer box paints the hairline edge; the 1dp padding is what makes it read
-    // as a stroke rather than a fill.
-    Box(
-        modifier = modifier
-            .background(ColorProvider(edge))
-            .cornerRadius(Glass.Radius.Outer)
-            .padding(1.dp)
-    ) {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(ColorProvider(pane))
-                .cornerRadius(Glass.Radius.Inner)
-        ) {
-            // Accent wash, laid over the pane so the tint follows the app theme.
-            Box(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(ColorProvider(wash))
-                    .cornerRadius(Glass.Radius.Inner)
-                    .padding(contentPadding),
-                contentAlignment = contentAlignment
-            ) {
-                content()
-            }
-        }
-    }
-}
-
-/** A small translucent chip, for counts and accent labels. */
-@Composable
-fun GlassChip(
-    modifier: GlanceModifier = GlanceModifier,
-    content: @Composable () -> Unit
-) {
-    val colors = EmranGlanceTheme.colors
-    Box(
-        modifier = modifier
-            .background(ColorProvider(colors.accentRaw.copy(alpha = 0.18f)))
-            .cornerRadius(Glass.Radius.Chip)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        content()
-    }
-}

@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import java.io.File
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 
@@ -23,8 +22,8 @@ import org.json.JSONArray
  *   adb logcat -d -s RATL-PIPE:I
  *
  * Checks, in order:
- *   1. DownloadManager fetches the model without Emran holding INTERNET
- *   2. SHA-256 verification accepts the real file and rejects a corrupt one
+ *   1. (with --ez fresh true) the unpacked model is wiped, to replay a first launch
+ *   2. the bundled model is unpacked from the APK and its SHA-256 verified, timed
  *   3. Emran's own quran.json Arabic -> Normalizer -> tokenizer -> model
  *      -> WordStatus results the UI can render
  */
@@ -34,15 +33,7 @@ class PipelineCheckReceiver : BroadcastReceiver() {
         val pending = goAsync()
         Thread {
             try {
-                // Downloading is OFF by default: a broadcast receiver gets about
-                // ten seconds, and MIUI defers download jobs far beyond that, so
-                // attempting it here ANRs the app. The download belongs to the
-                // sheet, whose scope lives as long as the screen. Pass
-                // --ez download true only when deliberately probing it.
-                run(
-                    context.applicationContext,
-                    keepModel = !intent.getBooleanExtra("download", false),
-                )
+                run(context.applicationContext, fresh = intent.getBooleanExtra("fresh", false))
             } catch (t: Throwable) {
                 say("FATAL ${t::class.java.simpleName}: ${t.message}")
             } finally {
@@ -68,39 +59,25 @@ class PipelineCheckReceiver : BroadcastReceiver() {
         error("ayah $surah:$ayah not in quran.json")
     }
 
-    private fun run(ctx: Context, keepModel: Boolean) = runBlocking {
+    private fun run(ctx: Context, fresh: Boolean) = runBlocking {
         say("=== RATL FULL PIPELINE CHECK ===")
 
         val assessor = RecitationAssessor(ctx)
-        if (!keepModel) {
-            assessor.removeModel()
-            say("1. model removed, isInstalled=${assessor.isInstalled}")
+        if (fresh) {
+            File(ctx.filesDir, "ratl-model").deleteRecursively()
+            say("1. unpacked model wiped, isInstalled=${assessor.isInstalled}")
         } else {
-            say("1. keeping existing model, isInstalled=${assessor.isInstalled}")
+            say("1. keeping the unpacked model, isInstalled=${assessor.isInstalled}")
         }
 
-        // ---- download + verify, through the same class the sheet uses
-        val events = if (keepModel) emptyList() else runCatching {
-            ModelDownloader(ctx).download(assessor, cancelOnClose = false).toList() }
-            .getOrElse {
-                say("   download threw ${it::class.java.simpleName}: ${it.message}")
-                emptyList()
-            }
-        val running = events.count { it is ModelDownloader.Progress.Running }
-        val verified = events.any { it is ModelDownloader.Progress.Verifying }
-        val installed = events.any { it is ModelDownloader.Progress.Installed }
-        val failures = events.filterIsInstance<ModelDownloader.Progress.Failed>()
-        say("2. download: progress_events=$running verifying=$verified installed=$installed")
-        if (failures.isNotEmpty()) say("   failures=${failures.map { it.reason }}")
-        say("   isInstalled=${assessor.isInstalled} bytes=${assessor.installedBytes()}")
-
-        // ---- a corrupt file must be refused
-        val bogus = File(ctx.cacheDir, "bogus.onnx").apply { writeText("not a model") }
-        val rejected = !assessor.installFrom(bogus)
-        bogus.delete()
-        say("3. corrupt file rejected=$rejected")
-
-        if (!assessor.isInstalled) {
+        // ---- unpack from the APK + verify, through the same call Hifz mode makes
+        val t0 = System.nanoTime()
+        val unpacked = runCatching { assessor.installBundled() }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        say("2. installBundled ok=${unpacked.isSuccess} in ${ms} ms, isInstalled=${assessor.isInstalled}" +
+            (unpacked.exceptionOrNull()?.let { " error=${it.message}" } ?: ""))
+        val installed = assessor.isInstalled
+        if (!installed) {
             say("RESULT: STOPPED - no model installed, cannot assess")
             return@runBlocking
         }
@@ -128,8 +105,7 @@ class PipelineCheckReceiver : BroadcastReceiver() {
             a.words.none { it.status == WordStatus.PENDING } &&
             a.words.none { it.status == WordStatus.SUBSTITUTION }
         say(
-            "RESULT: ${if (ok && installed && rejected) "PASS" else "SEE ABOVE"} " +
-                "(download=$installed verify_rejects_corrupt=$rejected assess=$ok)",
+            "RESULT: ${if (ok && installed) "PASS" else "SEE ABOVE"} (bundled=$installed assess=$ok)",
         )
         assessor.release()
     }

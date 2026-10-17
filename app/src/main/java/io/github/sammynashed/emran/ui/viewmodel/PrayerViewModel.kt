@@ -2,7 +2,7 @@ package io.github.sammynashed.emran.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
+
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope // Trigger 2
 import androidx.work.OneTimeWorkRequestBuilder
@@ -21,10 +21,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
-import java.time.Instant
-import java.time.temporal.ChronoUnit
-import kotlin.math.roundToInt
-
 
 class PrayerViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -55,7 +51,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
-    val appIconPreset = MutableStateFlow(preferences.getString("app_icon_preset", "EXPRESSIVE") ?: "EXPRESSIVE")
+    // Material You and the extra colour icons were retired; anything else falls back to Default.
     val locationName = MutableStateFlow(preferences.getString("location_name", "Aleppo, Syria") ?: "Aleppo, Syria")
     val currentLanguage = MutableStateFlow(preferences.getString("current_language", "en") ?: "en")
     val latitude = MutableStateFlow(preferences.getFloat("latitude", 36.2021f).toDouble())
@@ -98,10 +94,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
 
     val currentDate = MutableStateFlow(LocalDate.now())
 
-
-
-
-    val calculationMethod = MutableStateFlow(preferences.getString("calculation_method", "EGYPTIAN") ?: "EGYPTIAN")
+    val calculationMethod = MutableStateFlow(preferences.getString("calculation_method", "MWL") ?: "MWL")
     val asrSchool = MutableStateFlow(preferences.getString("asr_school", "SHAFII") ?: "SHAFII")
 
     /**
@@ -118,7 +111,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun parseMethod(value: String) = try {
         PrayerTimeCalculator.CalculationMethod.valueOf(value)
     } catch (e: Exception) {
-        PrayerTimeCalculator.CalculationMethod.EGYPTIAN
+        PrayerTimeCalculator.CalculationMethod.MWL
     }
 
     private fun parseSchool(value: String) = try {
@@ -183,7 +176,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
 
     // Notification states for the five daily prayers and sunrise
     val fahrNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Fajr", true))
-    val sunriseNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Sunrise", true))
+    val sunriseNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Sunrise", preferences.getBoolean("notif_Fajr", true)))
     val dhuhrNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Dhuhr", true))
     val asrNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Asr", true))
     val maghribNotifEnabled = MutableStateFlow(preferences.getBoolean("notif_Maghrib", true))
@@ -205,7 +198,8 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val currentVal = isPrayerNotificationEnabled(prayerName)
             val newVal = !currentVal
-            preferences.edit().putBoolean("notif_$prayerName", newVal).apply()
+            // commit (not apply): the alarm receiver may read this from another thread a moment later.
+            preferences.edit().putBoolean("notif_$prayerName", newVal).commit()
             
             when (prayerName) {
                 "Fajr" -> fahrNotifEnabled.value = newVal
@@ -303,14 +297,14 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         val nextPrayerName: String = "Fajr",
         val formattedRemaining: String = "00:00:00",
         val nextPrayerTime: String = "00:00",
+        /** The next adhan itself, so the screen can format it on the user's 12/24-hour clock. */
+        val nextPrayerAt: java.time.LocalDateTime? = null,
         val depletingRatio: Float = 1.0f,
         val entireDayProgress: Float = 0.0f
     )
 
     private val _countdownState = MutableStateFlow(CountdownState())
     val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
-
-
 
     private suspend fun updateCountdown() {
         val lat = latitude.value
@@ -405,6 +399,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             nextPrayerName = nextName,
             formattedRemaining = formatted,
             nextPrayerTime = nextTime.format(timeFormatter),
+            nextPrayerAt = nextTime,
             depletingRatio = ratio,
             entireDayProgress = entireDayProgress
         )
@@ -418,7 +413,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         lon: Double,
         zone: String,
         notificationsEnabled: Boolean = true,
-        initialCalculationMethod: String = "EGYPTIAN",
+        initialCalculationMethod: String = "MWL",
         initialAsrSchool: String = "SHAFII",
         defaultAdhanSoundVal: String = "default"
     ) {
@@ -468,74 +463,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun updateAppIcon(theme: String, restartApp: Boolean = false) {
-        val app = getApplication<Application>()
-        val packageManager = app.packageManager
-        val packageName = app.packageName
-
-        val aliases = listOf(
-            "Expressive", "Cosmic", "Teal", "Rose", "Golden", "Emerald", 
-            "Ocean", "Amythist", "Sunfire", "Sapphire", "Lavender", "Mint", 
-            "Forest", "Blood_moon", "Monochrome", "Sakura", "Nebula", 
-            "Desert", "Aurora", "Black_stone"
-        )
-        
-        // Capitalize the first letter and lowercase the rest to match alias naming
-        val activeAlias = when (theme) {
-            "BLOOD_MOON" -> "Blood_moon"
-            "BLACK_STONE" -> "Black_stone"
-            else -> theme.lowercase().replaceFirstChar { it.uppercase() }
-        }
-
-        val previouslyActive = preferences.getString("currently_active_launcher_alias", "Expressive")
-        if (activeAlias == previouslyActive) {
-            // Already set, do nothing to avoid killing the process unnecessarily!
-            return
-        }
-
-        try {
-            for (alias in aliases) {
-                val componentName = android.content.ComponentName(
-                    packageName,
-                    "io.github.sammynashed.emran.MainActivityAlias$alias"
-                )
-                val isTarget = alias == activeAlias
-                val newState = if (isTarget) {
-                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                } else {
-                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                }
-
-                val currentState = packageManager.getComponentEnabledSetting(componentName)
-                if (currentState != newState) {
-                    packageManager.setComponentEnabledSetting(
-                        componentName,
-                        newState,
-                        android.content.pm.PackageManager.DONT_KILL_APP
-                    )
-                }
-            }
-            
-            // Save the successfully applied active launcher alias
-            preferences.edit().putString("currently_active_launcher_alias", activeAlias).apply()
-            
-            if (restartApp) {
-                // Manually restart the app to apply the alias change cleanly
-                var intent = packageManager.getLaunchIntentForPackage(packageName)
-                if (intent == null) {
-                    intent = android.content.Intent().apply {
-                        setClassName(packageName, "io.github.sammynashed.emran.MainActivity")
-                    }
-                }
-                intent.putExtra("START_DESTINATION", "finetune")
-                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                app.startActivity(intent)
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("PrayerViewModel", "Failed to update dynamic launcher icon", e)
-        }
-    }
-
     fun setThemePreset(preset: String) {
         preferences.edit().putString("theme_preset", preset).apply()
         themePreset.value = preset
@@ -553,15 +480,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setCurrentLanguage(lang: String) {
         preferences.edit().putString("current_language", lang).apply()
         currentLanguage.value = lang
-    }
-
-    fun setAppIconPreset(preset: String) {
-        preferences.edit().putString("app_icon_preset", preset).apply()
-        appIconPreset.value = preset
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(800)
-            updateAppIcon(preset, restartApp = true)
-        }
     }
 
     fun setLocation(name: String, lat: Double, lon: Double, zone: String) {
@@ -609,6 +527,26 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     init {
+        // 2.1.1: the default method moved from Egyptian (Fajr 19.5 deg) to Muslim World League
+        // (18/17 deg), which is what Google and the Syrian timetables show for Aleppo. Egyptian
+        // runs about 7 minutes early there, so installs still on it are moved over once; anyone
+        // can pick another method again in Settings afterwards.
+        if (!preferences.getBoolean("method_mwl_default_v1", false)) {
+            preferences.edit().putBoolean("method_mwl_default_v1", true).apply()
+            if (calculationMethod.value == "EGYPTIAN") setCalculationMethod("MWL")
+        }
+        // Earlier builds let the user switch launcher icons; make sure the one entry left is on.
+        run {
+            val app = getApplication<Application>()
+            val entry = android.content.ComponentName(app.packageName, "io.github.sammynashed.emran.MainActivityAliasDefault")
+            if (app.packageManager.getComponentEnabledSetting(entry) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                app.packageManager.setComponentEnabledSetting(
+                    entry,
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP,
+                )
+            }
+        }
         io.github.sammynashed.emran.data.StoredDataPurge.run(getApplication(), preferences)
 
         // Trigger live countdown timer tick every second
@@ -618,7 +556,6 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
                 delay(1000)
             }
         }
-
 
         // Initialize default offsets & Qada structures if not existing in DB
          viewModelScope.launch {

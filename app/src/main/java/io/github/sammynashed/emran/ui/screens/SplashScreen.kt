@@ -1,296 +1,255 @@
 package io.github.sammynashed.emran.ui.screens
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import android.provider.Settings
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+
+import androidx.compose.ui.geometry.Offset
+
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import io.github.sammynashed.emran.R
-import io.github.sammynashed.emran.ui.theme.AppTheme
+import io.github.sammynashed.emran.ui.design.LocalSky
+import io.github.sammynashed.emran.ui.design.EmranIndigo
+import io.github.sammynashed.emran.ui.design.drawEmranMark
+import io.github.sammynashed.emran.ui.design.LocalSkyLayer
+import io.github.sammynashed.emran.ui.design.LocalSkySize
+import io.github.sammynashed.emran.ui.design.LocalSkyTime
+import io.github.sammynashed.emran.ui.design.drawSkyTexture
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.draw.drawBehind
+import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
+import io.github.sammynashed.emran.ui.theme.InterFontFamily
+import io.github.sammynashed.emran.ui.theme.ReadexFontFamily
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** Settles hard and lands soft: the curve for everything that arrives. */
+private val Arrive = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
+
+/**
+ * "Five pillars at dawn", on the live sky. The caller wraps it in SkyHost, so it is the same
+ * sky Home shows and the hand-off has no seam.
+ *
+ *    0 ms  the launcher icon's tile springs in (slight overshoot)
+ *  180 ms  the five pillars rise one after another, like the five prayers; each stretches as it
+ *          rises and squashes as it lands; a light tick when the tallest one lands
+ *  520 ms  the name rises in, its letter-spacing settling; the tagline follows
+ *  560 ms  a glow breathes behind the tile while a band of light sweeps across the pillars
+ * 1250 ms  exit: the tile dips, then lifts and dissolves upward, and the splash fades off Home
+ *
+ * Home is already composed underneath. The animation waits (on the plain sky, which continues
+ * the window background) until frames are arriving steadily, so cold-start work never lands
+ * mid-motion; that wait is capped at 1.5 s.
+ *
+ * A tap skips straight to the exit. With animations off in system settings it shows the
+ * finished logo briefly, then fades.
+ */
 @Composable
 fun SplashScreen(
-    appIconPreset: String,
     onSplashFinished: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
+    val sky = LocalSky.current
+    val skyLayer = LocalSkyLayer.current
+    val skySize = LocalSkySize.current
+    val skyTime = LocalSkyTime.current
+    val ar = LocalAppLanguage.current == "ar"
     val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-
-    // Animation States
-    val bgGlowAlpha = remember { Animatable(0f) }
-    
-    // Staggered bars
-    val barScales = List(5) { remember { Animatable(0f) } }
-    
-    // Logo container transparency & pulse
-    val containerAlpha = remember { Animatable(0f) }
-    val pulseScale = remember { Animatable(1f) }
-    
-    // Explosive soft halo
-    val explosionHaloScale = remember { Animatable(0.8f) }
-    val explosionHaloAlpha = remember { Animatable(0f) }
-
-    // Text & subtitle animation states
-    val emranAlpha = remember { Animatable(0f) }
-    val emranY = remember { Animatable(20f) }
-    val arabicAlpha = remember { Animatable(0f) }
-    val englishAlpha = remember { Animatable(0f) }
-
-    // Overall overlay fade-out state
-    val overallAlpha = remember { Animatable(1f) }
-
-    val presetColors = remember(appIconPreset) {
-        io.github.sammynashed.emran.ui.theme.getColorsByPreset(appIconPreset)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val reduceMotion = remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
 
-    LaunchedEffect(Unit) {
-        coroutineScope.launch {
-            // 1 & 2. Background glow fades in subtly
-            launch {
-                bgGlowAlpha.animateTo(
-                    targetValue = 0.25f, // Barely visible
-                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
-                )
+    val tileScale = remember { Animatable(0.82f) }
+    val tileAlpha = remember { Animatable(0f) }
+    val bars = remember { List(5) { Animatable(0f) } }
+    val sheen = remember { Animatable(-0.5f) }
+    val halo = remember { Animatable(0f) }
+    val word = remember { Animatable(0f) }
+    val tagline = remember { Animatable(0f) }
+    // Exit.
+    val lift = remember { Animatable(0f) }        // 0 resting, 1 gone upward
+    val dip = remember { Animatable(1f) }
+    val textOut = remember { Animatable(1f) }
+    val whole = remember { Animatable(1f) }
+
+    var exiting by remember { mutableStateOf(false) }
+    var timeline by remember { mutableStateOf<Job?>(null) }
+
+    fun exit() {
+        if (exiting) return
+        exiting = true
+        timeline?.cancel()
+        scope.launch {
+            if (reduceMotion) {
+                whole.animateTo(0f, tween(200, easing = LinearEasing))
+            } else {
+                // Overlapping action: the words leave first, the tile a beat later, the sky last.
+                launch { textOut.animateTo(0f, tween(160, easing = FastOutLinearInEasing)) }
+                dip.animateTo(0.95f, tween(90, easing = FastOutLinearInEasing))          // anticipation
+                launch { dip.animateTo(1f, tween(260, easing = Arrive)) }
+                launch { lift.animateTo(1f, tween(320, easing = FastOutLinearInEasing)) }
+                delay(60)
+                whole.animateTo(0f, tween(300, easing = LinearEasing))
             }
-            
-            // 3 & 4. Bars emerge with smooth upward motion
-            (0..4).forEach { index ->
-                launch {
-                    delay(50 + index * 50L)
-                    barScales[index].animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    )
-                }
-            }
-            
-            // Container border and background fade in smoothly
-            launch {
-                delay(200)
-                containerAlpha.animateTo(1f, tween(400, easing = FastOutSlowInEasing))
-            }
-            
-            // 5, 6, 7. Pulse together and soft halo expands
-            launch {
-                delay(500)
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                
-                launch {
-                    pulseScale.animateTo(1.05f, tween(150, easing = FastOutSlowInEasing))
-                    pulseScale.animateTo(1f, tween(250, easing = FastOutSlowInEasing))
-                }
-                launch {
-                    explosionHaloScale.snapTo(0.8f)
-                    explosionHaloScale.animateTo(2.2f, tween(400, easing = FastOutSlowInEasing))
-                }
-                launch {
-                    explosionHaloAlpha.snapTo(0.5f)
-                    explosionHaloAlpha.animateTo(0f, tween(400, easing = FastOutSlowInEasing))
-                }
-            }
-            
-            // 8. Fade in "Emran"
-            launch {
-                delay(600)
-                launch { emranAlpha.animateTo(1f, tween(300, easing = FastOutSlowInEasing)) }
-                launch { emranY.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-            }
-            
-            // 9. Fade in Arabic tagline
-            launch {
-                delay(700)
-                arabicAlpha.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
-            }
-            
-            // 10. Fade in English tagline
-            launch {
-                delay(800)
-                englishAlpha.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
-            }
-            
-            // 11. Hold for a brief moment
-            delay(1200)
-            
-            // 12. Transition smoothly to home screen
-            overallAlpha.animateTo(0f, tween(300, easing = LinearEasing))
             onSplashFinished()
         }
     }
 
-    // Pure black screen
+    LaunchedEffect(Unit) {
+        timeline = launch {
+            // Hold until the app has finished its first heavy frames: six in a row on time.
+            var last = 0L
+            var steady = 0
+            val t0 = System.nanoTime()
+            while (steady < 6 && System.nanoTime() - t0 < 1_500_000_000L) {
+                withFrameNanos { n ->
+                    steady = if (last != 0L && n - last < 24_000_000L) steady + 1 else 0
+                    last = n
+                }
+            }
+            if (reduceMotion) {
+                tileScale.snapTo(1f); tileAlpha.snapTo(1f); bars.forEach { it.snapTo(1f) }
+                word.snapTo(1f); tagline.snapTo(1f); halo.snapTo(0.3f)
+                delay(500)
+            } else {
+                launch { tileAlpha.animateTo(1f, tween(220, easing = LinearEasing)) }
+                launch { tileScale.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 300f)) }
+                bars.forEachIndexed { i, bar ->
+                    launch {
+                        delay(180L + i * 70L)
+                        // An under-damped spring overshoots past full height (the stretch) and
+                        // dips back below it on the rebound (the squash).
+                        bar.animateTo(1f, spring(dampingRatio = 0.48f, stiffness = 420f))
+                    }
+                }
+                launch { delay(180L + 2 * 70L + 150L); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                launch { delay(520); word.animateTo(1f, tween(460, easing = Arrive)) }
+                launch { delay(660); tagline.animateTo(1f, tween(420, easing = Arrive)) }
+                launch {
+                    delay(560)
+                    halo.animateTo(0.6f, tween(320, easing = Arrive))
+                    halo.animateTo(0.3f, tween(500, easing = Arrive))
+                }
+                launch { delay(600); sheen.animateTo(1.5f, tween(520, easing = Arrive)) }
+                delay(1250)
+            }
+            exit()
+        }
+    }
+
+    val tileDp = 112.dp
     Box(
-        modifier = modifier
+        modifier
             .fillMaxSize()
-            .alpha(overallAlpha.value)
-            .background(Color.Black), // Start pure black
-        contentAlignment = Alignment.Center
+            .graphicsLayer { alpha = whole.value }
+            // The same sky texture Home is drawn on (rendered once by SkyHost), so this costs a copy, not a shader.
+            .drawBehind { drawSkyTexture(skyLayer, sky, if (skySize.width > 0f) skySize else size, skyTime.value) }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { exit() },
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            // Main Logo Area
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(160.dp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Canvas(
+                Modifier
+                    .size(tileDp * 2.2f)
+                    .graphicsLayer {
+                        val s = tileScale.value * dip.value * (1f + 0.22f * lift.value)
+                        scaleX = s; scaleY = s
+                        translationY = -36.dp.toPx() * lift.value
+                        alpha = tileAlpha.value * (1f - lift.value)
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    },
             ) {
-                // Subtle ambient center glow
-                Box(
-                    modifier = Modifier
-                        .size(300.dp)
-                        .alpha(bgGlowAlpha.value)
-                        .blur(80.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    presetColors.primary.copy(alpha = 0.5f),
-                                    presetColors.secondary.copy(alpha = 0.1f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
-                // Expanding Soft Halo (Pulse Effect)
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .scale(explosionHaloScale.value)
-                        .alpha(explosionHaloAlpha.value)
-                        .blur(24.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(
-                                    presetColors.primary.copy(alpha = 0.8f),
-                                    presetColors.secondary.copy(alpha = 0.4f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
-                // Logo Container
-                Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .scale(pulseScale.value) // Pluses together
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    presetColors.primary.copy(alpha = 0.15f * containerAlpha.value),
-                                    presetColors.secondary.copy(alpha = 0.05f * containerAlpha.value)
-                                )
-                            )
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.15f * containerAlpha.value),
-                            shape = RoundedCornerShape(32.dp)
+                val c = center
+                val tilePx = tileDp.toPx()
+                // Glow behind the tile, in the colour the sky is glowing right now.
+                if (halo.value > 0f) {
+                    drawCircle(
+                        Brush.radialGradient(
+                            listOf(sky.glow.copy(alpha = halo.value), EmranIndigo.copy(alpha = halo.value * 0.35f), Color.Transparent),
+                            center = c, radius = size.minDimension / 2f,
                         ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // The 5 Bars
-                    Row(
-                        modifier = Modifier.padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        val heights = listOf(28.dp, 40.dp, 52.dp, 40.dp, 28.dp)
-                        heights.forEachIndexed { index, h ->
-                            Box(
-                                modifier = Modifier
-                                    .width(8.dp)
-                                    .height(h)
-                                    .graphicsLayer {
-                                        transformOrigin = TransformOrigin(0.5f, 1f) // Grow from bottom
-                                        scaleY = barScales[index].value
-                                        alpha = barScales[index].value.coerceAtLeast(0f)
-                                    }
-                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                presetColors.primary,
-                                                presetColors.secondary
-                                            )
-                                        )
-                                    )
-                                    .border(
-                                        width = 0.5.dp,
-                                        color = Color.White.copy(alpha = 0.25f),
-                                        shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
-                                    )
-                            )
-                        }
+                        radius = size.minDimension / 2f, center = c,
+                    )
+                }
+                // The launcher icon, with each pillar at its own height of the rise.
+                val tl = Offset(c.x - tilePx / 2f, c.y - tilePx / 2f)
+                val pillars = drawEmranMark(c, tilePx) { bars[it].value }
+                // Dawn light: a soft diagonal band sweeping across the pillars only.
+                if (sheen.value > -0.4f && sheen.value < 1.4f) {
+                    clipPath(pillars) {
+                        val sx = tl.x + tilePx * sheen.value
+                        drawRect(
+                            Brush.linearGradient(
+                                0f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.55f), 1f to Color.Transparent,
+                                start = Offset(sx - tilePx * 0.25f, tl.y + tilePx), end = Offset(sx + tilePx * 0.25f, tl.y),
+                            ),
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main branding text
+            Spacer(Modifier.height(4.dp))
             Text(
-                text = "Emran",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = FontFamily.SansSerif,
-                letterSpacing = 1.2.sp,
-                modifier = Modifier
-                    .alpha(emranAlpha.value)
-                    .graphicsLayer { translationY = emranY.value }
+                if (ar) "عِمران" else "Emran",
+                color = sky.ink,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = if (ar) ReadexFontFamily else InterFontFamily,
+                // The tracking settles as the word arrives (Latin only: spacing Arabic would break its joins).
+                letterSpacing = if (ar) 0.em else (0.30f - 0.20f * word.value).em,
+                modifier = Modifier.graphicsLayer {
+                    alpha = word.value * textOut.value
+                    translationY = 14.dp.toPx() * (1f - word.value) - 20.dp.toPx() * lift.value
+                },
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Arabic tagline
+            Spacer(Modifier.height(6.dp))
             Text(
-                text = "الصلاة عمران الروح",
-                color = presetColors.primary.copy(alpha = 0.85f),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.5.sp,
-                modifier = Modifier.alpha(arabicAlpha.value)
-            )
-            
-            Spacer(modifier = Modifier.height(2.dp))
-            
-            // English tagline
-            Text(
-                text = "The Prosperity of the Soul",
-                color = AppTheme.colors.grayMuted,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                modifier = Modifier.alpha(englishAlpha.value)
+                if (ar) "الصلاة عِمران الروح" else "The prosperity of the soul",
+                color = sky.inkSoft,
+                fontSize = 15.sp,
+                fontFamily = if (ar) ReadexFontFamily else InterFontFamily,
+                letterSpacing = if (ar) 0.em else 0.04.em,
+                modifier = Modifier.graphicsLayer {
+                    alpha = tagline.value * textOut.value
+                    translationY = 10.dp.toPx() * (1f - tagline.value)
+                },
             )
         }
     }

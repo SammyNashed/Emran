@@ -23,6 +23,25 @@ import java.net.URL
 object UpdateChecker {
 
     const val CHANNEL_URL = "https://t.me/emran_app"
+    private const val CHANNEL_HANDLE = "emran_app"
+
+    /**
+     * Opens the channel in the Telegram app. `tg://` goes straight to the app without looking
+     * up t.me, which some networks block; the https link is the fallback for a phone where
+     * the app is missing. Returns false when neither could be opened.
+     */
+    fun openChannel(context: android.content.Context): Boolean {
+        for (uri in listOf("tg://resolve?domain=$CHANNEL_HANDLE", CHANNEL_URL)) {
+            try {
+                context.startActivity(
+                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+                return true
+            } catch (_: Exception) { /* try the next one */ }
+        }
+        return false
+    }
     private const val LATEST_URL =
         "https://github.com/SammyNashed/Emran/releases/download/update/latest.json"
 
@@ -35,14 +54,21 @@ object UpdateChecker {
         data object Failed : Result
     }
 
-    suspend fun check(isArabic: Boolean): Result = withContext(Dispatchers.IO) {
+    /** Where the version file lives. Overridable for testing via the "update_url" pref (debug installs only can set it). */
+    private fun latestUrl(context: android.content.Context): String =
+        context.getSharedPreferences("emran_update", android.content.Context.MODE_PRIVATE)
+            .getString("update_url", null)?.takeIf { it.isNotBlank() } ?: LATEST_URL
+
+    suspend fun check(context: android.content.Context, isArabic: Boolean): Result = withContext(Dispatchers.IO) {
         var conn: HttpURLConnection? = null
         try {
-            conn = (URL(LATEST_URL).openConnection() as HttpURLConnection).apply {
+            conn = (URL(latestUrl(context)).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 10_000
                 instanceFollowRedirects = true
             }
+            // No latest.json published yet means no update exists, which is not an error to show.
+            if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) return@withContext Result.UpToDate
             if (conn.responseCode != HttpURLConnection.HTTP_OK) return@withContext Result.Failed
             val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             val latestCode = json.getInt("versionCode")

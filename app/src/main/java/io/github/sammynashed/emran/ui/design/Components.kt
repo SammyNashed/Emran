@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +59,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
+
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -69,12 +70,12 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
+
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.roundToInt
+
 import io.github.sammynashed.emran.ui.localization.Text
 
 /** A soft spring on press, the way iOS controls give under a finger. */
@@ -228,6 +229,9 @@ fun GlassDock(
     val currentSel by rememberUpdatedState(selIndex)
     val currentSelect by rememberUpdatedState(onSelect)
     val currentTabW by rememberUpdatedState(tabW)
+    // The tap handler below lives across recompositions: it must read the CURRENT tab order, or after a
+    // language switch (Arabic lists tabs right to left) a tap on Home would select the old slot's tab.
+    val currentVisual by rememberUpdatedState(visual)
 
     GlassPanel(
         modifier = modifier
@@ -272,7 +276,7 @@ fun GlassDock(
                     scope.launch { pillX.animateTo(padPx + idx * tw, spring(dampingRatio = 0.78f, stiffness = 48f)) }
                     if (idx != currentSel) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        currentSelect(visual[idx].key)
+                        currentSelect(currentVisual[idx].key)
                     }
                 }
             },
@@ -418,9 +422,38 @@ fun GlassBackButton(onBack: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-/** Back button + a large calm title; the top of every inner screen. */
+/** A round glass button holding one icon: header actions (search, saved, share). */
 @Composable
-fun ScreenHeader(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun GlassIconButton(icon: ImageVector, contentDescription: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val sky = LocalSky.current
+    val haptic = LocalHapticFeedback.current
+    val (source, scale) = rememberPress()
+    GlassPanel(
+        modifier = modifier
+            .size(Target.min)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(interactionSource = source, indication = null) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
+        cornerRadius = Target.min / 2,
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = sky.ink, modifier = Modifier.size(22.dp).align(Alignment.Center))
+    }
+}
+
+/**
+ * Back button + a large calm title (and an optional quieter line under it); the top of every
+ * inner screen. [actions] sit on the far side, e.g. a search button.
+ */
+@Composable
+fun ScreenHeader(
+    title: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
     val sky = LocalSky.current
     Row(
         modifier = modifier.fillMaxWidth().padding(top = Space.sm, bottom = Space.lg),
@@ -428,7 +461,14 @@ fun ScreenHeader(title: String, onBack: () -> Unit, modifier: Modifier = Modifie
     ) {
         GlassBackButton(onBack)
         Spacer(Modifier.width(Space.lg))
-        Text(title, color = sky.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.weight(1f)) {
+            Text(
+                title, color = sky.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) Text(subtitle, color = sky.inkSoft, fontSize = 13.sp, maxLines = 1)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }
 
@@ -485,6 +525,7 @@ fun SettingsRow(
     value: String? = null,
     chevron: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
+    minHeight: androidx.compose.ui.unit.Dp = 56.dp,
 ) {
     val sky = LocalSky.current
     val haptic = LocalHapticFeedback.current
@@ -501,8 +542,8 @@ fun SettingsRow(
                     onClick()
                 } else Modifier,
             )
-            .heightIn(min = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .heightIn(min = minHeight)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -510,14 +551,18 @@ fun SettingsRow(
             contentAlignment = Alignment.Center,
         ) { Icon(icon, contentDescription = null, tint = sky.ink, modifier = Modifier.size(21.dp)) }
         Spacer(Modifier.width(14.dp))
+        // The title takes the room that is left, so a wide switch beside it can never squeeze it
+        // against the edge; a long title ends in "…" rather than pushing the controls off.
         Text(
             title,
             color = sky.ink,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = if (trailing != null && value == null) Modifier.weight(1f).padding(end = 10.dp) else Modifier,
         )
-        Spacer(Modifier.weight(1f))
+        if (trailing == null || value != null) Spacer(Modifier.weight(1f))
         if (value != null) {
             Spacer(Modifier.width(10.dp))
             Text(
@@ -538,6 +583,57 @@ fun SettingsRow(
                 tint = sky.inkSoft,
                 modifier = Modifier.size(22.dp),
             )
+        }
+    }
+}
+
+/**
+ * A roomy row for Help and About: a tinted icon badge, a title and one quiet line saying what it does,
+ * so nobody has to guess what a tap will open. [accent] colours the badge only; text stays on the sky's ink.
+ */
+@Composable
+fun RichRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String?,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    accent: androidx.compose.ui.graphics.Color? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val sky = LocalSky.current
+    val haptic = LocalHapticFeedback.current
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val wash by animateFloatAsState(if (pressed) 0.12f else 0f, tween(120), label = "richWash")
+    val badge = accent?.copy(alpha = 0.30f) ?: sky.ink.copy(alpha = 0.12f)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawBehind { drawRect(sky.ink.copy(alpha = wash)) }
+            .then(
+                if (onClick != null) Modifier.clickable(interactionSource = source, indication = null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                } else Modifier,
+            )
+            .heightIn(min = 72.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(badge),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, contentDescription = null, tint = sky.ink, modifier = Modifier.size(25.dp)) }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, color = sky.ink, fontSize = 16.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            if (subtitle != null) Text(subtitle, color = sky.inkSoft, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 2)
+        }
+        if (trailing != null) trailing()
+        else if (onClick != null) {
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = sky.inkSoft, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -622,6 +718,8 @@ fun GlassTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enterIndex: Int? = null,
+    /** A quiet second line under the label (a reminder's time, say). */
+    value: String? = null,
 ) {
     val sky = LocalSky.current
     val haptic = LocalHapticFeedback.current
@@ -655,8 +753,18 @@ fun GlassTile(
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
+                // Words never break mid-word; a label too long for its tile ends in "…" instead.
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 15.sp,
+            )
+            if (value != null) Text(
+                value,
+                color = sky.inkSoft,
+                fontSize = 13.sp,
+                maxLines = 1,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 0.dp),
             )
         }
     }

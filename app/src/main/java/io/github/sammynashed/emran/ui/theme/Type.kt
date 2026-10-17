@@ -40,131 +40,41 @@ val ReadexFontFamily = FontFamily(
 )
 
 /**
- * Scripture and supplication text.
- *
- * A traditional Naskh, chosen for its tashkeel: vowel marks are the difference
- * between reciting a du'a correctly and not, and a UI sans places them far less
- * carefully than a Naskh designed around them.
+ * English text and every number: Inter, a calm neo-grotesque with even (tabular) figures, so
+ * a ticking time never reflows. Readex Pro stays the Arabic face, where it is at its best;
+ * its Latin is wide and airy, which made English screens look busy.
  */
 @OptIn(ExperimentalTextApi::class)
-val NaskhFontFamily = FontFamily(
-    Font(R.font.noto_naskh_arabic, FontWeight.Normal, variationSettings = weightAxis(400)),
-    Font(R.font.noto_naskh_arabic, FontWeight.Medium, variationSettings = weightAxis(500)),
-    Font(R.font.noto_naskh_arabic, FontWeight.Bold, variationSettings = weightAxis(700))
+val InterFontFamily = FontFamily(
+    Font(R.font.inter, FontWeight.Light, variationSettings = weightAxis(300)),
+    Font(R.font.inter, FontWeight.Normal, variationSettings = weightAxis(400)),
+    Font(R.font.inter, FontWeight.Medium, variationSettings = weightAxis(500)),
+    Font(R.font.inter, FontWeight.SemiBold, variationSettings = weightAxis(600)),
+    Font(R.font.inter, FontWeight.Bold, variationSettings = weightAxis(700)),
 )
 
 /**
- * Display numerals -- countdowns, streak counts, prayer times.
- *
- * Geometric and even-width, so a ticking figure does not visibly reflow as its
- * digits change.
+ * One scale for the whole app: titles semibold, body regular, labels medium, and no added
+ * letter-spacing (Inter is spaced for screens already; spacing Arabic breaks its joins).
  */
-@OptIn(ExperimentalTextApi::class)
-val OutfitFontFamily = FontFamily(
-    Font(R.font.outfit, FontWeight.Normal, variationSettings = weightAxis(400)),
-    Font(R.font.outfit, FontWeight.Medium, variationSettings = weightAxis(500)),
-    Font(R.font.outfit, FontWeight.SemiBold, variationSettings = weightAxis(600)),
-    Font(R.font.outfit, FontWeight.Bold, variationSettings = weightAxis(700)),
-    Font(R.font.outfit, FontWeight.ExtraBold, variationSettings = weightAxis(800))
-)
-
-val Typography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = OutfitFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 57.sp,
-        lineHeight = 64.sp
-    ),
-    displayMedium = TextStyle(
-        fontFamily = OutfitFontFamily,
-        fontWeight = FontWeight.Bold,
-        fontSize = 45.sp,
-        lineHeight = 52.sp
-    ),
-    displaySmall = TextStyle(
-        fontFamily = OutfitFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
-        lineHeight = 44.sp
-    ),
-    headlineLarge = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp
-    ),
-    titleLarge = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp
-    ),
-    titleMedium = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
-    ),
-    titleSmall = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.25.sp
-    ),
-    bodySmall = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
-    ),
-    labelLarge = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
-    ),
-    labelMedium = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = ReadexFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+fun emranTypography(arabic: Boolean): Typography {
+    val ui = if (arabic) ReadexFontFamily else InterFontFamily
+    fun st(family: FontFamily, w: FontWeight, size: Int, line: Int) = TextStyle(fontFamily = family, fontWeight = w, fontSize = size.sp, lineHeight = line.sp)
+    return Typography(
+        displayLarge = st(InterFontFamily, FontWeight.Light, 57, 64),
+        displayMedium = st(InterFontFamily, FontWeight.Light, 45, 52),
+        displaySmall = st(InterFontFamily, FontWeight.Normal, 36, 44),
+        headlineLarge = st(ui, FontWeight.SemiBold, 30, 38),
+        headlineMedium = st(ui, FontWeight.SemiBold, 26, 34),
+        headlineSmall = st(ui, FontWeight.SemiBold, 22, 30),
+        titleLarge = st(ui, FontWeight.SemiBold, 20, 26),
+        titleMedium = st(ui, FontWeight.Medium, 16, 22),
+        titleSmall = st(ui, FontWeight.Medium, 14, 20),
+        bodyLarge = st(ui, FontWeight.Normal, 16, 24),
+        bodyMedium = st(ui, FontWeight.Normal, 14, 20),
+        bodySmall = st(ui, FontWeight.Normal, 12, 16),
+        labelLarge = st(ui, FontWeight.Medium, 14, 20),
+        labelMedium = st(ui, FontWeight.Medium, 12, 16),
+        labelSmall = st(ui, FontWeight.Medium, 11, 16),
     )
-)
+}

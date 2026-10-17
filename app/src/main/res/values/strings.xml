@@ -1,11 +1,13 @@
 <resources>
     <string name="app_name">Emran</string>
-    <string name="widget_desc_next_prayer">The next prayer and its time</string>
-    <string name="widget_desc_today_five">Today&#8217;s five prayers, with the next one highlighted</string>
-    <string name="widget_desc_streak">Your consecutive days of complete prayers</string>
-    <string name="widget_desc_hijri">Today&#8217;s Hijri date</string>
-    <string name="widget_desc_today_v2">The prayer compass from the home screen</string>
-    <string name="widget_desc_countdown">A live countdown to the next prayer</string>
-    <string name="widget_desc_combined">Next prayer, streak and Hijri date in one tile</string>
-    <string name="widget_desc_quran">Your progress through the Mushaf</string>
+    <string name="widget_desc_day_arabic">The day in Arabic calligraphy</string>
+    <string name="widget_desc_day_english">The day in elegant type</string>
+    <string name="widget_desc_prayer_progress">Today\'s prayers and how far through the day you are</string>
+    <string name="widget_desc_prayer_table">All of today\'s prayer times</string>
+    <string name="widget_desc_next_prayer">The next prayer and a live countdown</string>
+    <string name="widget_desc_hijri_date">Today in the Hijri calendar, in calligraphy</string>
+    <string name="widget_desc_hijri_month">The Hijri month as dots, today glowing</string>
+    <string name="widget_desc_ayah">The day\'s ayah in the Mushaf script</string>
+    <string name="widget_desc_clock">A thin clock with the Hijri date</string>
+    <string name="widget_desc_occasion">Days until Ramadan, the Eids and more</string>
 </resources>

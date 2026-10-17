@@ -1,72 +1,17 @@
 package io.github.sammynashed.emran.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
+
 import io.github.sammynashed.emran.ui.theme.AppTheme
-
-/**
- * Frosted-glass card surface.
- *
- * The scrim and rim colours are chosen from the active palette rather than being
- * hardcoded white. White at 5% alpha over a light background is invisible, which
- * is why this used to be a dark-only effect; on a light surface the same illusion
- * needs a dark scrim and a white rim highlight instead.
- */
-@Composable
-fun Modifier.liquidGlassCard(
-    shape: Shape = RoundedCornerShape(26.dp),
-    accentColor: Color = Color.Transparent
-): Modifier {
-    val isLight = AppTheme.colors.isLight
-
-    // On dark, the glass is lit from within by a white sheen. On light, the same
-    // depth cue comes from a soft shadow tint plus a bright rim.
-    val scrimStart = if (isLight) Color.Black.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.05f)
-    val scrimEnd = if (isLight) Color.Black.copy(alpha = 0.015f) else Color.White.copy(alpha = 0.005f)
-    val rimBright = if (isLight) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.28f)
-    val rimFade = if (isLight) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.04f)
-    val accentAlpha = if (isLight) 0.10f else 0.06f
-
-    return this
-        .clip(shape)
-        .background(
-            Brush.verticalGradient(colors = listOf(scrimStart, scrimEnd))
-        )
-        .background(
-            Brush.radialGradient(
-                colors = listOf(
-                    accentColor.copy(alpha = accentAlpha),
-                    Color.Transparent
-                ),
-                radius = 600f
-            )
-        )
-        .border(
-            width = 1.dp,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    rimBright,
-                    rimFade,
-                    Color.Transparent,
-                    accentColor.copy(alpha = 0.16f)
-                ),
-                start = Offset(0f, 0f),
-                end = Offset(400f, 800f) // Sleek diagonal light reflection
-            ),
-            shape = shape
-        )
-}
 
 /**
  * The ambient app backdrop: two soft accent glows over a deep base.

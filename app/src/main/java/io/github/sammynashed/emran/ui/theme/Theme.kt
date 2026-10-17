@@ -68,7 +68,7 @@ fun MyApplicationTheme(
     CompositionLocalProvider(LocalAppColors provides chosenColors) {
         MaterialTheme(
             colorScheme = materialDynamicScheme,
-            typography = Typography,
+            typography = emranTypography(io.github.sammynashed.emran.ui.localization.LocalAppLanguage.current == "ar"),
             content = content
         )
     }

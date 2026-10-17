@@ -2,7 +2,7 @@ package io.github.sammynashed.emran.glance.ui
 
 import android.os.SystemClock
 import android.util.TypedValue
-import android.view.Gravity
+
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color

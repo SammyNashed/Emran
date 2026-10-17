@@ -21,7 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import io.github.sammynashed.emran.data.LocationPreset
 import io.github.sammynashed.emran.ui.localization.Text
-import io.github.sammynashed.emran.ui.theme.AppTheme
+import io.github.sammynashed.emran.ui.design.LocalSky
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,6 +59,7 @@ fun CurrentLocationButton(
     onLocationResolved: (LocationPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sky = LocalSky.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var error by remember { mutableStateOf<String?>(null) }
@@ -162,8 +163,8 @@ fun CurrentLocationButton(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(AppTheme.colors.primary.copy(alpha = 0.14f))
-                .border(1.dp, AppTheme.colors.primary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                .background(sky.ink.copy(alpha = 0.12f))
+                .border(1.dp, sky.ink.copy(alpha = 0.30f), RoundedCornerShape(14.dp))
                 .clickable(enabled = !busy) {
                     if (hasLocationPermission(context)) {
                         resolve()
@@ -184,7 +185,7 @@ fun CurrentLocationButton(
             ) {
                 if (busy) {
                     CircularProgressIndicator(
-                        color = AppTheme.colors.primary,
+                        color = sky.ink,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(18.dp)
                     )
@@ -192,7 +193,7 @@ fun CurrentLocationButton(
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = null,
-                        tint = AppTheme.colors.primary,
+                        tint = sky.ink,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -204,7 +205,7 @@ fun CurrentLocationButton(
                             lang == "ar" -> "استخدام موقعي الحالي"
                             else -> "Use my current location"
                         },
-                        color = Color.White,
+                        color = sky.ink,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -214,7 +215,7 @@ fun CurrentLocationButton(
                         } else {
                             "Stays on your device, sent nowhere. Asked once only."
                         },
-                        color = AppTheme.colors.grayMuted,
+                        color = sky.inkSoft,
                         fontSize = 11.sp,
                         lineHeight = 14.sp
                     )
@@ -230,7 +231,7 @@ fun CurrentLocationButton(
                 } else {
                     "Location is switched off on this device. Turn it on and Emran will carry on by itself."
                 },
-                color = AppTheme.colors.grayMuted,
+                color = sky.inkSoft,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
             )
@@ -239,7 +240,7 @@ fun CurrentLocationButton(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(AppTheme.colors.primary.copy(alpha = 0.2f))
+                    .background(sky.ink.copy(alpha = 0.14f))
                     .clickable {
                         locationSettingsLauncher.launch(
                             android.content.Intent(
@@ -252,7 +253,7 @@ fun CurrentLocationButton(
             ) {
                 Text(
                     text = if (lang == "ar") "تشغيل خدمة الموقع" else "Turn on location",
-                    color = AppTheme.colors.primary,
+                    color = sky.ink,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -261,7 +262,7 @@ fun CurrentLocationButton(
 
         error?.let {
             Spacer(modifier = Modifier.height(6.dp))
-            Text(text = it, color = AppTheme.colors.grayMuted, fontSize = 11.sp, lineHeight = 15.sp)
+            Text(text = it, color = sky.inkSoft, fontSize = 11.sp, lineHeight = 15.sp)
         }
     }
 }
@@ -271,47 +272,6 @@ private fun hasLocationPermission(context: Context): Boolean =
         PackageManager.PERMISSION_GRANTED ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
-
-/**
- * Best available last-known fix, resolved to a [LocationPreset].
- *
- * The zone comes from the device rather than the coordinates: mapping a lat/lon
- * to an IANA zone offline needs a boundary database Emran does not ship, and
- * someone standing at these coordinates is, by definition, in that zone.
- */
-private fun readLastKnownLocation(context: Context): LocationPreset? {
-    return try {
-        val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            ?: return null
-
-        val best = providersToTry(manager)
-            .mapNotNull { provider ->
-                @Suppress("MissingPermission")
-                try { manager.getLastKnownLocation(provider) } catch (e: Exception) { null }
-            }
-            .maxByOrNull { it.time }
-            // A cached fix is the fast path, not the only one. Turning location
-            // on does not itself produce a position: until something asks for
-            // one, every provider returns null and the button reports failure
-            // on a phone whose location works perfectly.
-            ?: requestSingleFix(manager)
-            ?: return null
-
-        val label = reverseGeocode(context, best.latitude, best.longitude)
-            ?: nearestKnownPlace(best.latitude, best.longitude)
-            ?: String.format(Locale.US, "%.3f, %.3f", best.latitude, best.longitude)
-
-        LocationPreset(
-            name = label,
-            latitude = best.latitude,
-            longitude = best.longitude,
-            zoneId = java.util.TimeZone.getDefault().id
-        )
-    } catch (e: Exception) {
-        android.util.Log.e("CurrentLocation", "Failed to read last known location", e)
-        null
-    }
-}
 
 /**
  * Every provider worth asking, fused first.
@@ -340,83 +300,6 @@ internal fun providersToTry(manager: LocationManager): List<String> {
         .distinct()
         .filter { it != LocationManager.PASSIVE_PROVIDER }
 }
-
-/**
- * Ask every enabled provider at once and take the first answer.
- *
- * Racing them is the whole point. An earlier version picked a single provider,
- * preferring `NETWORK_PROVIDER` because it is usually the fastest - and that is
- * exactly wrong for an offline-first app. The network provider stays *enabled*
- * with no connectivity; it simply never produces a fix. Choosing it meant
- * waiting out the timeout and reporting failure without ever asking GPS, which
- * is the one source that needs no network at all.
- *
- * So every enabled provider is started together and the first fix wins. Online
- * that is usually the network provider, in a second or so. Offline it is GPS,
- * which is slower and worth waiting for, because the alternative is an app that
- * cannot find you without the internet.
- *
- * Runs on a background thread by contract - the caller is inside
- * `withContext(Dispatchers.IO)` - so blocking here is correct rather than lazy.
- */
-private fun requestSingleFix(manager: LocationManager): android.location.Location? {
-    val providers = providersToTry(manager)
-    if (providers.isEmpty()) return null
-
-    val latch = java.util.concurrent.CountDownLatch(1)
-    val found = java.util.concurrent.atomic.AtomicReference<android.location.Location?>(null)
-    val looper = android.os.Looper.getMainLooper()
-    val started = mutableListOf<android.location.LocationListener>()
-
-    fun listener() = object : android.location.LocationListener {
-        override fun onLocationChanged(location: android.location.Location) {
-            // First provider to answer wins; the rest are torn down below.
-            if (found.compareAndSet(null, location)) latch.countDown()
-        }
-
-        // Deprecated but abstract below API 30; omitting it crashes there.
-        @Deprecated("Required by the interface below API 30")
-        override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
-
-        override fun onProviderDisabled(provider: String) = Unit
-
-        override fun onProviderEnabled(provider: String) = Unit
-    }
-
-    return try {
-        providers.forEach { provider ->
-            // One unavailable provider must not cancel the others - fused is
-            // requested unconditionally and throws on devices that lack it.
-            try {
-                val l = listener()
-                @Suppress("MissingPermission")
-                manager.requestLocationUpdates(provider, 0L, 0f, l, looper)
-                started += l
-            } catch (e: Exception) {
-                // Nothing to do; the remaining providers still race.
-            }
-        }
-        if (started.isEmpty()) return null
-        latch.await(FIX_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
-        found.get()
-    } catch (e: SecurityException) {
-        null
-    } catch (e: Exception) {
-        null
-    } finally {
-        started.forEach { l -> try { manager.removeUpdates(l) } catch (e: Exception) { } }
-    }
-}
-
-/**
- * How long to wait for a first fix.
- *
- * Long enough for a cold GPS fix outdoors, which is the case that matters when
- * there is no network to fall back on. A fix indoors may never arrive at all,
- * and that is an ordinary outcome rather than an error - the reader can still
- * pick their city from the list.
- */
-private const val FIX_TIMEOUT_MS = 25_000L
 
 /** City name if the device can resolve one; null offline, which is fine. */
 internal fun reverseGeocode(context: Context, lat: Double, lon: Double): String? {

@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +29,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.layer.CompositingStrategy
-import androidx.compose.ui.graphics.layer.drawLayer
+
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.unit.IntSize
@@ -47,12 +48,24 @@ import java.time.LocalTime
  * Developer switches for checking the design on a real phone without waiting for
  * the sun. Visual only; nothing here touches prayer times or alarms.
  *
- *   adb shell am start -n <pkg>/.MainActivityAliasExpressive --ei SKY_DEBUG_MIN 1080
+ *   adb shell am start -n <pkg>/.MainActivityAliasDefault --ei SKY_DEBUG_MIN 1080
  *   adb shell am start ... --es GLASS_TIER FLAT        (FLAT | BLUR | LENS)
  */
 object SkyDebug {
     /** Minute of the day (0..1439) to show instead of the real time, or null. */
     var minuteOfDay by mutableStateOf<Int?>(null)
+
+    /** Preview the Friday states (Masbaha challenge) on any day: adb ... --ez FORCE_FRIDAY true */
+    var forceFriday by mutableStateOf(false)
+
+    /** Show the first-run onboarding on top of an installed app, saving nothing: adb ... --ez FORCE_ONBOARDING true */
+    var forceOnboarding by mutableStateOf(false)
+
+    /** Show the one-time "keep the adhan reliable" page: adb ... --ez FORCE_GUIDE true */
+    var forceGuide by mutableStateOf(false)
+    var searchQuery by mutableStateOf("")
+    /** Debug: show this entry of the daily-ayah list instead of today's. */
+    var ayahIndex by mutableStateOf<Int?>(null)
 
     /** Force a glass tier to check the fallbacks, or null for the device's own. */
     var glassTier by mutableStateOf<GlassTier?>(null)
@@ -68,6 +81,9 @@ object SkyDebug {
  * or battery saver is on. Readers read `.value` inside a draw lambda, so a tick
  * redraws the sky and nothing else; no screen recomposes.
  */
+/** Where in the cloud pattern this launch starts, so the sky is not identical every time. Small on purpose. */
+private val launchOffset: Double = kotlin.random.Random.nextDouble(0.0, 120.0)
+
 @Composable
 fun rememberSkyClock(animate: Boolean = true): State<Float> {
     val context = LocalContext.current
@@ -80,11 +96,16 @@ fun rememberSkyClock(animate: Boolean = true): State<Float> {
             val saver = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
             if (!motion || saver) return@repeatOnLifecycle
             var last = 0L
+            var start = -1L
             while (true) {
                 withFrameNanos { n ->
-                    if (n - last >= 33_000_000L) {
+                    if (start < 0) start = n
+                    if (n - last >= 50_000_000L) {   // 20 fps: stars still twinkle smoothly, a third less work
                         last = n
-                        time.floatValue = ((n / 1_000_000_000.0) % 20000.0).toFloat()
+                        // Seconds since the sky started (plus a per-launch offset), NOT the phone's uptime:
+                        // the cloud shader adds this to its noise coordinates, and a number in the tens of
+                        // thousands leaves a low-precision GPU too few digits (flat blocky clouds).
+                        time.floatValue = (launchOffset + ((n - start) / 1_000_000_000.0)).toFloat()
                     }
                 }
             }
@@ -138,10 +159,15 @@ fun SkyHost(
         controller.isAppearanceLightNavigationBars = light
     }
 
+    SkySettings.ensureLoaded(LocalContext.current)
     var size by remember { mutableStateOf(Size.Zero) }
     val clock = rememberSkyClock(animate = showSky)
-    val painter = remember { SkyPainter() }
+    val appContext = LocalContext.current.applicationContext
+    val painter = remember { SkyPainter(appContext) }
     val layer = rememberGraphicsLayer()
+    // The cloud texture refreshes ~12 times a second; stars and specks (cheap, and they need to look smooth) at 30.
+    val slowClock = remember(clock) { derivedStateOf { kotlin.math.floor(clock.value * SKY_TEXTURE_FPS) / SKY_TEXTURE_FPS } }
+    val recorded = remember { object { var time = -1f; var size = IntSize.Zero; var sky: SkyState? = null; var calm = false } }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -162,8 +188,14 @@ fun SkyHost(
                         (this.size.width / SKY_DOWNSCALE).toInt().coerceAtLeast(1),
                         (this.size.height / SKY_DOWNSCALE).toInt().coerceAtLeast(1),
                     )
-                    layer.record(this, layoutDirection, small) {
-                        painter.paint(this, sky, Size(small.width.toFloat(), small.height.toFloat()), clock.value)
+                    val t = slowClock.value
+                    // Re-render the cloud texture only when its clock moved on (or the size/sky changed);
+                    // the recorded layer is kept between ticks.
+                    if (t != recorded.time || small != recorded.size || sky != recorded.sky || SkySettings.calm != recorded.calm) {
+                        recorded.time = t; recorded.size = small; recorded.sky = sky; recorded.calm = SkySettings.calm
+                        layer.record(this, layoutDirection, small) {
+                            painter.paint(this, sky, Size(small.width.toFloat(), small.height.toFloat()), t)
+                        }
                     }
                     layer.scaleX = this.size.width / small.width
                     layer.scaleY = this.size.height / small.height
@@ -174,7 +206,7 @@ fun SkyHost(
             },
         )
         CompositionLocalProvider(
-            LocalSky provides sky, LocalSkySize provides size, LocalSkyTime provides clock,
+            LocalSky provides sky, LocalSkySize provides size, LocalSkyTime provides clock, LocalSkySlowTime provides slowClock,
             LocalSkyLayer provides layer,
         ) {
             content()

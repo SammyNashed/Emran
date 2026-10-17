@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The clock widget's live digits: a TextClock the system ticks, in the thin system face. -->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_clock"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="sans-serif-thin"
+    android:format12Hour="h:mm"
+    android:format24Hour="HH:mm"
+    android:gravity="center"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="#FFFFFF"
+    android:textSize="56sp" />

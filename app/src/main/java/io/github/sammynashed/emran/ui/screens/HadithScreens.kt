@@ -1,10 +1,16 @@
 package io.github.sammynashed.emran.ui.screens
 
-import io.github.sammynashed.emran.ui.components.EmranAlertDialog
+import io.github.sammynashed.emran.ui.design.GlassDialog
+import io.github.sammynashed.emran.ui.design.GlassSectionLabel
+import io.github.sammynashed.emran.ui.design.LocalSky
+import io.github.sammynashed.emran.ui.design.ScreenHeader
+import io.github.sammynashed.emran.ui.design.Space
+import io.github.sammynashed.emran.ui.design.glassSurface
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -31,23 +37,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.CheckCircle
+
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
+
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
+
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TextButton
+
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -58,7 +61,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,11 +95,10 @@ import io.github.sammynashed.emran.data.hadith.HadithLibrary
 import io.github.sammynashed.emran.data.hadith.HadithPackStore
 import io.github.sammynashed.emran.data.hadith.PackState
 import io.github.sammynashed.emran.ui.components.ItemActions
-import io.github.sammynashed.emran.ui.components.liquidGlassCard
+
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
 import io.github.sammynashed.emran.ui.localization.Text
-import io.github.sammynashed.emran.ui.theme.AppTheme
-import io.github.sammynashed.emran.ui.tour.tourTarget
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -113,7 +115,7 @@ private fun HadithRoot(lang: String, content: @Composable () -> Unit) {
     )
 }
 
-/** Same header shape as the Adhkar screens so the sub-screens read as one family. */
+/** The standard header (glass back button, title, quiet subtitle), on the screen margin. */
 @Composable
 private fun HadithTopBar(
     title: String,
@@ -121,57 +123,12 @@ private fun HadithTopBar(
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 48.dp, start = 20.dp, end = 20.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.White.copy(alpha = 0.1f))
-                .tourTarget("sub_screen_back_button")
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.45f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        actions()
-    }
+    ScreenHeader(title = title, onBack = onBack, subtitle = subtitle, actions = actions, modifier = Modifier.padding(horizontal = Space.screen))
 }
 
 @Composable
 private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        color = AppTheme.colors.primary,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 2.sp,
-        modifier = modifier.padding(top = 12.dp, bottom = 4.dp)
-    )
+    GlassSectionLabel(text, modifier.padding(top = 12.dp))
 }
 
 private fun sizeLabel(bytes: Long): String =
@@ -188,14 +145,6 @@ private fun shareText(book: HadithBook?, lang: String, h: Hadith): String = buil
 private fun copyToClipboard(context: Context, text: String) {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     cm.setPrimaryClip(ClipData.newPlainText("Hadith", text))
-}
-
-private fun shareIntent(context: Context, text: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** Marks every word of [words] found in [text], ignoring case. English only. */
@@ -217,7 +166,7 @@ private fun highlight(text: String, words: List<String>, color: Color): Annotate
             var j = i
             while (j < text.length && marks[j] == marks[i]) j++
             val part = text.substring(i, j)
-            if (marks[i]) withStyle(SpanStyle(background = color.copy(alpha = 0.35f), fontWeight = FontWeight.Bold)) { append(part) }
+            if (marks[i]) withStyle(SpanStyle(background = color.copy(alpha = 0.35f), fontWeight = FontWeight.SemiBold)) { append(part) }
             else append(part)
             i = j
         }
@@ -252,7 +201,7 @@ fun HadithLibraryScreen(
     HadithRoot(lang) {
         Column(Modifier.fillMaxSize()) {
             HadithTopBar(
-                title = if (lang == "ar") "الأحاديث" else "HADITH",
+                title = if (lang == "ar") "الأحاديث" else "Hadith",
                 onBack = onBack
             )
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -282,7 +231,7 @@ fun HadithLibraryScreen(
                 item(span = { full() }) { SectionLabel(if (lang == "ar") "جاهزة للقراءة" else "READY TO READ") }
                 gridItems(ready, key = { "r-" + it.id }) { book ->
                     HadithBookCard(
-                        modifier = if (book.id == ready.first().id) Modifier.tourTarget("hadith_first_book") else Modifier,
+                        modifier = if (book.id == ready.first().id) Modifier else Modifier,
                         book = book,
                         lang = lang,
                         subtitle = countLabel(book.hadiths, lang),
@@ -300,7 +249,7 @@ fun HadithLibraryScreen(
                             Text(
                                 text = if (lang == "ar") "تُحمَّل عند طلبك فقط، وتبقى على جهازك."
                                 else "Fetched only when you tap, then kept on your device. Nothing runs in the background.",
-                                color = Color.White.copy(alpha = 0.4f),
+                                color = LocalSky.current.inkSoft,
                                 fontSize = 12.sp,
                                 lineHeight = 18.sp
                             )
@@ -323,7 +272,7 @@ fun HadithLibraryScreen(
                     item(span = { full() }) {
                         Text(
                             text = (if (lang == "ar") "الكتب المحمّلة تشغل " else "Downloaded books use ") + sizeLabel(downloadedBytes),
-                            color = Color.White.copy(alpha = 0.35f),
+                            color = LocalSky.current.inkSoft,
                             fontSize = 12.sp
                         )
                     }
@@ -333,24 +282,15 @@ fun HadithLibraryScreen(
     }
 
     confirmDelete?.let { book ->
-        EmranAlertDialog(
-            onDismissRequest = { confirmDelete = null },
-            title = { Text(if (lang == "ar") "حذف ${book.titleAr}؟" else "Remove ${book.titleEn}?") },
-            text = {
-                Text(
-                    if (lang == "ar") "سيُحرَّر ${sizeLabel(book.bytes)}، ويمكنك تنزيله مجددًا متى شئت. تبقى المحفوظات كما هي."
-                    else "This frees ${sizeLabel(book.bytes)}. You can download it again any time; your bookmarks are kept."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { HadithPackStore.delete(context, book); confirmDelete = null }) {
-                    Text(if (lang == "ar") "حذف" else "Remove")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = null }) { Text(if (lang == "ar") "إلغاء" else "Cancel") }
-            }
-        )
+        GlassDialog(
+            onDismiss = { confirmDelete = null },
+            title = if (lang == "ar") "حذف ${book.titleAr}؟" else "Remove ${book.titleEn}?",
+            subtitle = if (lang == "ar") "سيُحرَّر ${sizeLabel(book.bytes)}، ويمكنك تنزيله مجددًا متى شئت. تبقى المحفوظات كما هي."
+            else "This frees ${sizeLabel(book.bytes)}. You can download it again any time; your bookmarks are kept.",
+            confirmLabel = if (lang == "ar") "حذف" else "Remove",
+            onConfirm = { HadithPackStore.delete(context, book); confirmDelete = null },
+            dismissLabel = if (lang == "ar") "إلغاء" else "Cancel",
+        ) { }
     }
 }
 
@@ -371,12 +311,12 @@ private fun HadithBookCard(
     onDownload: () -> Unit,
     onRemove: (() -> Unit)?
 ) {
-    val accent = if (installed) AppTheme.colors.primary else Color.White.copy(alpha = 0.55f)
+    val accent = if (installed) LocalSky.current.ink else LocalSky.current.inkSoft
     Box(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .liquidGlassCard(RoundedCornerShape(24.dp), accent.copy(alpha = if (installed) 0.6f else 0.3f))
+            .glassSurface(24.dp)
             .clickable(enabled = installed || state !is PackState.Downloading) {
                 if (installed) onClick() else onDownload()
             }
@@ -390,9 +330,9 @@ private fun HadithBookCard(
             Spacer(Modifier.height(12.dp))
             Text(
                 text = book.title(lang),
-                color = if (installed) Color.White else Color.White.copy(alpha = 0.8f),
+                color = if (installed) LocalSky.current.ink else LocalSky.current.inkSoft,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 lineHeight = 19.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -402,7 +342,7 @@ private fun HadithBookCard(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = subtitle,
-                color = Color.White.copy(alpha = 0.45f),
+                color = LocalSky.current.inkSoft,
                 fontSize = 11.sp,
                 maxLines = 2,
                 textAlign = TextAlign.Center
@@ -424,11 +364,11 @@ private fun HadithBookCard(
                     progress = { state.fraction },
                     modifier = Modifier.size(24.dp),
                     strokeWidth = 3.dp,
-                    color = AppTheme.colors.primary
+                    color = LocalSky.current.ink
                 )
-                !installed -> Icon(Icons.Default.Download, contentDescription = "Download", tint = AppTheme.colors.primary, modifier = Modifier.size(22.dp))
+                !installed -> Icon(Icons.Default.Download, contentDescription = "Download", tint = LocalSky.current.ink, modifier = Modifier.size(22.dp))
                 onRemove != null -> IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color.White.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Delete, contentDescription = "Remove", tint = LocalSky.current.inkSoft, modifier = Modifier.size(18.dp))
                 }
                 else -> Unit
             }
@@ -446,14 +386,14 @@ private fun EntryChip(
     Row(
         modifier = modifier
             .height(52.dp)
-            .liquidGlassCard(RoundedCornerShape(16.dp), AppTheme.colors.primary.copy(alpha = 0.5f))
+            .glassSurface(16.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = AppTheme.colors.primary, modifier = Modifier.size(20.dp))
-        Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Icon(icon, contentDescription = null, tint = LocalSky.current.ink, modifier = Modifier.size(20.dp))
+        Text(label, color = LocalSky.current.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -479,7 +419,7 @@ fun HadithBookScreen(bookId: String, onBack: () -> Unit, onOpenChapter: (Int) ->
             )
             val chapters = pack?.chapters
             if (chapters == null) {
-                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = AppTheme.colors.primary) }
+                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = LocalSky.current.ink) }
             } else {
                 androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                     columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
@@ -495,7 +435,7 @@ fun HadithBookScreen(bookId: String, onBack: () -> Unit, onOpenChapter: (Int) ->
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
-                                .liquidGlassCard(RoundedCornerShape(24.dp), AppTheme.colors.primary.copy(alpha = 0.55f))
+                                .glassSurface(24.dp)
                                 .clickable { onOpenChapter(ch.id) }
                         ) {
                             Column(
@@ -507,17 +447,17 @@ fun HadithBookScreen(bookId: String, onBack: () -> Unit, onOpenChapter: (Int) ->
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(AppTheme.colors.primary.copy(alpha = 0.16f)),
+                                        .background(LocalSky.current.ink.copy(alpha = 0.16f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(ch.id.toString(), color = AppTheme.colors.primary, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, bypassNumerals = true)
+                                    Text((chapters.indexOf(ch) + 1).toString(), color = LocalSky.current.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, bypassNumerals = true)
                                 }
                                 Spacer(Modifier.height(10.dp))
                                 Text(
                                     text = ch.title(lang),
-                                    color = Color.White,
+                                    color = LocalSky.current.ink,
                                     fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.SemiBold,
                                     lineHeight = 18.sp,
                                     fontFamily = if (lang == "ar") SurahNameFontFamily else null,
                                     maxLines = 3,
@@ -528,7 +468,7 @@ fun HadithBookScreen(bookId: String, onBack: () -> Unit, onOpenChapter: (Int) ->
                                 Spacer(Modifier.height(6.dp))
                                 Text(
                                     text = countLabel(ch.count, lang),
-                                    color = Color.White.copy(alpha = 0.45f),
+                                    color = LocalSky.current.inkSoft,
                                     fontSize = 11.sp
                                 )
                             }
@@ -573,7 +513,7 @@ fun HadithChapterScreen(bookId: String, chapterId: Int, focusNumber: Int?, onBac
             )
             val list = hadiths
             if (list == null) {
-                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = AppTheme.colors.primary) }
+                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = LocalSky.current.ink) }
             } else {
                 LazyColumn(
                     state = listState,
@@ -623,11 +563,11 @@ private fun HadithCard(
     onShare: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accent = AppTheme.colors.primary
+    val accent = LocalSky.current.ink
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .liquidGlassCard(RoundedCornerShape(20.dp), accent.copy(alpha = if (focused) 0.9f else 0.4f))
+            .glassSurface(20.dp)
             .then(if (focused) Modifier.border(BorderStroke(1.5.dp, accent), RoundedCornerShape(20.dp)) else Modifier)
             .padding(16.dp)
     ) {
@@ -638,7 +578,7 @@ private fun HadithCard(
                     .background(accent.copy(alpha = 0.15f))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text("#${hadith.number}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, bypassNumerals = true)
+                Text("#${hadith.number}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, bypassNumerals = true)
             }
             Spacer(Modifier.weight(1f))
             ItemActions(
@@ -654,7 +594,7 @@ private fun HadithCard(
         // mode; in Arabic mode it would only be noise.
         Text(
             text = hadith.arabic,
-            color = Color.White,
+            color = LocalSky.current.ink,
             fontSize = 21.sp,
             lineHeight = 36.sp,
             fontFamily = SurahNameFontFamily,
@@ -668,7 +608,7 @@ private fun HadithCard(
                 Modifier
                     .fillMaxWidth()
                     .height(1.dp)
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(LocalSky.current.ink.copy(alpha = 0.08f))
             )
             Spacer(Modifier.height(14.dp))
             if (hadith.narrator.isNotBlank()) {
@@ -684,7 +624,7 @@ private fun HadithCard(
             }
             Text(
                 text = hadith.text,
-                color = Color.White.copy(alpha = 0.9f),
+                color = LocalSky.current.inkSoft,
                 fontSize = 15.sp,
                 lineHeight = 24.sp,
                 bypassNumerals = true
@@ -693,7 +633,7 @@ private fun HadithCard(
         Spacer(Modifier.height(12.dp))
         Text(
             text = sourceLabel,
-            color = Color.White.copy(alpha = 0.35f),
+            color = LocalSky.current.inkSoft,
             fontSize = 11.sp,
             bypassNumerals = true
         )
@@ -762,31 +702,31 @@ fun HadithSearchScreen(
 
     HadithRoot(lang) {
         Column(Modifier.fillMaxSize()) {
-            HadithTopBar(title = if (lang == "ar") "بحث" else "SEARCH", onBack = onBack)
+            HadithTopBar(title = if (lang == "ar") "بحث" else "Search", onBack = onBack)
             TextField(
                 value = query,
                 onValueChange = { query = it },
                 placeholder = {
                     Text(
                         if (lang == "ar") "ابحث في الأحاديث والأذكار…" else "Search hadith and adhkar, or a hadith number…",
-                        color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp
+                        color = LocalSky.current.inkSoft, fontSize = 14.sp
                     )
                 },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.5f)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = LocalSky.current.inkSoft) },
                 trailingIcon = {
                     if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color.White.copy(alpha = 0.5f))
+                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = LocalSky.current.inkSoft)
                     }
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {}),
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = AppTheme.colors.primary,
+                    focusedContainerColor = LocalSky.current.ink.copy(alpha = 0.08f),
+                    unfocusedContainerColor = LocalSky.current.ink.copy(alpha = 0.06f),
+                    focusedTextColor = LocalSky.current.ink,
+                    unfocusedTextColor = LocalSky.current.ink,
+                    cursorColor = LocalSky.current.ink,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
@@ -806,13 +746,13 @@ fun HadithSearchScreen(
                 else -> ""
             }
             if (status.isNotEmpty()) {
-                Text(status, color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp))
+                Text(status, color = LocalSky.current.inkSoft, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp))
             }
             if (installedCount < totalBooks && query.isNotBlank()) {
                 Text(
                     text = if (lang == "ar") "البحث في $installedCount من $totalBooks كتابًا — نزّل المزيد من قسم الأحاديث."
                     else "Searching $installedCount of $totalBooks books. Download more from the Hadith page to widen it.",
-                    color = Color.White.copy(alpha = 0.3f), fontSize = 11.sp,
+                    color = LocalSky.current.inkSoft, fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp)
                 )
             }
@@ -827,21 +767,21 @@ fun HadithSearchScreen(
                     items(dhikr) { d ->
                         ResultCard(
                             title = if (lang == "ar") d.folder.titleAr else d.folder.titleEn,
-                            body = if (lang == "ar") AnnotatedString(d.item.textAr) else highlight(d.item.textEn, words, AppTheme.colors.primary),
+                            body = if (lang == "ar") AnnotatedString(d.item.textAr) else highlight(d.item.textEn, words, LocalSky.current.ink),
                             arabic = lang == "ar",
                             onClick = { onOpenDhikr(d.folder.id) }
                         )
                     }
                 }
                 if (hits.isNotEmpty()) {
-                    item { SectionLabel(if (lang == "ar") "الأحاديث" else "HADITH") }
+                    item { SectionLabel(if (lang == "ar") "الأحاديث" else "Hadith") }
                     items(hits, key = { "${it.bookId}|${it.chapter.id}|${it.hadith.number}" }) { hit ->
                         val book = HadithLibrary.book(context, hit.bookId)
                         val showArabic = lang == "ar" || arabicQuery || hit.hadith.english.isBlank()
                         ResultCard(
                             title = "${book?.title(lang) ?: hit.bookId} · ${hit.hadith.number}",
                             body = if (showArabic) AnnotatedString(hit.hadith.arabic)
-                            else highlight(hit.hadith.english, words, AppTheme.colors.primary),
+                            else highlight(hit.hadith.english, words, LocalSky.current.ink),
                             arabic = showArabic,
                             onClick = { onOpenHadith(hit.bookId, hit.chapter.id, hit.hadith.number) }
                         )
@@ -857,15 +797,15 @@ private fun ResultCard(title: String, body: AnnotatedString, arabic: Boolean, on
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .liquidGlassCard(RoundedCornerShape(16.dp), AppTheme.colors.primary.copy(alpha = 0.35f))
+            .glassSurface(16.dp)
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
-        Text(title, color = AppTheme.colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, bypassNumerals = true)
+        Text(title, color = LocalSky.current.ink, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, bypassNumerals = true)
         Spacer(Modifier.height(6.dp))
         Text(
             text = body,
-            color = Color.White.copy(alpha = 0.9f),
+            color = LocalSky.current.inkSoft,
             fontSize = if (arabic) 18.sp else 14.sp,
             lineHeight = if (arabic) 30.sp else 21.sp,
             fontFamily = if (arabic) SurahNameFontFamily else null,
@@ -879,180 +819,6 @@ private fun ResultCard(title: String, body: AnnotatedString, arabic: Boolean, on
 }
 
 // -------------------------------------------------------------------------
-// Saved
-// -------------------------------------------------------------------------
-
-private class SavedRow(val bookmark: Bookmark, val title: String, val body: String, val arabic: Boolean)
-
-@Composable
-fun BookmarksScreen(
-    onBack: () -> Unit,
-    onOpenHadith: (bookId: String, chapterId: Int, number: Int) -> Unit,
-    onOpenDhikr: (folderId: String) -> Unit
-) {
-    val context = LocalContext.current
-    val lang = LocalAppLanguage.current
-    val bookmarks by HadithBookmarks.all.collectAsState()
-    LaunchedEffect(Unit) { HadithBookmarks.ensureLoaded(context) }
-
-    val rows by produceState<List<SavedRow>?>(null, bookmarks, lang) {
-        value = withContext(Dispatchers.IO) {
-            val folders = AdhkarRepository.loadAdhkar(context)
-            bookmarks.mapNotNull { b ->
-                when (b) {
-                    is Bookmark.HadithRef -> {
-                        val h = HadithLibrary.hadith(context, b.bookId, b.chapterId, b.number)
-                        val book = HadithLibrary.book(context, b.bookId)
-                        // A downloaded book that has since been removed cannot be shown;
-                        // the bookmark is kept so it reappears when the book comes back.
-                        if (h == null) SavedRow(b, "${book?.title(lang) ?: b.bookId} · ${b.number}",
-                            if (lang == "ar") "الكتاب غير مثبّت" else "This book is not installed.", false)
-                        else {
-                            val ar = lang == "ar" || h.english.isBlank()
-                            SavedRow(b, "${book?.title(lang) ?: b.bookId} · ${b.number}", if (ar) h.arabic else h.english, ar)
-                        }
-                    }
-                    is Bookmark.DhikrRef -> {
-                        val folder = folders.firstOrNull { it.id == b.folderId } ?: return@mapNotNull null
-                        val item = folder.items.withIndex().firstOrNull { (i, it) -> (it.id ?: i.toString()) == b.itemKey }?.value
-                            ?: return@mapNotNull null
-                        val ar = lang == "ar"
-                        SavedRow(b, if (ar) folder.titleAr else folder.titleEn, if (ar) item.textAr else item.textEn, ar)
-                    }
-                }
-            }
-        }
-    }
-
-    HadithRoot(lang) {
-        Column(Modifier.fillMaxSize()) {
-            HadithTopBar(title = if (lang == "ar") "المحفوظات" else "SAVED", onBack = onBack)
-            val list = rows
-            when {
-                list == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = AppTheme.colors.primary) }
-                list.isEmpty() -> Box(Modifier.fillMaxSize().padding(40.dp), Alignment.Center) {
-                    Text(
-                        text = if (lang == "ar") "لا محفوظات بعد. اضغط رمز العلامة على أي حديث أو ذكر."
-                        else "Nothing saved yet. Tap the bookmark on any hadith or dhikr and it shows up here.",
-                        color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp, lineHeight = 21.sp, textAlign = TextAlign.Center
-                    )
-                }
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 140.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(list, key = { it.bookmark.key }) { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .liquidGlassCard(RoundedCornerShape(16.dp), AppTheme.colors.primary.copy(alpha = 0.35f))
-                                .clickable {
-                                    when (val b = row.bookmark) {
-                                        is Bookmark.HadithRef -> onOpenHadith(b.bookId, b.chapterId, b.number)
-                                        is Bookmark.DhikrRef -> onOpenDhikr(b.folderId)
-                                    }
-                                }
-                                .padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(row.title, color = AppTheme.colors.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, bypassNumerals = true)
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = row.body,
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    fontSize = if (row.arabic) 17.sp else 14.sp,
-                                    lineHeight = if (row.arabic) 28.sp else 21.sp,
-                                    fontFamily = if (row.arabic) SurahNameFontFamily else null,
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Ellipsis,
-                                    bypassNumerals = true
-                                )
-                            }
-                            IconButton(onClick = { HadithBookmarks.remove(context, row.bookmark) }) {
-                                Icon(Icons.Default.Bookmark, contentDescription = "Remove bookmark", tint = AppTheme.colors.primary)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// -------------------------------------------------------------------------
 // Hadith of the day, for the home screen
 // -------------------------------------------------------------------------
 
-@Composable
-fun HadithOfTheDayCard(onOpen: (bookId: String, chapterId: Int, number: Int) -> Unit, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val lang = LocalAppLanguage.current
-    val hit by produceState<HadithHit?>(null) {
-        value = withContext(Dispatchers.IO) { runCatching { HadithLibrary.hadithOfTheDay(context) }.getOrNull() }
-    }
-    val h = hit ?: return
-    val book = remember(h.bookId) { HadithLibrary.book(context, h.bookId) }
-    val arabic = lang == "ar" || h.hadith.english.isBlank()
-    val bookmarks by HadithBookmarks.all.collectAsState()
-    LaunchedEffect(Unit) { HadithBookmarks.ensureLoaded(context) }
-    val bmKey = Bookmark.hadithKey(h.bookId, h.chapter.id, h.hadith.number)
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .liquidGlassCard(RoundedCornerShape(22.dp), AppTheme.colors.secondary)
-            .clickable { onOpen(h.bookId, h.chapter.id, h.hadith.number) }
-            .padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 18.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (lang == "ar") "حديث اليوم" else "HADITH OF THE DAY",
-                color = AppTheme.colors.secondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                modifier = Modifier.weight(1f)
-            )
-            ItemActions(
-                bookmarked = bookmarks.any { it.key == bmKey },
-                onToggleBookmark = { HadithBookmarks.toggleHadith(context, h.bookId, h.chapter.id, h.hadith.number) },
-                onCopy = { copyToClipboard(context, shareText(book, lang, h.hadith)) },
-                onShare = {
-                    io.github.sammynashed.emran.ui.share.ShareCard.share(
-                        context,
-                        io.github.sammynashed.emran.ui.share.ShareCard.Content(
-                            arabic = h.hadith.arabic,
-                            english = h.hadith.text.ifBlank { null },
-                            narrator = h.hadith.narrator.ifBlank { null },
-                            source = "${book?.title(lang) ?: ""} · ${h.hadith.number}"
-                        ),
-                        lang
-                    )
-                }
-            )
-        }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = if (arabic) h.hadith.arabic else h.hadith.english,
-            color = Color.White,
-            fontSize = if (arabic) 19.sp else 15.sp,
-            lineHeight = if (arabic) 32.sp else 23.sp,
-            fontFamily = if (arabic) SurahNameFontFamily else null,
-            textAlign = if (arabic) TextAlign.Right else null,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().padding(end = 10.dp),
-            bypassNumerals = true
-        )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = "${book?.title(lang) ?: ""} · ${h.hadith.number}",
-            color = Color.White.copy(alpha = 0.4f),
-            fontSize = 11.sp,
-            modifier = Modifier.padding(end = 10.dp),
-            bypassNumerals = true
-        )
-    }
-}

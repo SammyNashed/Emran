@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The window behind the first frame: the night sky's own colours, so a cold start goes
+     straight from launcher to sky instead of through a flat grey window. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="270"
+        android:startColor="#FF040A18"
+        android:centerColor="#FF0B2A3D"
+        android:endColor="#FF1F6B80" />
+</shape>

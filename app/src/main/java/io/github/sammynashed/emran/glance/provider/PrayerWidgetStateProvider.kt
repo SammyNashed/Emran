@@ -1,7 +1,7 @@
 package io.github.sammynashed.emran.glance.provider
 
 import android.content.Context
-import android.util.Log
+
 import io.github.sammynashed.emran.data.PrayerTimeCalculator
 import io.github.sammynashed.emran.glance.mapper.WidgetStateMapper
 import io.github.sammynashed.emran.ui.theme.EmranTheme
@@ -53,7 +53,7 @@ class PrayerWidgetStateProvider(private val context: Context) {
         // device locale, and the device's 12/24-hour preference for the clock.
         val localeData = WidgetStateMapper.LocaleDomainData(
             language = prefs.getString("current_language", "en") ?: "en",
-            use24Hour = android.text.format.DateFormat.is24HourFormat(context)
+            use24Hour = io.github.sammynashed.emran.data.TimeFormat.is24(context)
         )
 
         // Stats Data
@@ -103,12 +103,12 @@ class PrayerWidgetStateProvider(private val context: Context) {
         try {
             val lat = prefs.getFloat("latitude", 36.2021f).toDouble()
             val lon = prefs.getFloat("longitude", 37.1343f).toDouble()
-            val methodStr = prefs.getString("calculation_method", "EGYPTIAN") ?: "EGYPTIAN"
+            val methodStr = prefs.getString("calculation_method", "MWL") ?: "MWL"
             val schoolStr = prefs.getString("asr_school", "SHAFII") ?: "SHAFII"
             val ruleStr = prefs.getString("high_latitude_rule", "AUTOMATIC") ?: "AUTOMATIC"
             locationName = prefs.getString("location_name", "Aleppo") ?: "Aleppo"
 
-            val methodEnum = try { PrayerTimeCalculator.CalculationMethod.valueOf(methodStr) } catch(e: Exception) { PrayerTimeCalculator.CalculationMethod.EGYPTIAN }
+            val methodEnum = try { PrayerTimeCalculator.CalculationMethod.valueOf(methodStr) } catch(e: Exception) { PrayerTimeCalculator.CalculationMethod.MWL }
             val schoolEnum = try { PrayerTimeCalculator.AsrSchool.valueOf(schoolStr) } catch(e: Exception) { PrayerTimeCalculator.AsrSchool.SHAFII }
             val ruleEnum = try { PrayerTimeCalculator.HighLatitudeRule.valueOf(ruleStr) } catch(e: Exception) { PrayerTimeCalculator.HighLatitudeRule.AUTOMATIC }
 

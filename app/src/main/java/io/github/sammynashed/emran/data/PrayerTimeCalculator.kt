@@ -291,7 +291,7 @@ object PrayerTimeCalculator {
         latitude: Double = DEFAULT_LATITUDE,
         longitude: Double = DEFAULT_LONGITUDE,
         zone: ZoneId = DEFAULT_ZONE,
-        method: CalculationMethod = CalculationMethod.EGYPTIAN,
+        method: CalculationMethod = CalculationMethod.MWL,
         school: AsrSchool = AsrSchool.SHAFII,
         highLatitudeRule: HighLatitudeRule = HighLatitudeRule.AUTOMATIC,
         adjustments: Adjustments = Adjustments.NONE,
@@ -375,21 +375,20 @@ object PrayerTimeCalculator {
             )
         }
 
-        // The clock shows whole minutes, and which way the seconds go matters.
-        // Every screen formats with "HH:mm", which silently DROPS the seconds, so
-        // Aleppo's Fajr of 05:08:46 showed as 5:08 and Maghrib of 18:02:53 as
-        // 18:02 - the minute before each prayer was actually due, which a sheikh
-        // reading a timetable rightly called wrong (5:09 and 18:03). Prayers
-        // begin at the NEXT whole minute, so the adhan and the page never run
-        // ahead of the sun. Sunrise goes the other way: it marks the END of
-        // Fajr, so a partial minute is not rounded into the prayer's time.
+        // The clock shows whole minutes, so the seconds have to go somewhere. Every prayer goes to the
+        // NEAREST minute (half a minute rounds up), the way mosque timetables and other prayer apps
+        // read: Isha of 19:16:15 is 19:16, Fajr of 05:08:46 is 05:09. The adhan can therefore fall up to
+        // 30 s before the exact astronomical moment, never a whole minute after it.
+        // (The first version rounded UP so the adhan could never run ahead of the sun; that put it up to
+        // 59 s after the mosque's call, which a user in Aleppo heard as "Emran is a minute late".)
+        // Sunrise is not a prayer: it marks the END of Fajr, so its partial minute is dropped.
         return PrayerTimes(
-            fajr = toLocalDateTime(date, fajrUt, zone).ceilToMinute(),
+            fajr = toLocalDateTime(date, fajrUt, zone).roundToMinute(),
             sunrise = toLocalDateTime(date, sunriseUt, zone).truncatedTo(java.time.temporal.ChronoUnit.MINUTES),
-            dhuhr = toLocalDateTime(date, noonUt, zone).ceilToMinute(),
-            asr = toLocalDateTime(date, asrUt, zone).ceilToMinute(),
-            maghrib = toLocalDateTime(date, maghribUt, zone).ceilToMinute(),
-            isha = toLocalDateTime(date, ishaUt, zone).ceilToMinute(),
+            dhuhr = toLocalDateTime(date, noonUt, zone).roundToMinute(),
+            asr = toLocalDateTime(date, asrUt, zone).roundToMinute(),
+            maghrib = toLocalDateTime(date, maghribUt, zone).roundToMinute(),
+            isha = toLocalDateTime(date, ishaUt, zone).roundToMinute(),
             date = date,
             zone = zone,
             hasTrueSunriseAndSunset = hasTrueSunriseAndSunset,
@@ -403,7 +402,7 @@ object PrayerTimeCalculator {
         latitude: Double,
         longitude: Double,
         zoneId: String,
-        method: CalculationMethod = CalculationMethod.EGYPTIAN,
+        method: CalculationMethod = CalculationMethod.MWL,
         school: AsrSchool = AsrSchool.SHAFII,
         highLatitudeRule: HighLatitudeRule = HighLatitudeRule.AUTOMATIC,
         adjustments: Adjustments = Adjustments.NONE,
@@ -440,7 +439,7 @@ object PrayerTimeCalculator {
         latitude: Double,
         longitude: Double,
         timezone: Double,
-        method: CalculationMethod = CalculationMethod.EGYPTIAN,
+        method: CalculationMethod = CalculationMethod.MWL,
         school: AsrSchool = AsrSchool.SHAFII
     ): PrayerTimes = calculateTimes(
         date = date,
@@ -624,10 +623,10 @@ object PrayerTimeCalculator {
     // Small helpers
     // -----------------------------------------------------------------------
 
-    /** Next whole minute, or the same instant if the seconds are already zero. */
-    private fun LocalDateTime.ceilToMinute(): LocalDateTime {
+    /** The nearest whole minute: 30 seconds or more rounds up. */
+    private fun LocalDateTime.roundToMinute(): LocalDateTime {
         val floor = truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-        return if (this == floor) this else floor.plusMinutes(1)
+        return if (second >= 30) floor.plusMinutes(1) else floor
     }
 
     private fun sinDeg(degrees: Double) = sin(Math.toRadians(degrees))

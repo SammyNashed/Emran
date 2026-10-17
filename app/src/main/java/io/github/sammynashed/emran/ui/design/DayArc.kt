@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.absoluteOffset
+
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -30,13 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sammynashed.emran.data.PrayerTimeCalculator.PrayerTimes
 import io.github.sammynashed.emran.ui.localization.Text
-import io.github.sammynashed.emran.ui.theme.OutfitFontFamily
+import io.github.sammynashed.emran.ui.theme.InterFontFamily
 import java.time.Duration
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
-private class Mark(val name: String, val ar: String, val fraction: Float, val key: String)
+private class Mark(val name: String, val ar: String, val fraction: Float, val key: String, val time: String)
 
 /**
  * The day, drawn as one quiet arc.
@@ -65,12 +68,18 @@ fun DayArc(
     fun frac(t: java.time.LocalDateTime) =
         (Duration.between(times.fajr, t).seconds / span).coerceIn(0f, 1f)
 
+    val use24 = io.github.sammynashed.emran.data.TimeFormat.use24
+    fun hm(t: java.time.LocalDateTime) = io.github.sammynashed.emran.data.TimeFormat.clock(t.toLocalTime(), use24)
     val marks = listOf(
-        Mark("Fajr", "الفجر", 0f, "Fajr"),
-        Mark("Dhuhr", "الظهر", frac(times.dhuhr), "Dhuhr"),
-        Mark("Asr", "العصر", frac(times.asr), "Asr"),
-        Mark("Maghrib", "المغرب", frac(times.maghrib), "Maghrib"),
-        Mark("Isha", "العشاء", 1f, "Isha"),
+        Mark("Fajr", "الفجر", 0f, "Fajr", hm(times.fajr)),
+        Mark(
+            io.github.sammynashed.emran.data.PrayerNames.name("Dhuhr", false, times.dhuhr.toLocalDate()),
+            io.github.sammynashed.emran.data.PrayerNames.name("Dhuhr", true, times.dhuhr.toLocalDate()),
+            frac(times.dhuhr), "Dhuhr", hm(times.dhuhr),
+        ),
+        Mark("Asr", "العصر", frac(times.asr), "Asr", hm(times.asr)),
+        Mark("Maghrib", "المغرب", frac(times.maghrib), "Maghrib", hm(times.maghrib)),
+        Mark("Isha", "العشاء", 1f, "Isha", hm(times.isha)),
     )
     val sunriseFraction = frac(times.sunrise)
     // The adhan clock is the same moment as the highlighted tick; Sunrise highlights Fajr's neighbour.
@@ -78,11 +87,11 @@ fun DayArc(
 
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val screenWidth = maxWidth
-        val radius = screenWidth * 0.30f
+        val radius = screenWidth * 0.31f
         val top = 36.dp
         val cx = maxWidth / 2
         val cy = top + radius
-        val boxHeight = cy + 66.dp
+        val boxHeight = cy + 70.dp
 
         // Position of a point on the arc, in dp, for a day-fraction f at a given radius.
         fun point(f: Float, r: androidx.compose.ui.unit.Dp): Pair<androidx.compose.ui.unit.Dp, androidx.compose.ui.unit.Dp> {
@@ -108,9 +117,12 @@ fun DayArc(
 
                 // The whole day, faint.
                 drawArc(sky.ink.copy(alpha = 0.22f), 180f, 180f, false, topLeft, arcSize, style = stroke)
-                // The part already lived, brighter.
+                // The part already lived, brighter, with a soft glow under it.
                 val lived = sky.dayFraction * 180f
                 if (lived > 0.5f) {
+                    val glow = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
+                    if (rtl) drawArc(sky.ink.copy(alpha = 0.10f), 0f, -lived, false, topLeft, arcSize, style = glow)
+                    else drawArc(sky.ink.copy(alpha = 0.10f), 180f, lived, false, topLeft, arcSize, style = glow)
                     if (rtl) drawArc(sky.ink.copy(alpha = 0.85f), 0f, -lived, false, topLeft, arcSize, style = stroke)
                     else drawArc(sky.ink.copy(alpha = 0.85f), 180f, lived, false, topLeft, arcSize, style = stroke)
                 }
@@ -122,17 +134,20 @@ fun DayArc(
                     return Offset(if (rtl) c.x + dx else c.x - dx, c.y - dy)
                 }
 
-                // Prayer ticks.
+                // Prayer dots: solid once prayed past, dim ahead, the next one bigger with a halo.
                 marks.forEach { m ->
-                    val next = m.key == highlightKey
-                    val a = at(m.fraction, r - (if (next) 9.dp.toPx() else 6.dp.toPx()))
-                    val b = at(m.fraction, r + (if (next) 9.dp.toPx() else 6.dp.toPx()))
-                    drawLine(
-                        color = if (next) sky.ink else sky.ink.copy(alpha = 0.6f),
-                        start = a, end = b,
-                        strokeWidth = (if (next) 3.5f else 2f).dp.toPx(),
-                        cap = StrokeCap.Round,
-                    )
+                    val p = at(m.fraction, r)
+                    when {
+                        m.key == highlightKey -> {
+                            drawCircle(sky.ink.copy(alpha = 0.18f), 11.dp.toPx(), p)
+                            drawCircle(sky.ink, 5.5.dp.toPx(), p)
+                        }
+                        m.fraction <= sky.dayFraction -> drawCircle(sky.ink.copy(alpha = 0.9f), 4.dp.toPx(), p)
+                        else -> {
+                            drawCircle(sky.ink.copy(alpha = 0.35f), 4.dp.toPx(), p)
+                            drawCircle(sky.ink.copy(alpha = 0.75f), 4.dp.toPx(), p, style = Stroke(1.5.dp.toPx()))
+                        }
+                    }
                 }
                 // Sunrise, a small dot with no label.
                 drawCircle(sky.ink.copy(alpha = 0.4f), 2.5.dp.toPx(), at(sunriseFraction, r))
@@ -150,37 +165,30 @@ fun DayArc(
                 drawCircle(Color.White.copy(alpha = 0.85f), 3.5.dp.toPx(), orbAt)
             }
 
-            // Each name sits OUTSIDE the arc, on a zero-width anchor, and grows AWAY from it:
-            // left of the arc it ends at the anchor, right of it it starts there, at the top it
-            // is centred above its tick, and the two ends (Fajr, Isha) sit under their tick.
-            // Anchoring (rather than a fixed-width box that must be clamped to the screen)
-            // means nothing can ever push a name back onto the line. Coordinates are plain
-            // left-to-right (see the Ltr provider above); the day's direction in Arabic is
-            // already inside `point`.
-            val gap = 14.dp
+            // Each label (name over time) is one block centred just outside its own dot, on the
+            // line from the arc's centre through the dot, far enough out that the block clears
+            // the arc at any angle. The top one runs inline (room sideways, not upwards); the two
+            // ends sit under their dots. Coordinates are plain left-to-right (see the Ltr provider
+            // above); the day's direction in Arabic is already inside `point`.
             marks.forEach { m ->
                 val next = m.key == highlightKey
                 val atEnd = m.fraction <= 0.001f || m.fraction >= 0.999f
-                // The orb's glow is ~34 dp wide. When it sits near this prayer, slide the name a
-                // little ALONG the arc, away from the orb, so it stays right beside its own tick
-                // instead of being pushed out into the sky.
-                val orbHere = abs(sky.dayFraction - m.fraction) < 0.09f
-                val slide = if (orbHere && !atEnd) (if (sky.dayFraction > m.fraction) -0.07f else 0.07f) else 0f
-                val (ax, ay) = point((m.fraction + slide).coerceIn(0f, 1f), radius + gap)
-                val anchor = when {
-                    atEnd -> 0
-                    ax < cx - 28.dp -> -1
-                    ax > cx + 28.dp -> 1
-                    else -> 0
-                }
+                // When the orb's glow sits on this prayer, slide the label a little along the arc,
+                // never toward an end, where the end's own label sits.
+                val orbHere = abs(sky.dayFraction - m.fraction) < 0.08f
+                val slide = if (orbHere && !atEnd) (if (sky.dayFraction > m.fraction) -0.06f else 0.06f) else 0f
+                val f = if (atEnd) m.fraction else (m.fraction + slide).coerceIn(0.12f, 0.88f)
+                val top = !atEnd && abs(f - 0.5f) < 0.14f
                 val (x, y) = when {
-                    atEnd -> point(m.fraction, radius).first to (cy + (if (orbHere) 34.dp else 20.dp))
-                    anchor == 0 -> ax to (ay - 12.dp)
-                    else -> ax to ay
+                    atEnd -> point(m.fraction, radius).first to (cy + (if (orbHere) 40.dp else 28.dp))
+                    top -> point(f, radius + 16.dp).let { it.first to it.second - 6.dp }
+                    else -> point(f, radius + (if (next) 46.dp else 34.dp))
                 }
                 AnchoredLabel(
-                    x = x, y = y, side = anchor,
+                    x = x, y = y, side = 0,
                     text = if (ar) m.ar else m.name,
+                    sub = m.time,
+                    inline = top,
                     color = if (next) sky.ink else sky.inkSoft,
                     bold = next,
                 )
@@ -193,22 +201,21 @@ fun DayArc(
                     .offset(y = top + radius * 0.34f),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                val shown = nextName.removeSuffix(" (Tomorrow)")
                 Text(
-                    text = if (ar) arName(shown) else shown,
+                    text = io.github.sammynashed.emran.data.PrayerNames.name(nextName, ar),
                     color = sky.ink,
-                    fontSize = 46.sp,
+                    fontSize = 40.sp,
                     fontWeight = FontWeight.Light,
-                    fontFamily = if (ar) null else OutfitFontFamily,
+                    fontFamily = if (ar) null else InterFontFamily,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                 )
                 Text(
                     text = countdown,
                     color = sky.ink,
-                    fontSize = 34.sp,
+                    fontSize = 31.sp,
                     fontWeight = FontWeight.ExtraLight,
-                    fontFamily = OutfitFontFamily,
+                    fontFamily = InterFontFamily,
                     style = TextStyle(fontFeatureSettings = "tnum"),
                     bypassNumerals = true,
                 )
@@ -225,16 +232,6 @@ fun DayArc(
     }
 }
 
-private fun arName(name: String) = when (name) {
-    "Fajr" -> "الفجر"
-    "Sunrise" -> "الشروق"
-    "Dhuhr" -> "الظهر"
-    "Asr" -> "العصر"
-    "Maghrib" -> "المغرب"
-    "Isha" -> "العشاء"
-    else -> name
-}
-
 /**
  * Text placed relative to a point: [side] -1 ends at the point, 1 starts at it, 0 is centred
  * on it. The point is where the layout says it is, with no width of its own to clamp.
@@ -245,8 +242,10 @@ private fun AnchoredLabel(
     y: androidx.compose.ui.unit.Dp,
     side: Int,
     text: String,
+    sub: String?,
     color: Color,
     bold: Boolean,
+    inline: Boolean = false,
 ) {
     Box(
         Modifier.layout { measurable, constraints ->
@@ -257,13 +256,53 @@ private fun AnchoredLabel(
             }
         },
     ) {
-        Text(
-            text = text,
-            color = color,
-            fontSize = 13.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1,
-            softWrap = false,
-        )
+        val name: @Composable () -> Unit = {
+            Text(
+                text = text,
+                color = color,
+                fontSize = 13.sp,
+                fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false,
+                style = tight(18.sp),
+            )
+        }
+        val time: @Composable () -> Unit = {
+            if (sub != null) {
+                Text(
+                    text = sub,
+                    style = tight(13.sp),
+                    color = color.copy(alpha = color.alpha * 0.85f),
+                    fontSize = 11.sp,
+                    fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
+                    fontFamily = InterFontFamily,
+                    maxLines = 1,
+                    softWrap = false,
+                    bypassNumerals = true,
+                )
+            }
+        }
+        val pill = if (bold) Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.16f))
+            .padding(horizontal = 9.dp, vertical = 3.dp) else Modifier
+        if (inline) {
+            androidx.compose.foundation.layout.Row(
+                modifier = pill,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            ) { name(); time() }
+        } else {
+            Column(pill, horizontalAlignment = Alignment.CenterHorizontally) { name(); time() }
+        }
     }
 }
+
+/** Line box trimmed to the glyphs, so a name and its time sit close (Arabic fonts carry tall line gaps). */
+private fun tight(lineHeight: androidx.compose.ui.unit.TextUnit) = TextStyle(
+    lineHeight = lineHeight,
+    lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(
+        alignment = androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+        trim = androidx.compose.ui.text.style.LineHeightStyle.Trim.Both,
+    ),
+)

@@ -62,13 +62,16 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** The first chapter-list load; opening a surah from outside waits for it so it can't land after (and replace) the surah. */
+    private var chaptersJob: kotlinx.coroutines.Job? = null
+
     fun loadChapters() {
         if (cachedChapters != null) {
             _uiState.value = QuranUiState.SuccessChapters(cachedChapters!!)
             return
         }
 
-        viewModelScope.launch {
+        chaptersJob = viewModelScope.launch {
             _uiState.value = QuranUiState.Loading
             try {
                 val chapters = repository.getChapters()
@@ -81,7 +84,19 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadSurah(chapter: QuranChapter) {
+    /** An ayah the reader should open on (set by ayah search); consumed once the reader has jumped. */
+    private val _jumpToAyah = MutableStateFlow<Int?>(null)
+    val jumpToAyah: StateFlow<Int?> = _jumpToAyah
+    fun consumeJump() { _jumpToAyah.value = null }
+
+    /** (surah, ayah) the reader marks after a search jump, until the reader turns away from it. */
+    private val _focusAyah = MutableStateFlow<Pair<Int, Int>?>(null)
+    val focusAyah: StateFlow<Pair<Int, Int>?> = _focusAyah
+    fun clearFocus() { _focusAyah.value = null }
+
+    fun loadSurah(chapter: QuranChapter, ayah: Int? = null) {
+        _jumpToAyah.value = ayah
+        _focusAyah.value = ayah?.let { chapter.id to it }
         viewModelScope.launch {
             _uiState.value = QuranUiState.Loading
             try {
@@ -118,6 +133,22 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Opens the reader on one ayah (from a bookmark), marked until the reader turns away from it. */
+    fun openAyah(surah: Int, ayah: Int?) {
+        viewModelScope.launch {
+            chaptersJob?.join()
+            val chapters = cachedChapters ?: runCatching { repository.getChapters() }.getOrNull() ?: return@launch
+            if (cachedChapters == null) {
+                cachedChapters = chapters
+                _allChapters.value = chapters
+            }
+            chapters.firstOrNull { it.id == surah }?.let { loadSurah(it, ayah) }
+        }
+    }
+
+    /** Opens a whole surah (the Friday al-Kahf reminder): where the reader left it, or its start. */
+    fun openSurah(surah: Int) = openAyah(surah, null)
+
     fun saveBookmark(chapterId: Int, scrollPos: Int) {
         prefs.edit()
             .putInt("bookmark_chapter_id", chapterId)
@@ -140,6 +171,31 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
      * sees "3 completed" alongside a fresh 0/114, rather than a bar stuck at
      * full forever or a count that silently resets to nothing.
      */
+    /** This khatmah so far: surahs finished, the muṣḥaf pages they cover, and khatmas completed before. */
+    data class Khatmah(val surahs: Int, val pages: Int, val totalPages: Int, val completed: Int)
+
+    private val _khatmah = MutableStateFlow(Khatmah(0, 0, 604, prefs.getInt(KEY_KHATMAH_COUNT, 0)))
+    val khatmah: StateFlow<Khatmah> = _khatmah
+
+    /** Recounts from the saved set; pages shared by two finished surahs count once. */
+    fun refreshKhatmah() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val done = prefs.getStringSet(KEY_SURAHS_DONE, emptySet())?.mapNotNull { it.toIntOrNull() } ?: emptyList()
+            val pages = HashSet<Int>()
+            var total = 604
+            runCatching {
+                val all = HashSet<Int>()
+                for (id in 1..TOTAL_SURAHS) {
+                    val ps = repository.getSurahVerses(id).verses.map { it.page }
+                    all += ps
+                    if (id in done) pages += ps
+                }
+                total = all.size.coerceAtLeast(1)
+            }
+            _khatmah.value = Khatmah(done.size, pages.size, total, prefs.getInt(KEY_KHATMAH_COUNT, 0))
+        }
+    }
+
     fun recordSurahCompleted(chapterId: Int) {
         if (chapterId !in 1..TOTAL_SURAHS) return
 
@@ -154,6 +210,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             editor.putStringSet(KEY_SURAHS_DONE, current)
         }
         editor.apply()
+        refreshKhatmah()
 
         viewModelScope.launch {
             try {

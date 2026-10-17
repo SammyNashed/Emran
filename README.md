@@ -1,146 +1,137 @@
-<!-- Banner & Title -->
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxhdpi/ic_launcher.png" alt="Emran App Icon" width="128" height="128" />
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="Emran" width="128" height="128" />
 </p>
 
-<h1 align="center">Emran</h1>
+<h1 align="center">Emran · عِمران</h1>
 <p align="center">
   <strong>الصلاة عمران الروح — "Salah is the prosperity of the soul."</strong>
 </p>
 
 <p align="center">
   <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.2-7F52FF.svg?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" /></a>
-  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-M3-4285F4.svg?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" /></a>
-  <a href="https://developer.android.com/training/data-storage/room"><img src="https://img.shields.io/badge/Database-Room-3DDC84.svg?style=flat-square&logo=android&logoColor=white" alt="Room" /></a>
-  <a href="https://developer.android.com/jetpack/androidx/releases/glance"><img src="https://img.shields.io/badge/Widget-Jetpack%20Glance-4285F4.svg?style=flat-square&logo=android&logoColor=white" alt="Glance Widget" /></a>
+  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-AGSL%20sky-4285F4.svg?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" /></a>
+  <a href="https://github.com/SammyNashed/ratl"><img src="https://img.shields.io/badge/Hifz-RATL%20on--device-0F766E.svg?style=flat-square" alt="RATL" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green.svg?style=flat-square" alt="GPL-3.0" /></a>
-  <img src="https://img.shields.io/badge/Network-Only%20when%20you%20ask-blue.svg?style=flat-square" alt="Network only for downloads you start" />
+  <img src="https://img.shields.io/badge/Version-2.3.0-orange.svg?style=flat-square" alt="2.3.0" />
+  <img src="https://img.shields.io/badge/Tracking-none-blue.svg?style=flat-square" alt="No tracking" />
 </p>
 
 <p align="center">
-  <strong>Emran</strong> is a free and open-source Islamic companion app that helps Muslims build and sustain consistency in their daily prayers. It is fully offline: prayer calculations, Quran text, Adhkar and all personal data live on the device. The app uses the network for one thing only, optional downloads you start yourself (the Hifz speech model and extra Hadith collections). There is no telemetry, no analytics and no account.
+  A free, open-source Islamic companion for Android, Arabic first. Prayer times and
+  adhan, the Madinah mushaf with recitation and on-device Hifz checking, Qibla,
+  masbaha, adhkar and twelve hadith books, all under a sky that follows the real
+  sun where you are. No account, no ads, no analytics.
+</p>
+
+<p align="center">
+  <a href="https://t.me/emran_app"><strong>Download from the Telegram channel</strong></a>
+</p>
+
+---
+
+<p align="center">
+  <img src="docs/screenshots/home-night.png" alt="Home at night" width="19%" />
+  <img src="docs/screenshots/home-maghrib.png" alt="Home at Maghrib" width="19%" />
+  <img src="docs/screenshots/home.png" alt="Home by day" width="19%" />
+  <img src="docs/screenshots/prayer-times.png" alt="Prayer times" width="19%" />
+  <img src="docs/screenshots/compass.png" alt="Qibla" width="19%" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/quran.png" alt="Quran tab" width="19%" />
+  <img src="docs/screenshots/reader.png" alt="Madinah mushaf page" width="19%" />
+  <img src="docs/screenshots/player.png" alt="Recitation player" width="19%" />
+  <img src="docs/screenshots/dhikr.png" alt="Masbaha" width="19%" />
+  <img src="docs/screenshots/hadith.png" alt="Hadith library" width="19%" />
+</p>
+<p align="center"><sub>The same Home screen at night, at Maghrib and by day: the sky follows the real sun.</sub></p>
+
+## ✨ What's inside
+
+### 🌅 A living sky
+Every screen sits on a sky computed from the sun's real position at your location:
+navy before Fajr, dawn colours at sunrise, bright day, ember at Maghrib. Clouds are
+an AGSL shader rendered at low resolution, and the text colour switches between
+light and dark ink as the sky changes, so it stays readable at every hour. Cards
+and the dock are frosted glass.
+
+### 🕌 Prayer times & adhan
+* Offline calculation for any coordinate or bundled city, with twelve published
+  conventions (Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Dubai,
+  Qatar, Kuwait, Singapore, Diyanet, Tehran, Ja'fari) plus custom angles, Shafi'i or
+  Hanafi Asr, high-latitude rules and per-prayer fine-tuning.
+* Home shows the day as an arc with every prayer on it, the next prayer and a
+  countdown, the Hijri date in words, and an ayah of the day with its tafsir.
+* Exact alarms for the adhan, re-armed after a reboot, an app update, or a time or
+  time zone change. A one-time guide walks people through the battery and
+  autostart settings that Xiaomi, Samsung and others use to kill alarms.
+* Morning and evening adhkar reminders, 12 or 24 hour clock.
+
+### 📖 Qur'an
+* **The Madinah mushaf page**: 604 pages, 15 lines each, set in the KFGQPC Uthmanic
+  Hafs font with the King Fahd Complex's own text, drawn line by line on a canvas.
+* Search by words (diacritics ignored) or by reference like `2:255`, surah and juz
+  lists, a continue card with a khatmah ring, and one bookmark per surah.
+* Tap any ayah for its meaning (Tafsir al-Muyassar, or Saheeh International in
+  English).
+* **Recitation**: ten reciters (Alafasy, Al-Muaiqly, Al-Dosari, Al-Juhany,
+  Al-Shatri, Al-Qatami, Al-Ghamdi, Al-Husary, Abdul Basit, Al-Minshawi). Download a
+  surah or the whole Qur'an, then listen offline with the playing ayah highlighted
+  and the page following along. A full player has a whole-surah seek bar, repeat
+  for an ayah or a surah, a queue, lock-screen controls, and the Emran logo moving
+  with the reciter's voice.
+* **Hifz mode**: recite from memory and the words reveal themselves as you say
+  them. Speech is checked on the phone by [RATL](https://github.com/SammyNashed/ratl);
+  the model ships inside the app and nothing you say ever leaves the device.
+
+### 🧭 Qibla
+A compass with magnetic-declination correction and calibration hints. With camera
+permission it becomes a camera view with the Kaaba floating in the Qibla direction
+(preview only, nothing is recorded or stored).
+
+### 📿 Masbaha, adhkar & hadith
+* A masbaha with a string of 33 beads, the classic tasbihat and your own, with sound
+  and vibration.
+* 55 core adhkar with Arabic, transliteration, translation and source, plus 223
+  items from Hisn al-Muslim kept in their own section, and your own adhkar.
+* **Twelve hadith books inside the app**: Riyad as-Salihin, the Forty of an-Nawawi,
+  the Forty Qudsi, Sahih al-Bukhari, Sahih Muslim, Abi Dawud, at-Tirmidhi,
+  an-Nasa'i, Ibn Majah, Muwatta Malik, ad-Darimi and Bulugh al-Maram. Search,
+  bookmarks, and Hadith of the Day.
+* Share any ayah, hadith or dhikr as a picture card.
+
+### 🪟 Home-screen widgets
+Ten glass widgets: next prayer with a live countdown, the day's prayer table,
+prayer progress, a clock, the day name in Thuluth calligraphy or in English, the
+Hijri date, the Hijri month, the ayah of the day, and the next occasion.
+
+<p align="center">
+  <img src="docs/screenshots/widgets.png" alt="Emran widgets" width="860" />
 </p>
 
 ---
 
 ## 🔒 Privacy
 
-Emran is fully offline. It does hold the `INTERNET` permission, for exactly one
-purpose: **optional downloads that you start with a tap** - the Hifz speech model,
-and the larger Hadith collections (the small ones ship inside the app). Nothing
-runs in the background, and every download is checked against a SHA-256 before it
-is used. There is no telemetry, no analytics, no ad SDK and no account, and
-nothing you record ever leaves your device. It never collects, shares or sells data.
+Emran collects nothing, shares nothing and sells nothing. There is no account, no
+analytics, no ad SDK and no crash reporter. Prayer times, the Qur'an, Hifz, adhkar
+and every hadith book work with no internet at all.
 
-Permissions requested, and why each one is needed:
+The app goes online in exactly two cases, both started by you: **Check for updates**
+in Settings, and **downloading a reciter's audio**.
 
 | Permission | Why |
 | :--- | :--- |
-| `INTERNET` | Only for the downloads you start yourself (Hifz model, extra Hadith books). Never used for analytics or syncing |
-| `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM` | Deliver the adhan at the exact prayer instant rather than in a batched window |
-| `RECEIVE_BOOT_COMPLETED` | Restore the alarm schedule after a reboot, otherwise the adhan stops silently |
-| `POST_NOTIFICATIONS` | Show prayer alerts on Android 13+ |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Optional, user-initiated from Settings; keeps the adhan reliable under Doze |
-| `VIBRATE` | Haptic feedback for the tasbeeh counter and Qada incrementors |
-
----
-
-## ✨ Features
-
-### 1. Daily Prayer Ledger & Notifications
-* **Offline prayer calculation** for any coordinate or bundled city, using twelve
-  published conventions: Muslim World League, ISNA, Egyptian General Authority,
-  Umm al-Qura, Karachi, Dubai, Qatar, Kuwait, Singapore (MUIS), Diyanet (Turkey),
-  Tehran, and Ja'fari — plus a **Custom** mode for user-defined angles.
-* **Correct across daylight saving time.** Locations are stored as IANA time
-  zones (`America/Chicago`), not fixed UTC offsets, so times follow each region's
-  actual rules for each date. See [Time zone handling](#-time-zone-handling).
-* **High-latitude rules** for places where the sun never reaches the Fajr or Isha
-  angle: middle of the night, one-seventh of the night, angle-based, or automatic.
-* **Prayer tracking & ledger** — log all five daily prayers with categorised status.
-* **Consistency streaks** with a full-screen celebration animation and haptics.
-* **Adhan scheduling** via `AlarmManager` with a `WorkManager` fallback, and
-  automatic rescheduling on boot.
-
-### 2. The Forge (Qada Backlog Tracker)
-* Calculate, manage and track missed prayers accumulated over months or years.
-* Visual progress gauges and fluid counters with tactile feedback.
-
-### 3. Qibla Compass
-* Rotation-vector, accelerometer and magnetometer fusion with geomagnetic
-  declination correction, plus live calibration guidance.
-
-### 4. Quran Reader
-* All 114 surahs offline in Uthmani script, rendered in a proper mushaf typeface.
-* Navigate by Surah, Juz or page (604-page mapping), with search and bookmarks.
-* *Audio recitation is not included — see [Roadmap](#-roadmap).*
-
-### 5. Dhikr & Digital Masbaha
-* Counter with custom targets, lap counting, sound and per-count micro-vibration
-  for eyes-free use.
-
-### 6. Adhkar Collection
-* **55 supplications** across morning, evening, after-prayer, before-sleep and
-  upon-waking, each with **Arabic, transliteration, translation and its source**
-  (surah and ayah, or collection and hadith number).
-* Narrated virtues shown where they exist, and built-in repetition counters.
-* **128 more chapters from Hisn al-Muslim** (223 items) in their own section. These
-  cite the book's chapter, not a hadith number, and are kept visibly separate from
-  the verified core.
-* **Search and bookmarks** across adhkar and hadith.
-* Format and contribution guide: [`docs/adhkar-format.md`](docs/adhkar-format.md).
-
-### 6b. Hadith Library
-* **Riyad as-Salihin, the Forty Hadith of an-Nawawi and the Forty Hadith Qudsi**
-  ship inside the app (about 0.5 MB together), Arabic with English.
-* **Nine more collections are optional downloads** - Sahih al-Bukhari, Sahih Muslim,
-  Abi Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah, Muwatta Malik, ad-Darimi and Bulugh
-  al-Maram - fetched only when you tap, 0.4 to 2.6 MB each, removable at any time.
-* Built to stay light: a compact per-chapter format read in place, so a chapter is
-  decoded when opened and only a few are ever in memory. See
-  [`tools/build_hadith_packs.py`](tools/build_hadith_packs.py).
-* Search (Arabic ignoring diacritics, English, or a hadith number), bookmarks,
-  copy and share, and a Hadith of the Day on the home screen.
-
-### 7. Quests & Badges
-* Consistency quests and unlockable achievements for long-term habit formation.
-
-### 8. Home-Screen Widget
-* Jetpack Glance widget showing the next prayer and its time.
-* Background colours and accents follow the active app theme and light/dark mode
-  immediately when either is changed.
-
----
-
-## 🎨 Themes & Personalisation
-
-**20 Material 3 presets**, each with a matching launcher icon, and each available
-in **light, dark or follow-system**. The light variants are derived from the dark
-ones so a preset keeps its accent identity in both modes — "Golden Oasis" stays
-golden either way.
-
-| Preset | Colour identity | Launcher icon |
-| :--- | :--- | :--- |
-| **Black Stone** | Kaaba black & Makkah gold | `ic_launcher_black_stone` |
-| **Boreal Lights** | Aurora green & violet | `ic_launcher_aurora` |
-| **Cosmic Noir** | Deep space dark | `ic_launcher_cosmic` |
-| **Crimson Moon** | Blood moon red | `ic_launcher_blood_moon` |
-| **Expressive** | Default vibrant modern **(default)** | `ic_launcher_expressive` |
-| **Golden Oasis** | Sand & warm gold | `ic_launcher_golden` |
-| **Ice Emerald** | Mint & jade green | `ic_launcher_emerald` |
-| **Lavender Field** | Soft lavender & iris | `ic_launcher_lavender` |
-| **Midnight Teal** | Emerald cyan & teal | `ic_launcher_teal` |
-| **Nebula Spark** | Cosmic purple & cyan | `ic_launcher_nebula` |
-| **Neon Sapphire** | Electric blue | `ic_launcher_sapphire` |
-| **Pacific Sea** | Ocean blue & sky | `ic_launcher_ocean` |
-| **Pine Evergreen** | Deep forest green | `ic_launcher_forest` |
-| **Polar Glacier** | Soft mint glacier | `ic_launcher_mint` |
-| **Pure Slate** | High-contrast monochrome | `ic_launcher_monochrome` |
-| **Sahara Nomad** | Desert dune & amber | `ic_launcher_desert` |
-| **Solar Flare** | Crimson & warm sunfire | `ic_launcher_sunfire` |
-| **Sunset Rose** | Dusty rose & pink | `ic_launcher_rose` |
-| **Tokyo Sakura** | Cherry blossom pink | `ic_launcher_sakura` |
-| **Velvet Amethyst** | Deep violet & purple | `ic_launcher_amythist` |
+| `INTERNET` | Check for updates and recitation downloads, only when you tap them |
+| `ACCESS_COARSE/FINE_LOCATION` | Your prayer times and Qibla. Optional, you can pick a city instead |
+| `SCHEDULE_EXACT_ALARM` / `USE_EXACT_ALARM` | The adhan at the exact minute, not in a batched window |
+| `RECEIVE_BOOT_COMPLETED` | Re-arm the adhan after a reboot |
+| `POST_NOTIFICATIONS` | Prayer and adhkar alerts on Android 13+ |
+| `RECORD_AUDIO` | Hifz mode. Audio is processed on the phone and never stored or sent |
+| `CAMERA` | Optional camera Qibla view, preview only |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` / `_DATA_SYNC` | Playing recitation and downloading it in the background |
+| `REQUEST_INSTALL_PACKAGES` | Applying a small update file you open from the Telegram channel; Android asks you to confirm |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Optional, from Settings, keeps the adhan reliable under Doze |
+| `VIBRATE` | Masbaha and button feedback |
 
 ---
 
@@ -150,74 +141,76 @@ Worth calling out, because it is the part most prayer apps get quietly wrong.
 
 Emran stores each location as an **IANA time zone identifier**, never as a fixed
 UTC offset. Solar events are computed as absolute instants in universal time and
-only converted to wall-clock time at the very end, through
-`java.time`'s time zone database.
+only converted to wall-clock time at the very end, through `java.time`'s time zone
+database.
 
 This matters more than it sounds. **77 of Emran's 164 bundled cities observe
 daylight saving time.** An earlier version stored Chicago as `-6.0`, which is
-correct in January and an hour wrong from March to November — so every prayer time
-and every adhan alarm was an hour late for most of the year, everywhere in North
-America and Europe. Working in instants also means Morocco's Ramadan shift and the
-southern hemisphere's inverted summer are handled automatically, and a prayer that
-falls on a spring-forward morning resolves to the correct side of the transition.
+correct in January and an hour wrong from March to November. Working in instants
+also means Morocco's Ramadan shift and the southern hemisphere's inverted summer
+are handled automatically. Times are rounded up to the minute, so the adhan is
+never early.
 
-The calculation is covered by a test suite that cross-checks sunrise and sunset
-against an **independently implemented NOAA solar algorithm** across eight cities
-and six dates, rather than against the app's own arithmetic.
+The calculation is covered by tests that cross-check sunrise and sunset against an
+**independently implemented NOAA solar algorithm** across several cities and dates.
 
 ---
 
-## 🛠 Architecture & Tech Stack
+## 🛠 Tech
 
-* **Language** — [Kotlin 2.2](https://kotlinlang.org/)
-* **UI** — [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material 3
-* **Widgets** — [Jetpack Glance](https://developer.android.com/jetpack/androidx/releases/glance)
-* **Architecture** — MVVM with `StateFlow` and `collectAsStateWithLifecycle()`
-* **Database** — [Room](https://developer.android.com/training/data-storage/room) via KSP
-* **Background** — `WorkManager` and `AlarmManager`
-* **Navigation** — Navigation Compose
-* **Testing** — JUnit, Robolectric, Roborazzi screenshot tests
+* **Kotlin 2.2**, **Jetpack Compose**, MVVM with `StateFlow`
+* **AGSL** shaders for the sky, a custom liquid-glass dock and frosted panes
+* **Media3** for recitation (gapless per-ayah playlists, media session)
+* **ONNX Runtime** running RATL's alignment model for Hifz
+* **Glance** + bitmap-drawn widgets, **Room**, **WorkManager**, **AlarmManager**
 
 ---
 
 ## ⚡ Building
 
-### Prerequisites
-* Android Studio Koala or newer
-* Android SDK 36 (`compileSdk` 36, `targetSdk` 36, `minSdk` 24)
-* JDK 17
-
-### Command line
+Emran compiles against the [RATL](https://github.com/SammyNashed/ratl) engine as a
+Gradle composite build, so clone both side by side:
 
 ```bash
+git clone https://github.com/SammyNashed/ratl.git
 git clone https://github.com/SammyNashed/Emran.git
 cd Emran
 
-./gradlew assembleDebug      # Debug APK
-./gradlew testDebugUnitTest  # Run the test suite
-./gradlew assembleRelease    # Release APK (unsigned unless a keystore is present)
-./gradlew bundleRelease      # Release AAB
+./gradlew assembleDebug        # debug APK
+./gradlew testDebugUnitTest    # tests
+./gradlew assembleRelease      # release APKs (per ABI + universal)
 ```
 
-Release signing is opt-in. Without `KEYSTORE_PATH` and `STORE_PASSWORD` in the
-environment, `assembleRelease` produces an unsigned APK rather than failing — so
-F-Droid and contributors can build without any secrets.
+Needs Android SDK 36 (`minSdk` 24) and JDK 21. Release signing is read from
+`KEYSTORE_PATH`, `STORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`; without them the
+release build is unsigned rather than failing.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome, particularly:
+Contributions are welcome, especially:
 
 * **Translations.** UI strings live in `ui/localization/Localizations.kt`
-  (English and Arabic today).
-* **Adhkar content.** Every entry must carry a verifiable source — see
-  [`docs/adhkar-format.md`](docs/adhkar-format.md) and `tools/import_adhkar.py`,
-  which validates submissions and rejects unsourced or unvocalised entries.
+  (Arabic and English today).
+* **Adhkar content.** Every entry needs a verifiable source; see
+  [`docs/adhkar-format.md`](docs/adhkar-format.md).
 * **Prayer calculation conventions.** New methods need a citation for their angles.
 
 Anything touching prayer times must come with tests. That code is the reason
 someone wakes for Fajr.
+
+---
+
+## 📚 Credits
+
+* Qur'an text and font: King Fahd Glorious Qur'an Printing Complex (KFGQPC Uthmanic
+  Hafs v22, via [nuqayah/qpc-fonts](https://github.com/nuqayah/qpc-fonts))
+* Translation: Saheeh International · Tafsir: al-Muyassar
+* Recitation audio: [EveryAyah](https://everyayah.com)
+* Fonts: Inter, Readex Pro, Amiri, Bodoni Moda, Scheherazade New (SIL OFL, licences in
+  `assets/licenses/`)
+* Everyone on the in-app thank-you wall who tested Emran and sent feedback
 
 ---
 
@@ -228,36 +221,18 @@ Emran is licensed under the **GNU General Public License v3.0**. See [LICENSE](L
 ### A note on the author's intent
 
 Emran was written for the Muslim community, freely, seeking the pleasure of Allah.
-The author's wish is that **nobody profits from it commercially** — not others, and
+The author's wish is that **nobody profits from it commercially**, not others and
 not the author.
 
 GPL-3.0 was chosen deliberately over a licence that bans commercial use outright.
 A non-commercial licence is not open source: F-Droid and similar repositories will
-not distribute it, which would cut Emran off from exactly the privacy-conscious
-audience it is built for. GPL-3.0 instead requires that **any fork or modified
-build publish its full source under the same terms**, which forbids the outcome
-actually worth preventing — someone re-skinning Emran, adding advertising or a
-subscription, and shipping it closed.
+not distribute it. GPL-3.0 instead requires that **any fork or modified build
+publish its full source under the same terms**, which forbids the outcome actually
+worth preventing: someone re-skinning Emran, adding advertising or a subscription,
+and shipping it closed.
 
 If you fork Emran, please honour that intent: keep it free, keep it open, and keep
 it free of advertising.
-
----
-
-## 📌 Roadmap
-
-Currently deferred, and honestly labelled as such:
-
-* **Fasting & Ramadan module** — partially implemented in the codebase but not yet
-  finished or enabled for release.
-* **Quran audio recitation** — planned; would require optional network access or
-  bundled audio, which needs a decision on download size.
-* **Additional widget sizes and layouts.**
-* **Primary hadith references for the Hisn al-Muslim chapters** — the 55 core
-  adhkar cite a hadith number; the 223 imported Hisn al-Muslim items cite the
-  book's chapter only, because that is all the source dataset provides, and are
-  kept in their own section so the two standards are never mixed. Adding the
-  primary reference to each is the remaining work.
 
 ---
 

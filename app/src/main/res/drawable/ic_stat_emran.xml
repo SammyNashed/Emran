@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar / notification icon: Emran's five pillars as a white silhouette (Android tints it).
+     Same paths as ic_launcher_mono, cropped from the 108 launcher canvas to the mark itself. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="56" android:viewportHeight="56">
+    <group android:translateX="-26" android:translateY="-27.65">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M 28.7,74.9 L 28.7,57.3 A 3.30,3.30 0 0 1 35.3,57.3 L 35.3,74.9 Z M 39.7,74.9 L 39.7,48.5 A 3.30,3.30 0 0 1 46.3,48.5 L 46.3,74.9 Z M 50.7,74.9 L 50.7,39.7 A 3.30,3.30 0 0 1 57.3,39.7 L 57.3,74.9 Z M 61.7,74.9 L 61.7,48.5 A 3.30,3.30 0 0 1 68.3,48.5 L 68.3,74.9 Z M 72.7,74.9 L 72.7,57.3 A 3.30,3.30 0 0 1 79.3,57.3 L 79.3,74.9 Z" />
+    </group>
+</vector>

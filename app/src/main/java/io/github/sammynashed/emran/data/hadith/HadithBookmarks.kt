@@ -34,9 +34,19 @@ sealed class Bookmark {
         override val key get() = dhikrKey(folderId, itemKey)
     }
 
+    /** Where the reader stopped in the Qur'an: one ayah. Kept apart from the automatic "resume". */
+    data class AyahRef(
+        val surah: Int,
+        val ayah: Int,
+        override val savedAt: Long
+    ) : Bookmark() {
+        override val key get() = ayahKey(surah, ayah)
+    }
+
     companion object {
         fun hadithKey(bookId: String, chapterId: Int, number: Int) = "h|$bookId|$chapterId|$number"
         fun dhikrKey(folderId: String, itemKey: String) = "a|$folderId|$itemKey"
+        fun ayahKey(surah: Int, ayah: Int) = "q|$surah|$ayah"
     }
 }
 
@@ -72,6 +82,18 @@ object HadithBookmarks {
             Bookmark.DhikrRef(folderId, itemKey, System.currentTimeMillis())
         }
 
+    fun toggleAyah(context: Context, surah: Int, ayah: Int) =
+        toggle(context, Bookmark.ayahKey(surah, ayah)) {
+            Bookmark.AyahRef(surah, ayah, System.currentTimeMillis())
+        }
+
+    /** Drops a dhikr's bookmark if there is one (the user deleted one of their own adhkar). */
+    fun removeDhikr(context: Context, folderId: String, itemKey: String) {
+        ensureLoaded(context)
+        val key = Bookmark.dhikrKey(folderId, itemKey)
+        if (_all.value.any { it.key == key }) persist(context, _all.value.filterNot { it.key == key })
+    }
+
     fun remove(context: Context, bookmark: Bookmark) {
         ensureLoaded(context)
         persist(context, _all.value.filterNot { it.key == bookmark.key })
@@ -93,6 +115,7 @@ object HadithBookmarks {
     private fun serialize(b: Bookmark) = when (b) {
         is Bookmark.HadithRef -> "h|${b.bookId}|${b.chapterId}|${b.number}|${b.savedAt}"
         is Bookmark.DhikrRef -> "a|${b.folderId}|${b.itemKey}|${b.savedAt}"
+        is Bookmark.AyahRef -> "q|${b.surah}|${b.ayah}|${b.savedAt}"
     }
 
     private fun parse(s: String): Bookmark? = try {
@@ -100,6 +123,7 @@ object HadithBookmarks {
         when (p[0]) {
             "h" -> Bookmark.HadithRef(p[1], p[2].toInt(), p[3].toInt(), p[4].toLong())
             "a" -> Bookmark.DhikrRef(p[1], p[2], p[3].toLong())
+            "q" -> Bookmark.AyahRef(p[1].toInt(), p[2].toInt(), p[3].toLong())
             else -> null
         }
     } catch (e: Exception) {

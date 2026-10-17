@@ -15,10 +15,10 @@
     android:id="@+id/widget_chronometer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fontFamily="@font/outfit"
+    android:fontFamily="@font/inter"
     android:includeFontPadding="false"
     android:gravity="center"
     android:maxLines="1"
-    android:textStyle="bold"
+    android:textStyle="normal"
     android:textSize="20sp"
     android:textColor="#FFFFFF" />

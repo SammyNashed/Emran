@@ -68,6 +68,9 @@ object HadithLibrary {
                 )
             }
             books = list
+            // Every book ships in the APK now (GitHub downloads fail in Syria without a VPN), so a copy someone
+            // downloaded earlier is a duplicate: free the space.
+            list.filter { it.bundled }.forEach { runCatching { packFile(context, it.id).delete() } }
             return list
         }
     }

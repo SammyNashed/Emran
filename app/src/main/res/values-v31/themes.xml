@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ draws its own launch splash first; give it the night sky's colour so it
+         hands over to Emran's animated splash without a grey flash. -->
+    <style name="Theme.Emran" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@drawable/window_night_sky</item>
+        <item name="android:windowSplashScreenBackground">#FF071626</item>
+    </style>
+</resources>

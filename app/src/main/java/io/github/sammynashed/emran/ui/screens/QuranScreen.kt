@@ -7,8 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.testTag
-import io.github.sammynashed.emran.ui.tour.tourTarget
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,16 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.graphicsLayer
+
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
+
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.Font
@@ -65,7 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.sammynashed.emran.R
 import io.github.sammynashed.emran.data.QuranChapter
 import io.github.sammynashed.emran.data.QuranVerse
-import io.github.sammynashed.emran.ui.theme.AppTheme
+
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
 import io.github.sammynashed.emran.ui.localization.Localizations
 import io.github.sammynashed.emran.ui.localization.Text
@@ -413,7 +411,9 @@ internal fun surahMetaLabel(type: String, verses: Int, lang: String): String {
 @Composable
 fun QuranScreen(
     modifier: Modifier = Modifier,
-    viewModel: QuranViewModel = viewModel()
+    viewModel: QuranViewModel = viewModel(),
+    onOpenReciters: () -> Unit = {},
+    onOpenPlayer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isPaginatedMode by viewModel.isPaginatedMode.collectAsState()
@@ -463,6 +463,7 @@ fun QuranScreen(
         }
     }
     val hifzWordTotal = hifzWordKeys.size
+    val hifzAyahKeys = remember(hifzWordKeys) { hifzWordKeys.groupBy { it shr 12 } }
 
     // How much of the surah the transition is currently showing, 0..1.
     //
@@ -547,13 +548,19 @@ fun QuranScreen(
     val hifzScope = rememberCoroutineScope()
     val askHifzMic = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
-    ) { granted -> hifzNeedsMic = !granted }
+    ) { granted ->
+        hifzNeedsMic = !granted
+        // Granted from the "Start reciting" button: start right away, so nobody has to press it twice.
+        if (granted && !hifz.recording) {
+            hifz.toggle(hifzScope, hifzVerses.map { it.text }, hifzVerses.map { it.id }) { }
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         when (val state = uiState) {
             is QuranUiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppTheme.colors.primary)
+                    CircularProgressIndicator(color = io.github.sammynashed.emran.ui.design.LocalSky.current.ink)
                 }
             }
             is QuranUiState.Error -> {
@@ -568,39 +575,21 @@ fun QuranScreen(
                 }
             }
             is QuranUiState.SuccessChapters -> {
-                // Choosing how to read comes before choosing what to read. The
-                // old surah list lived here; it is now reached through the same
-                // selector the reading screen uses, so there is one way to pick
-                // a surah rather than two that drift apart.
-                var pendingHifz by remember { mutableStateOf<Boolean?>(null) }
+                // The Qur'an tab: one page (QuranHome.kt); how to read is chosen inside the reader.
                 val bookmarkedChapterId by viewModel.bookmarkedChapterId.collectAsState()
-
-                // The picker is a screen of its own on the sky (not a pop-up), so Back must
-                // close it and return to the two ways of reading.
-                if (pendingHifz == null) {
-                    QuranModesPage(
-                        lang = lang,
-                        resumeChapter = state.chapters.find { it.id == bookmarkedChapterId },
-                        onTilawah = { pendingHifz = false },
-                        onHifz = { pendingHifz = true },
-                        onResume = { chapter ->
-                            hifzMode = false
-                            viewModel.loadSurah(chapter)
-                        },
-                    )
-                } else {
-                    BackHandler { pendingHifz = null }
-                    SurahPicker(
-                        lang = lang,
-                        allChapters = state.chapters,
-                        onSelect = { selected ->
-                            hifzMode = pendingHifz == true
-                            viewModel.loadSurah(selected)
-                            pendingHifz = null
-                        },
-                        onBack = { pendingHifz = null },
-                    )
-                }
+                val khatmah by viewModel.khatmah.collectAsState()
+                LaunchedEffect(Unit) { viewModel.refreshKhatmah() }
+                QuranHomePage(
+                    lang = lang,
+                    chapters = state.chapters,
+                    resumeChapter = state.chapters.find { it.id == bookmarkedChapterId },
+                    khatmah = khatmah,
+                    onOpenPlayer = onOpenPlayer,
+                    onOpen = { chapter, ayah ->
+                        hifzMode = false
+                        viewModel.loadSurah(chapter, ayah)
+                    },
+                )
             }
             is QuranUiState.SuccessVerses -> {
                 BackHandler {
@@ -626,17 +615,69 @@ fun QuranScreen(
                     onDispose { dockVisible.value = true }
                 }
 
-                // Controls visibility toggled via single tap for immersive experience
-                var isControlsVisible by remember { mutableStateOf(true) }
-                // Shown on arrival so they can be found, then out of the way: the page is
-                // what matters. A tap brings them back. Hifz keeps them, it needs Start.
-                LaunchedEffect(Unit) {
-                    delay(2600)
-                    if (!hifzMode) isControlsVisible = false
-                }
+                // The bars are always there; the bottom bar's Listen / Display open one panel at a time.
+                var openPanel by remember { mutableStateOf<ReaderPanel?>(null) }
+                BackHandler(enabled = openPanel != null) { openPanel = null }
                 var showSurahSelector by remember { mutableStateOf(false) }
-                var showRecitationSheet by remember { mutableStateOf(false) }
                 val recitationContext = androidx.compose.ui.platform.LocalContext.current
+
+                // The ayah whose meaning is open (tapped on the page), and the reader's own bookmarks.
+                var selectedAyah by remember(state.chapter.id) { mutableStateOf<Pair<Int, Int>?>(null) }
+                // The ayah the reciter is on: marked on the page, and the page follows it.
+                val audioNow by io.github.sammynashed.emran.data.audio.QuranAudio.state.collectAsState()
+                // Only when the recitation is of the surah you opened: opening another surah while one
+                // plays must not pull you to the reciting one.
+                val playingAyah = audioNow?.takeIf { it.ayah > 0 && it.surah == state.chapter.id }?.let { it.surah to it.ayah }
+                // Hifz listens through the microphone; it must not hear the reciter.
+                LaunchedEffect(hifzMode) { if (hifzMode) io.github.sammynashed.emran.data.audio.QuranAudio.stop() }
+                val allBookmarks by io.github.sammynashed.emran.data.hadith.HadithBookmarks.all.collectAsState()
+                LaunchedEffect(Unit) { io.github.sammynashed.emran.data.hadith.HadithBookmarks.ensureLoaded(recitationContext) }
+                val ayahBookmarks = remember(allBookmarks) {
+                    allBookmarks.filterIsInstance<io.github.sammynashed.emran.data.hadith.Bookmark.AyahRef>()
+                }
+                // The verses of the page on screen, for the bookmark in the top bar.
+                var visibleVerses by remember(state.chapter.id) { mutableStateOf<List<QuranVerse>>(emptyList()) }
+                var bookmarkNotice by remember { mutableStateOf<String?>(null) }
+                // The top-bar bookmark asks which ayah of this surah you stopped at.
+                var askBookmark by remember(state.chapter.id) { mutableStateOf(false) }
+                val isContinuousReading by viewModel.isContinuousMode.collectAsState()
+                LaunchedEffect(bookmarkNotice) { if (bookmarkNotice != null) { delay(2800); bookmarkNotice = null } }
+                // Tilawah: any ayah. Hifz: only an ayah already recited in full (or revealed),
+                // so its meaning never gives away words still hidden.
+                // One "I stopped here" per surah: marking a new ayah moves the surah's old mark;
+                // marking the same ayah again removes it.
+                fun markAyah(s: Int, a: Int) {
+                    val ctx = recitationContext
+                    val had = ayahBookmarks.any { it.surah == s && it.ayah == a }
+                    val older = ayahBookmarks.filter { it.surah == s && it.ayah != a }
+                    if (!had) older.forEach { io.github.sammynashed.emran.data.hadith.HadithBookmarks.remove(ctx, it) }
+                    io.github.sammynashed.emran.data.hadith.HadithBookmarks.toggleAyah(ctx, s, a)
+                    val ch = allChapters.firstOrNull { it.id == s }
+                    bookmarkNotice = when {
+                        had && lang == "ar" -> "أُزيلت العلامة"
+                        had -> "Bookmark removed"
+                        older.isNotEmpty() && lang == "ar" -> "نُقلت العلامة إلى الآية $a"
+                        older.isNotEmpty() -> "Bookmark moved to ayah $a"
+                        lang == "ar" -> "حُفظت العلامة: سورة ${ch?.name ?: state.chapter.name}، الآية $a"
+                        else -> "Bookmarked ${ch?.transliteration ?: ""} $s:$a"
+                    }
+                }
+                val onAyahTap: (Int, Int) -> Boolean = { s, a ->
+                    val allowed = when {
+                        !hifzMode && !sweeping -> true
+                        sweeping -> false
+                        s != state.chapter.id -> true
+                        else -> {
+                            val shown = hifz.revealed + hifz.unsure
+                            hifzAyahKeys[a]?.all { it in shown } == true
+                        }
+                    }
+                    if (allowed) {
+                        selectedAyah = s to a
+                        openPanel = null
+                    }
+                    allowed
+                }
 
                 // Auto Scroll engine state (Scroll View only)
                 var isAutoScrolling by remember { mutableStateOf(false) }
@@ -657,14 +698,9 @@ fun QuranScreen(
                 ) {
                     // The page owns the whole screen; the bars float over it, so showing or
                     // hiding them never re-lays-out the page underneath.
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        // IMMERSIVE TOP BAR
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isControlsVisible,
-                            modifier = Modifier.zIndex(1f),
-                            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-                            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
-                        ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // TOP BAR: always there.
+                        Box(Modifier.zIndex(1f)) {
                             TopAppBar(
                                 title = {
                                     Row(
@@ -695,42 +731,17 @@ fun QuranScreen(
                                     }
                                 },
                                 actions = {
-                                    // Switching how you read belongs beside the
-                                    // surah you are reading, not buried in the
-                                    // tools sheet: it changes what the page is,
-                                    // not how it is decorated.
-                                    IconButton(onClick = { hifzMode = !hifzMode }) {
+                                    // "I stopped here": the bookmark asks for the ayah number in this surah.
+                                    // (Tapping an ayah on its own only opens its meaning.)
+                                    val pageMarks = ayahBookmarks.filter { b -> visibleVerses.any { it.chapterId == b.surah && it.id == b.ayah } }
+                                    IconButton(onClick = {
+                                        askBookmark = true
+                                        openPanel = null
+                                    }) {
                                         Icon(
-                                            imageVector = if (hifzMode) {
-                                                Icons.Default.MenuBook
-                                            } else {
-                                                Icons.Default.Visibility
-                                            },
-                                            contentDescription = when {
-                                                hifzMode && lang == "ar" -> "التبديل إلى وضع التلاوة"
-                                                hifzMode -> "Switch to Tilawah mode"
-                                                lang == "ar" -> "التبديل إلى وضع الحفظ"
-                                                else -> "Switch to Hifz mode"
-                                            },
-                                            tint = if (hifzMode) {
-                                                currentTheme.ornament
-                                            } else {
-                                                animatedTextColor
-                                            },
-                                        )
-                                    }
-
-                                    // Recitation Check opens as a sheet from here rather
-                                    // than sitting inline under the mushaf text.
-                                    // Always the model sheet. Reciting lives
-                                    // in Hifz mode on the page itself, so this
-                                    // icon answers one question: is the model
-                                    // here, and do I want it here.
-                                    IconButton(onClick = { showRecitationSheet = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Mic,
-                                            contentDescription = if (lang == "ar") "تدقيق التلاوة" else "Recitation Check",
-                                            tint = animatedTextColor
+                                            imageVector = if (pageMarks.isNotEmpty()) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                            contentDescription = if (lang == "ar") "علامة" else "Bookmark",
+                                            tint = if (pageMarks.isNotEmpty()) currentTheme.ornament else animatedTextColor,
                                         )
                                     }
                                 },
@@ -753,7 +764,8 @@ fun QuranScreen(
                         // PAGE BOUNDARIES BORDER FOR AUTHENTIC PHYSICAL MUSHAF FEEL
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
+                                .weight(1f)
                                 .then(
                                     // The printed page draws its own frame.
                                     if (isPaginatedMode || mushafLayoutAvailable()) Modifier else Modifier.mushafBorder(
@@ -766,9 +778,8 @@ fun QuranScreen(
                                 )
                                 .pointerInput(Unit) {
                                     detectTapGestures(
-                                        onTap = {
-                                            isControlsVisible = !isControlsVisible
-                                        }
+                                        // A tap on the page only closes an open panel; it never hides the bars.
+                                        onTap = { openPanel = null }
                                     )
                                 }
                         ) {
@@ -788,6 +799,7 @@ fun QuranScreen(
                             }
 
                             val isContinuous by viewModel.isContinuousMode.collectAsState()
+                            val focusAyah by viewModel.focusAyah.collectAsState()
 
                             val targetPageNum = remember(state.chapter.id, state.verses) {
                                 state.verses.firstOrNull { it.chapterId == state.chapter.id }?.page
@@ -803,7 +815,12 @@ fun QuranScreen(
                                 val bookmarkedScrollPos by viewModel.bookmarkedScrollPos.collectAsState()
                                 
                                 LaunchedEffect(state.chapter.id) {
-                                    if (isContinuous) {
+                                    val jump = viewModel.jumpToAyah.value
+                                    val jumpIndex = if (jump == null) -1 else pages.indexOfFirst { pg -> pg.any { it.id == jump && (it.chapterId == state.chapter.id) } }
+                                    if (jumpIndex >= 0) {
+                                        pagerState.scrollToPage(jumpIndex)
+                                        viewModel.consumeJump()
+                                    } else if (isContinuous) {
                                         if (targetPageIndex != -1) {
                                             pagerState.scrollToPage(targetPageIndex)
                                         }
@@ -812,6 +829,17 @@ fun QuranScreen(
                                             pagerState.scrollToPage(bookmarkedScrollPos)
                                         }
                                     }
+                                }
+
+                                // The searched ayah stays marked until the reader turns to another page.
+                                val focusIndex = remember(focusAyah, pages) {
+                                    focusAyah?.let { (s, a) -> pages.indexOfFirst { pg -> pg.any { it.chapterId == s && it.id == a } } } ?: -1
+                                }
+                                var focusSeen by remember(focusAyah) { mutableStateOf(false) }
+                                LaunchedEffect(pagerState.currentPage, focusIndex) {
+                                    if (focusIndex < 0) return@LaunchedEffect
+                                    if (pagerState.currentPage == focusIndex) focusSeen = true
+                                    else if (focusSeen) viewModel.clearFocus()
                                 }
 
                                 DisposableEffect(Unit) {
@@ -823,6 +851,18 @@ fun QuranScreen(
                                             viewModel.saveBookmark(activeChapterId, currentPage)
                                         }
                                     }
+                                }
+
+                                LaunchedEffect(pagerState.currentPage, pages) {
+                                    visibleVerses = pages.getOrNull(pagerState.currentPage).orEmpty()
+                                }
+                                LaunchedEffect(playingAyah, pages) {
+                                    val (s, a) = playingAyah ?: return@LaunchedEffect
+                                    // The page the ayah is printed on (not the verse list's guess).
+                                    val printed = io.github.sammynashed.emran.tajweed.MushafLayout.pageOf(recitationContext, s, a)
+                                    val i = printed?.let { sortedPageKeys.indexOf(it) }?.takeIf { it >= 0 }
+                                        ?: pages.indexOfFirst { pg -> pg.any { it.chapterId == s && it.id == a } }
+                                    if (i >= 0 && i != pagerState.currentPage) pagerState.animateScrollToPage(i)
                                 }
 
                                 // A surah counts as read once its last page has been
@@ -864,6 +904,8 @@ fun QuranScreen(
                                                     arabicDigits = arabicDigits,
                                                     surahNames = surahNames + (state.chapter.id to state.chapter.name),
                                                     onlySurah = if (isContinuous) null else state.chapter.id,
+                                                    focusAyah = playingAyah ?: selectedAyah ?: focusAyah,
+                                                    onAyahTap = onAyahTap,
                                                 )
                                                 return@HorizontalPager
                                             }
@@ -986,8 +1028,30 @@ fun QuranScreen(
                                     }
                                 }
 
+                                val focusIndexScroll = remember(focusAyah, scrollPages) {
+                                    focusAyah?.let { (s, a) -> scrollPages.indexOfFirst { pg -> pg.any { it.chapterId == s && it.id == a } } } ?: -1
+                                }
+                                var focusSeenScroll by remember(focusAyah) { mutableStateOf(false) }
+                                LaunchedEffect(playingAyah, scrollPages) {
+                                    val (s, a) = playingAyah ?: return@LaunchedEffect
+                                    val printed = io.github.sammynashed.emran.tajweed.MushafLayout.pageOf(recitationContext, s, a)
+                                    val i = printed?.let { sortedPageKeys.indexOf(it) }?.takeIf { it >= 0 }
+                                        ?: scrollPages.indexOfFirst { pg -> pg.any { it.chapterId == s && it.id == a } }
+                                    if (i >= 0 && lazyListState.layoutInfo.visibleItemsInfo.none { it.index == i }) lazyListState.animateScrollToItem(i)
+                                }
+                                LaunchedEffect(lazyListState.firstVisibleItemIndex, focusIndexScroll) {
+                                    if (focusIndexScroll < 0) return@LaunchedEffect
+                                    if (lazyListState.firstVisibleItemIndex == focusIndexScroll) focusSeenScroll = true
+                                    else if (focusSeenScroll) viewModel.clearFocus()
+                                }
+
                                 LaunchedEffect(state.chapter.id) {
-                                    if (isContinuous) {
+                                    val jump = viewModel.jumpToAyah.value
+                                    val jumpIndex = if (jump == null) -1 else scrollPages.indexOfFirst { pg -> pg.any { it.id == jump && (it.chapterId == state.chapter.id) } }
+                                    if (jumpIndex >= 0) {
+                                        lazyListState.scrollToItem(jumpIndex)
+                                        viewModel.consumeJump()
+                                    } else if (isContinuous) {
                                         if (targetPageIndex != -1) {
                                             lazyListState.scrollToItem(targetPageIndex)
                                         }
@@ -1007,6 +1071,10 @@ fun QuranScreen(
                                             viewModel.saveBookmark(activeChapterId, firstVisibleIndex)
                                         }
                                     }
+                                }
+
+                                LaunchedEffect(lazyListState.firstVisibleItemIndex, scrollPages) {
+                                    visibleVerses = scrollPages.getOrNull(lazyListState.firstVisibleItemIndex).orEmpty()
                                 }
 
                                 // Auto scroll engine tick
@@ -1053,6 +1121,8 @@ fun QuranScreen(
                                                 arabicDigits = arabicDigits,
                                                 surahNames = surahNames + (state.chapter.id to state.chapter.name),
                                                 onlySurah = if (isContinuous) null else state.chapter.id,
+                                                focusAyah = playingAyah ?: selectedAyah ?: focusAyah,
+                                                onAyahTap = onAyahTap,
                                                 modifier = Modifier.fillParentMaxHeight(),
                                             )
                                             return@itemsIndexed
@@ -1139,19 +1209,57 @@ fun QuranScreen(
                                 }
                             }
                         }
+                        QuranBottomBar(
+                            theme = currentTheme,
+                            lang = lang,
+                            open = openPanel,
+                            hifzOn = hifzMode,
+                            onListen = { openPanel = if (openPanel == ReaderPanel.LISTEN) null else ReaderPanel.LISTEN },
+                            onHifz = { hifzMode = !hifzMode; openPanel = null },
+                            onDisplay = { openPanel = if (openPanel == ReaderPanel.DISPLAY) null else ReaderPanel.DISPLAY },
+                        )
                     }
 
                     // SEARCHABLE DIRECT SURAH SELECTION MODAL
-                    val recitationAyat = remember(state.verses, state.chapter.id) {
-                        state.verses
-                            .filter { it.chapterId == state.chapter.id }
-                            .map {
-                                io.github.sammynashed.emran.recitation.RecitationAyah(
-                                    chapterId = it.chapterId,
-                                    ayahId = it.id,
-                                    arabic = it.text,
-                                )
-                            }
+
+                    // A quiet confirmation when the top-bar bookmark is used.
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = bookmarkNotice != null,
+                        enter = fadeIn(), exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp).zIndex(2f),
+                    ) {
+                        var last by remember { mutableStateOf("") }
+                        bookmarkNotice?.let { last = it }
+                        Text(
+                            last,
+                            color = currentTheme.backgroundColor,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(currentTheme.textColor.copy(alpha = 0.9f))
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        )
+                    }
+
+                    if (askBookmark) {
+                        // Prefilled with where you most likely are: the ayah sounding, the one being
+                        // recited in Hifz, or the first ayah of this surah on the page.
+                        val guess = audioNow?.takeIf { it.surah == state.chapter.id && it.ayah > 0 }?.ayah
+                            ?: (if (hifzMode && hifz.revealed.isNotEmpty()) hifz.ayahNumber else null)
+                            ?: visibleVerses.firstOrNull { it.chapterId == state.chapter.id }?.id
+                            ?: 1
+                        AyahBookmarkDialog(
+                            surahName = state.chapter.name,
+                            ayahCount = state.chapter.total_verses,
+                            initialAyah = guess,
+                            isMarked = { a -> ayahBookmarks.any { it.surah == state.chapter.id && it.ayah == a } },
+                            currentMark = ayahBookmarks.filter { it.surah == state.chapter.id }.maxByOrNull { it.savedAt }?.ayah,
+                            theme = currentTheme,
+                            lang = lang,
+                            onConfirm = { a -> markAyah(state.chapter.id, a); askBookmark = false },
+                            onDismiss = { askBookmark = false },
+                        )
                     }
 
                     if (showTajweedLegend) {
@@ -1162,12 +1270,6 @@ fun QuranScreen(
                         )
                     }
 
-                    if (showRecitationSheet) {
-                        io.github.sammynashed.emran.recitation.RecitationSheet(
-                            lang = lang,
-                            onDismiss = { showRecitationSheet = false },
-                        )
-                    }
 
                     if (showSurahSelector) {
                         SurahSelectorDialog(
@@ -1183,12 +1285,21 @@ fun QuranScreen(
                         )
                     }
 
-                    // FLOATING COLLAPSIBLE BOTTOM TOOL SHEET FOR SECONDARY READING UTILITIES
+                    // While a recitation plays and no panel is open: a small player above the bar.
+                    val showMiniPlayer = audioNow != null && openPanel == null && !hifzMode
+                    if (showMiniPlayer) {
+                        QuranMiniPlayer(
+                            theme = currentTheme, lang = lang, onOpen = onOpenPlayer,
+                            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = ReaderBarHeight),
+                        )
+                    }
+
+                    // THE PANEL: Listen or Display from the bottom bar, or the Hifz controls while Hifz is on.
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = isControlsVisible,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                        visible = openPanel != null || hifzMode,
+                        enter = slideInVertically(initialOffsetY = { it / 3 }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it / 3 }) + fadeOut(),
+                        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = ReaderBarHeight)
                     ) {
                         // Page-toned and nearly opaque: the Qur'an text must never show through
                         // the controls, so this is a quiet panel in the page's own colours.
@@ -1209,8 +1320,8 @@ fun QuranScreen(
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
-                            // Rarely used options stay folded away: calm by default.
-                            var moreTools by remember { mutableStateOf(false) }
+                            // Display options only in the Display panel.
+                            val moreTools = openPanel == ReaderPanel.DISPLAY
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1233,10 +1344,24 @@ fun QuranScreen(
                                     }
                                 }
 
+                                if (openPanel == ReaderPanel.LISTEN) {
+                                    val chapterVerses = remember(state.verses, state.chapter.id) { state.verses.filter { it.chapterId == state.chapter.id } }
+                                    val surahWords = remember(chapterVerses) { chapterVerses.sumOf { v -> v.text.split(' ').count { it.any(Char::isLetter) } } }
+                                    QuranListenRow(
+                                        surah = state.chapter.id,
+                                        surahName = state.chapter.name,
+                                        surahWords = surahWords,
+                                        startAyah = visibleVerses.firstOrNull { it.chapterId == state.chapter.id }?.id ?: 1,
+                                        theme = currentTheme,
+                                        lang = lang,
+                                        onChangeReciter = onOpenReciters,
+                                    )
+                                }
+
                                 // Recording controls belong to the same overlay
                                 // as the other reading tools, so entering Hifz
                                 // mode adds to the page rather than replacing it.
-                                if (hifzMode) {
+                                if (hifzMode && openPanel == null) {
                                     // Stacked, never side by side: three controls in one row left the
                                     // last one a sliver wide, and its label wrapped letter by letter
                                     // into a column hundreds of pixels tall.
@@ -1330,9 +1455,7 @@ fun QuranScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
+                                if (moreTools) Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
@@ -1382,21 +1505,6 @@ fun QuranScreen(
                                     }
                                 }
                                 
-                                TextButton(
-                                    onClick = { moreTools = !moreTools },
-                                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                                ) {
-                                    Text(
-                                        text = if (moreTools) {
-                                            if (lang == "ar") "أقل" else "Fewer options"
-                                        } else {
-                                            if (lang == "ar") "خيارات أكثر" else "More options"
-                                        },
-                                        color = currentTheme.textColor.copy(alpha = 0.7f),
-                                        fontSize = 13.sp,
-                                    )
-                                }
-
                                 if (moreTools) Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1525,64 +1633,31 @@ fun QuranScreen(
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-}
 
-@Composable
-fun ChapterItem(chapter: QuranChapter, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val lang = LocalAppLanguage.current
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E24).copy(alpha = 0.8f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(AppTheme.colors.primary.copy(alpha = 0.2f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = chapter.id.toString(),
-                        color = AppTheme.colors.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = chapter.transliteration,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        text = surahMetaLabel(chapter.type, chapter.total_verses, lang),
-                        color = Color.Gray,
-                        fontSize = 12.sp
-                    )
+                    // The meaning of the tapped ayah, over everything else in the reader.
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = selectedAyah != null,
+                        enter = fadeIn(tween(180)) + slideInVertically(tween(260)) { it / 3 },
+                        exit = fadeOut(tween(160)),
+                        modifier = Modifier.zIndex(3f),
+                    ) {
+                        var shown by remember { mutableStateOf(1 to 1) }
+                        selectedAyah?.let { shown = it }
+                        val (s, a) = shown
+                        AyahMeaningSheet(
+                            surah = s,
+                            ayah = a,
+                            surahName = allChapters.firstOrNull { it.id == s }?.let { if (lang == "ar") it.name else it.transliteration }
+                                ?: state.chapter.name,
+                            theme = currentTheme,
+                            lang = lang,
+                            bookmarked = ayahBookmarks.any { it.surah == s && it.ayah == a },
+                            onToggleBookmark = { io.github.sammynashed.emran.data.hadith.HadithBookmarks.toggleAyah(recitationContext, s, a) },
+                            onDismiss = { selectedAyah = null },
+                        )
+                    }
                 }
             }
-            Text(
-                text = chapter.name,
-                fontFamily = SurahNameFontFamily,
-                fontSize = 25.sp,
-                color = AppTheme.colors.secondary,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
@@ -1689,7 +1764,6 @@ fun Modifier.drawScrollbar(
     }
 }
 
-
 /**
  * The key to the tajweed colours.
  *
@@ -1743,11 +1817,11 @@ private fun TajweedLegendDialog(
                 Text(
                     text = if (ar) {
                         "تُبيّن هذه الألوان مواضع الأحكام في النص المكتوب لتساعدك على " +
-                            "تعلّمها. لا يستمع التطبيق إلى تلاوتك ولا يحكم عليها."
+                            "تعلّمها، وليست حكمًا على تلاوتك."
                     } else {
                         "These colours show where each rule applies in the written " +
-                            "text, to help you learn them. Emran does not listen to " +
-                            "your recitation or judge it."
+                            "text, to help you learn them. They are not a judgement " +
+                            "of how you recite."
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,

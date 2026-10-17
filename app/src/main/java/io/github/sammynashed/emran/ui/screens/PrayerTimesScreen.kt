@@ -1,5 +1,9 @@
 package io.github.sammynashed.emran.ui.screens
 
+import androidx.compose.foundation.rememberScrollState
+
+import androidx.compose.foundation.verticalScroll
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,7 +51,7 @@ import io.github.sammynashed.emran.ui.design.Space
 import io.github.sammynashed.emran.ui.design.Target
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
 import io.github.sammynashed.emran.ui.localization.Text
-import io.github.sammynashed.emran.ui.theme.OutfitFontFamily
+import io.github.sammynashed.emran.ui.theme.InterFontFamily
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
@@ -110,7 +114,10 @@ fun PrayerTimesScreen(
     ): TimeRow {
         val todays = t(timesToday)
         val passed = !todays.isAfter(now)
-        return TimeRow(key, en, ar, if (passed) t(timesTomorrow) else todays, on, fard, passed)
+        val shown = if (passed) t(timesTomorrow) else todays
+        // Friday's Dhuhr row reads Jumu'ah (by the day of the time it shows, so Thursday night's "tomorrow" row does too).
+        val (nameEn, nameAr) = if (key == "Dhuhr") io.github.sammynashed.emran.data.PrayerNames.name(key, false, shown.toLocalDate()) to io.github.sammynashed.emran.data.PrayerNames.name(key, true, shown.toLocalDate()) else en to ar
+        return TimeRow(key, nameEn, nameAr, shown, on, fard, passed)
     }
 
     val rows = listOf(
@@ -133,7 +140,8 @@ fun PrayerTimesScreen(
         ) {
             ScreenHeader(title = if (ar) "مواقيت الصلاة" else "Prayer Times", onBack = onBack)
 
-            Column(verticalArrangement = Arrangement.spacedBy(Space.md)) {
+            // Scrolls on short phones so Maghrib and Isha are never out of reach.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Space.md)) {
                 rows.forEach { r ->
                     val isNext = r.key == nextKey
                     GlassPanel(
@@ -163,8 +171,10 @@ fun PrayerTimesScreen(
                                     if (!r.notifOn) (if (ar) "التنبيه مغلق" else "Adhan off") else null,
                                     if (r.tomorrow) (if (ar) "غداً" else "Tomorrow") else null,
                                 ).joinToString(" · ")
-                                Text(
-                                    text = status.ifEmpty { " " },
+                                // Only when there is something to say: an empty line here held the
+                                // name above the row's centre.
+                                if (status.isNotEmpty()) Text(
+                                    text = status,
                                     color = sky.inkSoft, fontSize = 12.sp,
                                     maxLines = 1, softWrap = false,
                                 )
@@ -176,7 +186,7 @@ fun PrayerTimesScreen(
                                 Text(
                                     text = parts[0],
                                     color = sky.ink, fontSize = 28.sp, fontWeight = FontWeight.Light,
-                                    fontFamily = OutfitFontFamily,
+                                    fontFamily = InterFontFamily,
                                     style = TextStyle(fontFeatureSettings = "tnum"),
                                     maxLines = 1, softWrap = false,
                                 )

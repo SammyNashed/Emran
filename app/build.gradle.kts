@@ -16,8 +16,8 @@ android {
     applicationId = "io.github.sammynashed.emran"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "2.1.0"
+    versionCode = 10
+    versionName = "2.3.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -120,6 +120,9 @@ dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.work.runtime.ktx)
+  // Quran audio: gapless per-ayah playlist + media session (lock screen, background on HyperOS).
+  implementation("androidx.media3:media3-exoplayer:1.8.0")
+  implementation("androidx.media3:media3-session:1.8.0")
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)

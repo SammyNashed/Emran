@@ -65,5 +65,16 @@ data class EmranWidgetState(
 
     /** Surahs finished in the current khatmah, and how many khatmat came before. */
     val surahsCompleted: Int = 0,
-    val khatmahCount: Int = 0
+    val khatmahCount: Int = 0,
+
+    /** This widget's glass tint (WidgetArt.Tint name). In the state so a change redraws it at once. */
+    val tint: String = "AUTO",
+
+    /** Today's ayah (see data/DailyAyat): its text, where it is from, and Saheeh's translation. */
+    val ayahText: String? = null,
+    val ayahSurah: Int = 0,
+    val ayahNumber: Int = 0,
+    val ayahSurahAr: String? = null,
+    val ayahSurahEn: String? = null,
+    val ayahEnglish: String? = null,
 )

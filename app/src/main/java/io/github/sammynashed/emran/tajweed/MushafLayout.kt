@@ -35,6 +35,23 @@ object MushafLayout {
 
     fun isLoaded(context: Context): Boolean = load(context).isNotEmpty()
 
+    private var firstPage: Map<Long, Int>? = null
+
+    /**
+     * The printed page where [ayah]'s first word is drawn. Not always the page the verse list
+     * gives it: 55:17–18 sit at the foot of page 531 in print, while the list puts them on 532.
+     */
+    @Synchronized
+    fun pageOf(context: Context, surah: Int, ayah: Int): Int? {
+        val index = firstPage ?: HashMap<Long, Int>().also { m ->
+            for ((page, lines) in load(context)) for (line in lines) for (r in line) {
+                if (r.from == 0) m.putIfAbsent(r.surah * 1000L + r.ayah, page)
+            }
+            firstPage = m
+        }
+        return index[surah * 1000L + ayah]
+    }
+
     @Synchronized
     private fun load(context: Context): Map<Int, List<List<Run>>> {
         pages?.let { return it }

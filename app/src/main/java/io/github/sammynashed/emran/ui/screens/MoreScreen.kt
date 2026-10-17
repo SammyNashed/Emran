@@ -8,17 +8,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
+
 import androidx.compose.ui.unit.dp
-import io.github.sammynashed.emran.R
+
 import io.github.sammynashed.emran.ui.design.GlassRow
 import io.github.sammynashed.emran.ui.design.ScreenHeader
 import io.github.sammynashed.emran.ui.design.Space
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
-import io.github.sammynashed.emran.ui.tour.tourTarget
 
 /** The rest of Emran, one calm tap from Home. */
 @Composable
@@ -27,6 +26,7 @@ fun MoreScreen(
     onOpenAdhkar: () -> Unit,
     onOpenHadith: () -> Unit,
     onOpenSaved: () -> Unit,
+    onOpenReciters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ar = LocalAppLanguage.current == "ar"
@@ -44,7 +44,7 @@ fun MoreScreen(
                 subtitle = if (ar) "أذكار الصباح والمساء" else "Morning & evening",
                 icon = Icons.AutoMirrored.Outlined.MenuBook,
                 onClick = onOpenAdhkar,
-                modifier = Modifier.tourTarget("home_widget_adhkar"),
+                modifier = Modifier,
             )
             GlassRow(
                 title = if (ar) "الأحاديث" else "Hadith",
@@ -52,7 +52,7 @@ fun MoreScreen(
                 subtitle = if (ar) "كتب السنة" else "Books of Sunnah",
                 icon = Icons.Outlined.AutoStories,
                 onClick = onOpenHadith,
-                modifier = Modifier.tourTarget("home_widget_hadith"),
+                modifier = Modifier,
             )
             GlassRow(
                 title = if (ar) "المحفوظات" else "Saved",
@@ -60,6 +60,13 @@ fun MoreScreen(
                 subtitle = if (ar) "علاماتك المرجعية" else "Your bookmarks",
                 icon = Icons.Outlined.BookmarkBorder,
                 onClick = onOpenSaved,
+            )
+            GlassRow(
+                title = if (ar) "القرّاء" else "Reciters",
+                enterIndex = 3,
+                subtitle = if (ar) "اسمع الأصوات واختر قارئك" else "Hear the voices, pick yours",
+                icon = Icons.Outlined.GraphicEq,
+                onClick = onOpenReciters,
             )
         }
     }

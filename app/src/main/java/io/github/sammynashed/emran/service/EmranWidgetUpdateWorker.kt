@@ -1,8 +1,7 @@
 package io.github.sammynashed.emran.service
 
 import android.content.Context
-import android.util.Log
-import androidx.glance.appwidget.updateAll
+
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import io.github.sammynashed.emran.glance.WidgetUpdater

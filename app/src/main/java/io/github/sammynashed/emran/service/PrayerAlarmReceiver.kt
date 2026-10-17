@@ -21,6 +21,17 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         private var volumeReceiver: BroadcastReceiver? = null
         const val ACTION_MUTE_ADHAN = "io.github.sammynashed.emran.IMAD_ACTION_MUTE_ADHAN"
 
+        /** The user's switch for this prayer's adhan (Sunrise has its own; it used to borrow Fajr's). */
+        fun isAdhanEnabled(context: Context, prayerName: String): Boolean {
+            val prefs = context.getSharedPreferences("emran_settings", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("notifications_enabled_global", true)) return false
+            return when (prayerName) {
+                "Sunrise" -> prefs.getBoolean("notif_Sunrise", prefs.getBoolean("notif_Fajr", true))
+                "Fajr", "Dhuhr", "Asr", "Maghrib", "Isha" -> prefs.getBoolean("notif_$prayerName", true)
+                else -> true
+            }
+        }
+
         fun isAdhanPlaying(): Boolean {
             return try {
                 mediaPlayer?.isPlaying ?: false
@@ -68,7 +79,13 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         }
 
         val prayerName = intent.getStringExtra("PRAYER_NAME") ?: "Salah"
-        showNotification(context, prayerName)
+        // The bell is checked again HERE, at the moment the alarm fires, not only when it was scheduled:
+        // an alarm armed before the user switched a prayer off (or by an older build) must stay silent.
+        if (intent.getBooleanExtra("TEST", false) || isAdhanEnabled(context, prayerName)) {
+            showNotification(context, prayerName)
+        } else {
+            android.util.Log.d("PrayerAlarmReceiver", "$prayerName adhan is switched off; staying silent.")
+        }
 
         // Dynamically reschedule next batch of alarms to ensure alarms never expire if app is closed
         try {
@@ -138,10 +155,9 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 title = "شروق الشمس - انتهاء وقت الفجر"
                 content = "لقد حان وقت شروق الشمس في $locName وانتهى وقت صلاة الفجر."
             } else {
-                val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
                 val prayerAr = when (prayerName) {
                     "Fajr" -> "الفجر"
-                    "Dhuhr" -> if (isFriday) "الجمعة" else "الظهر"
+                    "Dhuhr" -> io.github.sammynashed.emran.data.PrayerNames.name("Dhuhr", true)
                     "Asr" -> "العصر"
                     "Maghrib" -> "المغرب"
                     "Isha" -> "العشاء"
@@ -155,10 +171,9 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 title = "Sunrise - Fajr Ended"
                 content = "Sunrise time in $locName. Fajr prayer has ended."
             } else {
-                val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
                 val prayerEn = when (prayerName) {
                     "Fajr" -> "Fajr"
-                    "Dhuhr" -> if (isFriday) "Jum'ah" else "Dhuhr"
+                    "Dhuhr" -> io.github.sammynashed.emran.data.PrayerNames.name("Dhuhr", false)
                     "Asr" -> "Asr"
                     "Maghrib" -> "Maghrib"
                     "Isha" -> "Isha"
@@ -193,7 +208,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         val muteActionTitle = if (lang == "ar") "إيقاف الأذان" else "Stop Adhan"
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(io.github.sammynashed.emran.R.drawable.ic_stat_emran)
             .setContentTitle(title)
             .setContentText(content)
             .setPriority(NotificationCompat.PRIORITY_MAX)

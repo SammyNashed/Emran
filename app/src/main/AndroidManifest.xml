@@ -24,6 +24,15 @@
     <!-- Optional Recitation Check. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Only to show the Qibla in the user's room: a live preview, never captured, recorded or
+         stored (the camera code has no image reader or recorder at all). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Small updates from Telegram: Emran rebuilds the new version from itself and asks Android
+         to install it (Android shows its own confirm screen). Nothing is downloaded by the app. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- Used for exactly one thing: fetching the optional recitation model when
          the user explicitly asks for it. Nothing else in Emran touches the
          network - prayer times, the Quran text, Adhkar and all personal data
@@ -31,6 +40,10 @@
          was a deliberate decision to make the model obtainable in-app; before
          it, the model could only be side-loaded through the file picker. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Quran audio: the player runs as a media service, downloads as a data-sync job. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!--
       Optional, and only ever used to fill in the user's city during onboarding.
@@ -41,7 +54,6 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-feature android:name="android.hardware.location" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
-
 
     <application
         android:allowBackup="true"
@@ -57,10 +69,28 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|density|uiMode"
-            android:theme="@style/Theme.Emran" />
+            android:theme="@style/Theme.Emran">
+            <!-- Update files (.emran) opened from Telegram or shared to Emran. Telegram sends files
+                 it doesn't know as application/octet-stream; anything that isn't a patch is
+                 politely refused in the dialog. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-emran-patch" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-emran-patch" />
+            </intent-filter>
+        </activity>
 
         <activity-alias
-            android:name=".MainActivityAliasExpressive"
+            android:name=".MainActivityAliasDefault"
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="true"
@@ -73,244 +103,18 @@
             </intent-filter>
         </activity-alias>
 
-        <activity-alias
-            android:name=".MainActivityAliasCosmic"
-            android:targetActivity=".MainActivity"
+        <service
+            android:name=".service.QuranAudioService"
             android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_cosmic"
-            android:roundIcon="@mipmap/ic_launcher_round_cosmic"
-            android:label="@string/app_name">
+            android:foregroundServiceType="mediaPlayback">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityAliasTeal"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_teal"
-            android:roundIcon="@mipmap/ic_launcher_round_teal"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name=".MainActivityAliasRose"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_rose"
-            android:roundIcon="@mipmap/ic_launcher_round_rose"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        
-        <activity-alias
-            android:name=".MainActivityAliasGolden"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_golden"
-            android:roundIcon="@mipmap/ic_launcher_round_golden"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasEmerald"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_emerald"
-            android:roundIcon="@mipmap/ic_launcher_round_emerald"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasOcean"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_ocean"
-            android:roundIcon="@mipmap/ic_launcher_round_ocean"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasAmythist"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_amythist"
-            android:roundIcon="@mipmap/ic_launcher_round_amythist"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasSunfire"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_sunfire"
-            android:roundIcon="@mipmap/ic_launcher_round_sunfire"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasSapphire"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_sapphire"
-            android:roundIcon="@mipmap/ic_launcher_round_sapphire"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasLavender"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_lavender"
-            android:roundIcon="@mipmap/ic_launcher_round_lavender"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasMint"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_mint"
-            android:roundIcon="@mipmap/ic_launcher_round_mint"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasForest"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_forest"
-            android:roundIcon="@mipmap/ic_launcher_round_forest"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasBlood_moon"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_blood_moon"
-            android:roundIcon="@mipmap/ic_launcher_round_blood_moon"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasMonochrome"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_monochrome"
-            android:roundIcon="@mipmap/ic_launcher_round_monochrome"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasSakura"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_sakura"
-            android:roundIcon="@mipmap/ic_launcher_round_sakura"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasNebula"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_nebula"
-            android:roundIcon="@mipmap/ic_launcher_round_nebula"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasDesert"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_desert"
-            android:roundIcon="@mipmap/ic_launcher_round_desert"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".MainActivityAliasAurora"
-            android:targetActivity=".MainActivity"
-            android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_aurora"
-            android:roundIcon="@mipmap/ic_launcher_round_aurora"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        </service>
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- Broadcast Receivers -->
         <!-- Hands the rendered share picture to WhatsApp and friends without opening up storage. -->
@@ -330,44 +134,100 @@
             android:exported="false" />
 
         <receiver
+            android:name=".data.update.InstallStatusReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.AdhkarReminderReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
             android:name=".service.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
-        <activity-alias
-            android:name=".MainActivityAliasBlack_stone"
-            android:targetActivity=".MainActivity"
+        <activity
+            android:name=".glance.WidgetStyleActivity"
             android:exported="true"
-            android:enabled="false"
-            android:icon="@mipmap/ic_launcher_black_stone"
-            android:roundIcon="@mipmap/ic_launcher_round_black_stone"
-            android:label="@string/app_name">
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Emran">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
-        </activity-alias>
+        </activity>
 
         <receiver
-            android:name=".glance.TodayFiveWidgetReceiver"
+            android:name=".glance.DayArabicWidgetReceiver"
             android:exported="true"
-            android:label="Emran · Today’s Prayers">
+            android:label="Emran · Day · Arabic">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_today_five_info" />
+                android:resource="@xml/widget_day_arabic_info" />
         </receiver>
 
+        <receiver
+            android:name=".glance.DayEnglishWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Day · English">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_day_english_info" />
+        </receiver>
 
         <receiver
-            android:name=".glance.HijriWidgetReceiver"
+            android:name=".glance.PrayerProgressWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Prayer Progress">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_progress_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.PrayerTableWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Prayer Table">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_table_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.NextPrayerWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Next Prayer">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_prayer_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.HijriDateWidgetReceiver"
             android:exported="true"
             android:label="Emran · Hijri Date">
             <intent-filter>
@@ -375,56 +235,60 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_hijri_info" />
+                android:resource="@xml/widget_hijri_date_info" />
         </receiver>
 
         <receiver
-            android:name=".glance.QuranProgressWidgetReceiver"
+            android:name=".glance.HijriMonthWidgetReceiver"
             android:exported="true"
-            android:label="Emran · Quran Progress">
+            android:label="Emran · Hijri Month">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_quran_info" />
+                android:resource="@xml/widget_hijri_month_info" />
         </receiver>
 
         <receiver
-            android:name=".glance.CountdownWidgetReceiver"
+            android:name=".glance.AyahWidgetReceiver"
             android:exported="true"
-            android:label="Emran · Countdown">
+            android:label="Emran · Ayah of the Day">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_countdown_info" />
+                android:resource="@xml/widget_ayah_info" />
         </receiver>
 
         <receiver
-            android:name=".glance.CombinedWidgetReceiver"
+            android:name=".glance.ClockWidgetReceiver"
             android:exported="true"
-            android:label="Emran · Overview">
+            android:label="Emran · Clock">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_combined_info" />
+                android:resource="@xml/widget_clock_info" />
         </receiver>
 
         <receiver
-            android:name=".glance.TodayPrayersV2WidgetReceiver"
+            android:name=".glance.OccasionWidgetReceiver"
             android:exported="true"
-            android:label="Emran · Today’s Prayers V2">
+            android:label="Emran · Next Occasion">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_today_v2_info" />
+                android:resource="@xml/widget_occasion_info" />
         </receiver>
+
+        <receiver
+            android:name=".glance.MidnightReceiver"
+            android:exported="false" />
 
     </application>
 

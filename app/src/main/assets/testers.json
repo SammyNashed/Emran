@@ -1,13 +1,102 @@
 {
-  "testers": [
-    { "id": "ahmad-homsi",    "nameEn": "Ahmad Homsi",    "nameAr": "أحمد حمصي",  "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" },
-    { "id": "khaled-al-mamo", "nameEn": "Khaled Al-Mamo", "nameAr": "خالد المامو", "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" },
-    { "id": "walid-jreid",    "nameEn": "Walid Jreid",    "nameAr": null,          "roleEn": "Early beta tester", "roleAr": "مختبر مبكّر" }
-  ],
-  "reviews": [
-    { "testerId": "ahmad-homsi",    "textAr": "أكتر شي عجبني بعمران هو شمولية الميزات واجتماعها بمكان واحد.", "textEn": null },
-    { "testerId": "khaled-al-mamo", "textAr": "أكتر شي استفدت منه هو أوقات الصلاة والتنبيهات.",            "textEn": null },
-    { "testerId": "ahmad-homsi",    "textAr": "عمران تطبيق بيضيف شي جميل ومفيد للشباب بهالوقت.",            "textEn": null },
-    { "testerId": "khaled-al-mamo", "textAr": "مفيد وبوصل للمعلومة بسرعة بدون تعقيد.",                       "textEn": null }
-  ]
+ "testers": [
+  {
+   "id": "khaled-al-mamo",
+   "nameEn": "Khaled Al-Mamo",
+   "nameAr": "خالد المامو",
+   "roleAr": "مختبر مبكّر",
+   "photo": "testers/khaled-al-mamo.jpg",
+   "roleEn": "Early beta tester"
+  },
+  {
+   "id": "walid-jreid",
+   "nameEn": "Walid Jreid",
+   "nameAr": "وليد جريد",
+   "photo": "testers/walid-jreid.jpg",
+   "roleEn": "Early beta tester",
+   "roleAr": "مختبر مبكّر"
+  },
+  {
+   "id": "ayham-al-hayek",
+   "nameEn": "Ayham Al-Hayek",
+   "nameAr": "أيهم الحايك",
+   "roleAr": "مختبر مبكّر",
+   "photo": "testers/ayham-al-hayek.jpg",
+   "roleEn": "Early beta tester"
+  },
+  {
+   "id": "ahmad-zaatary",
+   "nameEn": "Ahmad Zaatary",
+   "nameAr": "أحمد زعتري",
+   "photo": "testers/ahmad-zaatary.jpg",
+   "roleEn": "Early beta tester",
+   "roleAr": "مختبر مبكّر"
+  },
+  {
+   "id": "rami-jamous",
+   "nameEn": "Rami Jamous",
+   "nameAr": "رامي جاموس",
+   "roleAr": "مختبر مبكّر",
+   "photo": "testers/rami-jamous.jpg",
+   "roleEn": "Early beta tester"
+  },
+  {
+   "id": "abd-al-kareem-hallak",
+   "nameEn": "Abd Al-Kareem Hallak",
+   "nameAr": "عبد الكريم حلّاق",
+   "roleAr": "مختبر مبكّر",
+   "photo": "testers/abd-al-kareem-hallak.jpg",
+   "roleEn": "Early beta tester"
+  },
+  {
+   "id": "abd-ulhamid-alhussein",
+   "nameEn": "Abd Ulhamid Al-Hussein",
+   "nameAr": "عبد الحميد الحسين",
+   "roleAr": "مختبر مبكّر",
+   "photo": "testers/abd-ulhamid-alhussein.jpg",
+   "roleEn": "Early beta tester"
+  }
+ ],
+ "reviews": [
+  {
+   "testerId": "khaled-al-mamo",
+   "textAr": "أكتر شي استفدت منه هو أوقات الصلاة والتنبيهات.",
+   "textEn": "What I benefited from most is the prayer times and the notifications."
+  },
+  {
+   "testerId": "khaled-al-mamo",
+   "textAr": "مفيد وبوصل للمعلومة بسرعة بدون تعقيد.",
+   "textEn": "Useful, and gets you the information quickly without any complication."
+  },
+  {
+   "testerId": "walid-jreid",
+   "textEn": "A really great app; easy, comfortable and uncomplicated.",
+   "textAr": "تطبيق رائع جدا؛ سهل ومريح وغير معقد."
+  },
+  {
+   "testerId": "ayham-al-hayek",
+   "textAr": "عمران.. العبادة في أبسط صورها",
+   "textEn": "Emran.. worship in its simplest form."
+  },
+  {
+   "testerId": "ahmad-zaatary",
+   "textEn": "Comfortable and uncomplicated.",
+   "textAr": "مريح وبدون تعقيد"
+  },
+  {
+   "testerId": "rami-jamous",
+   "textAr": "عمران وسيلة لتحسين الجانب الديني بحياتنا",
+   "textEn": "Emran is a way to improve the religious side of our lives."
+  },
+  {
+   "testerId": "abd-al-kareem-hallak",
+   "textAr": "مودرن، مريح، تفاعلي، شامل لأغلب الميزات.",
+   "textEn": "Modern, comfortable, interactive, and covers most features."
+  },
+  {
+   "testerId": "abd-ulhamid-alhussein",
+   "textAr": "تطبيق كتير مريح وبيغني عن أمثاله، نسخة عصرية بالشكل والمضمون ومحافظ على قيمته.",
+   "textEn": "Very comfortable, and you won't need any other app like it. Modern in look and content, yet true to its values."
+  }
+ ]
 }

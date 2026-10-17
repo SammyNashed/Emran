@@ -32,5 +32,14 @@ class AdhkarViewModel(application: Application) : AndroidViewModel(application) 
             _categories.value = AdhkarRepository.loadCategories(getApplication())
             _isLoading.value = false
         }
+        // The user's own folder follows every add, edit and delete.
+        viewModelScope.launch {
+            io.github.sammynashed.emran.data.assets.MyAdhkar.items.collect { mine ->
+                if (mine == null) return@collect
+                _folders.value = _folders.value.map { f ->
+                    if (f.id == io.github.sammynashed.emran.data.assets.MyAdhkar.FOLDER_ID) f.copy(items = mine) else f
+                }
+            }
+        }
     }
 }

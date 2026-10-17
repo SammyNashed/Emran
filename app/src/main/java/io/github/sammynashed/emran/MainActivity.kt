@@ -6,42 +6,37 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.outlined.List
+
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Explore
+
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Build
-import androidx.compose.material.icons.outlined.Explore
+
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.outlined.CheckCircle
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
-import io.github.sammynashed.emran.ui.tour.tourTarget
-import androidx.compose.ui.text.font.FontWeight
+
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
 import androidx.navigation.compose.*
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import io.github.sammynashed.emran.ui.screens.*
@@ -53,15 +48,11 @@ import io.github.sammynashed.emran.ui.design.GlassTier
 import io.github.sammynashed.emran.ui.design.SkyDebug
 import io.github.sammynashed.emran.ui.design.SkyHost
 import io.github.sammynashed.emran.ui.screens.MoreScreen
-import io.github.sammynashed.emran.ui.components.liquidGlassCard
+
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import io.github.sammynashed.emran.ui.viewmodel.QuranViewModel
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
-import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -75,6 +66,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        takeUpdateFile(intent)
+        io.github.sammynashed.emran.data.TimeFormat.ensureLoaded(this)
+        runCatching { io.github.sammynashed.emran.service.BootReceiver.ensureDaily(applicationContext) }
+        runCatching { io.github.sammynashed.emran.service.AdhkarReminders.scheduleAll(applicationContext) }
         // Transparent bars with no contrast scrim, so the sky runs right under them.
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -101,7 +96,6 @@ class MainActivity : ComponentActivity() {
             val isOnboardingCompleted by viewModel.onboardingCompleted.collectAsState()
             val themePreset by viewModel.themePreset.collectAsState()
             val themeModeName by viewModel.themeMode.collectAsState()
-            val appIconPreset by viewModel.appIconPreset.collectAsState()
             val savedLanguage by viewModel.currentLanguage.collectAsState()
             val currentLanguage = SkyDebug.language ?: savedLanguage
 
@@ -123,16 +117,15 @@ class MainActivity : ComponentActivity() {
                 // Saved, so a rotation (or any recreation) never replays the splash.
                 var showSplash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
 
-                if (showSplash) {
-                    SplashScreen(
-                        appIconPreset = appIconPreset,
-                        onSplashFinished = { showSplash = false }
-                    )
-                } else if (!isOnboardingCompleted) {
+                // Home (or setup) composes straight away, underneath the splash, so all of its first-frame
+                // work is done before the splash animates and nothing hitches mid-motion.
+                if (!isOnboardingCompleted || SkyDebug.forceOnboarding) {
                     OnboardingScreen(
+                        viewModel = viewModel,
                         currentLanguage = currentLanguage,
                         onLanguageSelect = { lang -> viewModel.setCurrentLanguage(lang) },
                         onFinished = { preset, location, notificationsEnabled, method, school, adhanSound ->
+                            if (SkyDebug.forceOnboarding) { SkyDebug.forceOnboarding = false; return@OnboardingScreen }
                             viewModel.setOnboardingCompleted(
                                 completed = true,
                                 initialTheme = preset,
@@ -145,22 +138,9 @@ class MainActivity : ComponentActivity() {
                                 initialAsrSchool = school,
                                 defaultAdhanSoundVal = adhanSound
                             )
-                        },
-                        onThemePreview = { preset ->
-                            viewModel.themePreset.value = preset
-                        },
-                        onThemeConfirmed = { preset ->
-                            viewModel.setThemePreset(preset)
                         }
                     )
                 } else {
-                    val tourManager = remember(preferences) { io.github.sammynashed.emran.ui.tour.TourManager(preferences) }
-                    val tourRegistry = remember { io.github.sammynashed.emran.ui.tour.TourTargetRegistry() }
-
-                    LaunchedEffect(Unit) {
-                        tourManager.startTour()
-                    }
-
                     val route = intent.getStringExtra("ROUTE")
                     val targetStart = intent.getStringExtra("START_DESTINATION") ?: "home"
                     val initialRoute = "home"
@@ -174,87 +154,6 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(currentRoute) {
                         // When transitioning back to main/home from a subscreen, retain the last activeTabRoute
                     }
-                    val isTourActive by tourManager.isActive.collectAsState()
-                    val tourStepIndex by tourManager.currentStepIndex.collectAsState()
-
-                    LaunchedEffect(activeTabRoute, currentRoute, tourStepIndex, isTourActive) {
-                        if (isTourActive) {
-                            val step = tourManager.steps.getOrNull(tourStepIndex)
-                            if (step != null && step.type == io.github.sammynashed.emran.ui.tour.TourStepType.INTERACTIVE) {
-                                if (step.id == "nav_quran" && activeTabRoute == "quran") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "nav_finetune" && activeTabRoute == "finetune") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "today_prayers_widget_card" && currentRoute == "prayer_times") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "home_widget_qibla" && currentRoute == "compass") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "home_widget_dhikr" && currentRoute == "dhikr") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "home_widget_adhkar" && currentRoute == "adhkar") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "home_widget_hadith" && currentRoute == "hadith") {
-                                    tourManager.nextStep()
-                                } else if (step.id == "adhkar_first_folder" && currentRoute.startsWith("adhkar_detail")) {
-                                    tourManager.nextStep()
-                                } else if (step.id == "sub_screen_back_button" && (currentRoute == "home" || currentRoute == "more")) {
-                                    tourManager.nextStep()
-                                } else if (step.id == "sub_screen_back_button" && step.targetRoute == "adhkar_detail" && currentRoute == "adhkar") {
-                                    tourManager.nextStep()
-                                }
-                            }
-                        }
-                    }
-                    LaunchedEffect(tourStepIndex, isTourActive) {
-                        if (isTourActive) {
-                            val step = tourManager.steps.getOrNull(tourStepIndex)
-                            // True when the user skipped the previous step instead of completing it.
-                            val skippedHere = tourManager.consumeSkipFlag()
-                            if (step != null) {
-                                val expectedTab = when (step.targetRoute) {
-                                    "quran" -> "quran"
-                                    "finetune" -> "finetune"
-                                    else -> "home"
-                                }
-                                if (activeTabRoute != expectedTab) {
-                                    activeTabRoute = expectedTab
-                                }
-
-                                val stepRoute = step.targetRoute
-                                if (currentRoute != stepRoute) {
-                                    // Only auto-navigate to the correct screen if we are not on an interactive click-to-transition step
-                                    val isInteractiveTransition = !skippedHere && step.type == io.github.sammynashed.emran.ui.tour.TourStepType.INTERACTIVE && 
-                                        (stepRoute == "home" || stepRoute == "adhkar" || stepRoute == "adhkar_detail")
-                                    
-                                    if (!isInteractiveTransition) {
-                                        when (stepRoute) {
-                                            "home" -> {
-                                                if (currentRoute != "home") {
-                                                    // Plain pop back to Home. The old popUpTo{saveState}+restoreState call restored the very
-                                    // sub-screen it had just popped, so "Home" could land on a stale screen.
-                                    navController.popBackStack("home", false)
-                                                }
-                                            }
-                                            "prayer_times" -> navController.navigate("prayer_times") { launchSingleTop = true }
-                                            "more" -> navController.navigate("more") { launchSingleTop = true }
-                                            "compass" -> navController.navigate("compass") { launchSingleTop = true }
-                                            "dhikr" -> navController.navigate("dhikr") { launchSingleTop = true }
-                                            "adhkar" -> navController.navigate("adhkar") { launchSingleTop = true }
-                                            // "Featured" was a folder that no longer exists; the first folder is "morning".
-                                            "adhkar_detail" -> navController.navigate("adhkar_detail/morning") { launchSingleTop = true }
-                                            "hadith" -> navController.navigate("hadith") { launchSingleTop = true }
-                                            // The Quran and Settings tabs live inside the home route: leave any sub-screen.
-                                            "quran", "finetune" -> if (currentRoute != "home") {
-                                                // Plain pop back to Home. The old popUpTo{saveState}+restoreState call restored the very
-                                    // sub-screen it had just popped, so "Home" could land on a stale screen.
-                                    navController.popBackStack("home", false)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                     LaunchedEffect(route) {
                         if (route == "more") {
                             navController.navigate("more") { launchSingleTop = true }
@@ -265,6 +164,16 @@ class MainActivity : ComponentActivity() {
                                 launchSingleTop = true
                                 restoreState = true
                             }
+                        } else if (route in setOf("quran", "finetune")) {
+                            activeTabRoute = route!!
+                        } else if (route?.startsWith("quran_surah/") == true) {
+                            // A reminder (al-Kahf on Friday) opens its surah in Tilawah.
+                            activeTabRoute = "quran"
+                            route.removePrefix("quran_surah/").toIntOrNull()?.let { quranViewModel.openSurah(it) }
+                        } else if (route != null) {
+                            // Debug: open any screen directly (screenshots on small displays).
+                            if (route == "quran_player") activeTabRoute = "quran"
+                            runCatching { navController.navigate(route) { launchSingleTop = true } }
                         }
                     }
 
@@ -273,10 +182,7 @@ class MainActivity : ComponentActivity() {
                     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-                    CompositionLocalProvider(
-                        io.github.sammynashed.emran.ui.tour.LocalTourRegistry provides tourRegistry,
-                        io.github.sammynashed.emran.ui.tour.LocalTourManager provides tourManager
-                    ) {
+                    run {
                         // Screens already redesigned live on the sky; the rest keep their old
                         // background until their stage (the sky is white-on-bright unfriendly to them).
                         // The Quran tab is on the sky for its front pages (how to read, which surah);
@@ -286,7 +192,11 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "quran" &&
                                 quranState !is io.github.sammynashed.emran.ui.viewmodel.QuranUiState.SuccessVerses) ||
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
-                            currentRoute == "prayer_times" || currentRoute == "more"
+                            currentRoute == "prayer_times" || currentRoute == "more" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
+                            currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
+                            currentRoute == "testers" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
+                            currentRoute?.startsWith("adhkar_detail/") == true ||
+                            currentRoute == "hadith" || currentRoute?.startsWith("hadith_") == true || currentRoute?.startsWith("bookmarks") == true
                         SkyHost(
                             viewModel = viewModel,
                             showSky = skyScreen,
@@ -395,19 +305,26 @@ class MainActivity : ComponentActivity() {
                                                     onNavigateToQibla = { navController.navigate("compass") { launchSingleTop = true } },
                                                     onNavigateToTasbeeh = { navController.navigate("dhikr") { launchSingleTop = true } },
                                                     onNavigateToMore = { navController.navigate("more") { launchSingleTop = true } },
+                                                    onOpenAyah = { surah, ayah ->
+                                                        navController.navigate("ayah/$surah/$ayah") { launchSingleTop = true }
+                                                    },
                                                  )
                                                  }
                                             }
                                             "quran" -> {
-                                                QuranScreen(viewModel = quranViewModel)
+                                                QuranScreen(
+                                                    viewModel = quranViewModel,
+                                                    onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
+                                                    onOpenPlayer = {
+                                                        // The player belongs to the Qur'an tab: Back from it must land there.
+                                                        activeTabRoute = "quran"
+                                                        navController.navigate("quran_player") { launchSingleTop = true }
+                                                    },
+                                                )
                                             }
                                             "finetune" -> {
                                                 FineTuneScreen(
                                                     viewModel = viewModel,
-                                                    onReplayTour = {
-                                                        activeTabRoute = "home"
-                                                        tourManager.restartTour()
-                                                    },
                                                     onOpenAcknowledgements = { navController.navigate("testers") }
                                                 )
                                             }
@@ -419,7 +336,7 @@ class MainActivity : ComponentActivity() {
                                              onNavigateBack = { navController.popBackStack() },
                                              onNavigateToCategory = { navController.navigate("adhkar_category/$it") },
                                              onSearch = { navController.navigate("hadith_search") },
-                                             onBookmarks = { navController.navigate("bookmarks") },
+                                             onBookmarks = { navController.navigate("bookmarks?tab=adhkar") },
                                              onNavigateToDetail = { folderId ->
                                                  navController.navigate("adhkar_detail/$folderId")
                                              }
@@ -450,7 +367,7 @@ class MainActivity : ComponentActivity() {
                                              onBack = { navController.popBackStack() },
                                              onOpenBook = { navController.navigate("hadith_book/$it") },
                                              onSearch = { navController.navigate("hadith_search") },
-                                             onBookmarks = { navController.navigate("bookmarks") }
+                                             onBookmarks = { navController.navigate("bookmarks?tab=adhkar") }
                                          )
                                      }
                                      composable("hadith_book/{book}") { entry ->
@@ -485,9 +402,19 @@ class MainActivity : ComponentActivity() {
                                              onOpenDhikr = { navController.navigate("adhkar_detail/$it") }
                                          )
                                      }
-                                     composable("bookmarks") {
+                                     composable(
+                                         "bookmarks?tab={tab}",
+                                         arguments = listOf(androidx.navigation.navArgument("tab") { type = androidx.navigation.NavType.StringType; defaultValue = "quran" }),
+                                     ) { entry ->
                                          io.github.sammynashed.emran.ui.screens.BookmarksScreen(
+                                             initialTab = entry.arguments?.getString("tab") ?: "quran",
                                              onBack = { navController.popBackStack() },
+                                             onOpenAyah = { surah, ayah ->
+                                                 // The reader lives in the Qur'an tab: switch to it, then open the ayah.
+                                                 activeTabRoute = "quran"
+                                                 navController.popBackStack("home", false)
+                                                 quranViewModel.openAyah(surah, ayah)
+                                             },
                                              onOpenHadith = { book, chapter, number ->
                                                  navController.navigate("hadith_chapter/$book/$chapter?n=$number")
                                              },
@@ -499,13 +426,44 @@ class MainActivity : ComponentActivity() {
                                             onBack = { navController.popBackStack() },
                                             onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
                                             onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
-                                            onOpenSaved = { navController.navigate("bookmarks") { launchSingleTop = true } },
+                                            onOpenSaved = { navController.navigate("bookmarks?tab=quran") { launchSingleTop = true } },
+                                            onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
                                         )
                                     }
+                                    composable("quran_player") {
+                                        io.github.sammynashed.emran.ui.screens.QuranPlayerScreen(onBack = { navController.popBackStack() })
+                                    }
+                                    composable("reciters") {
+                                        io.github.sammynashed.emran.ui.screens.RecitersScreen(
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+
                                      composable("prayer_times") {
                                         io.github.sammynashed.emran.ui.screens.PrayerTimesScreen(
                                             viewModel = viewModel,
                                             onBack = { navController.popBackStack() }
+                                        )
+                                    }
+                                    composable("ayah/{surah}/{ayah}") { entry ->
+                                        AyahExplainScreen(
+                                            surah = entry.arguments?.getString("surah")?.toIntOrNull() ?: 55,
+                                            ayah = entry.arguments?.getString("ayah")?.toIntOrNull() ?: 13,
+                                            onBack = { navController.popBackStack() },
+                                            onChooseAnother = { navController.navigate("ayah_pick") { launchSingleTop = true } },
+                                        )
+                                    }
+                                    composable("ayah_pick") {
+                                        val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+                                        io.github.sammynashed.emran.ui.screens.AyahPickerScreen(
+                                            onBack = { navController.popBackStack() },
+                                            onPick = { s, a ->
+                                                // The chosen ayah is today's ayah everywhere (Home, widget) until midnight.
+                                                io.github.sammynashed.emran.data.DailyAyat.pick(appContext, s, a)
+                                                lifecycleScope.launch { runCatching { io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(appContext) } }
+                                                navController.popBackStack("home", false)
+                                                navController.navigate("ayah/$s/$a") { launchSingleTop = true }
+                                            },
                                         )
                                     }
                                     composable("dhikr") {
@@ -531,24 +489,24 @@ class MainActivity : ComponentActivity() {
                                         label = "DockAlpha"
                                     )
                                     
-                                    if (dockAlpha > 0f && skyScreen) {
+                                    if (dockAlpha > 0f) {
                                         val ar = currentLanguage == "ar"
                                         GlassDock(
                                             tabs = listOf(
                                                 DockTab(
                                                     "home", if (ar) "الرئيسية" else "Home",
                                                     Icons.Outlined.Home, Icons.Filled.Home,
-                                                    Modifier.testTag("nav_home").tourTarget("nav_home"),
+                                                    Modifier.testTag("nav_home"),
                                                 ),
                                                 DockTab(
                                                     "quran", if (ar) "القرآن" else "Quran",
                                                     Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Filled.MenuBook,
-                                                    Modifier.testTag("nav_quran").tourTarget("nav_quran"),
+                                                    Modifier.testTag("nav_quran"),
                                                 ),
                                                 DockTab(
                                                     "finetune", if (ar) "الإعدادات" else "Settings",
                                                     Icons.Outlined.Settings, Icons.Filled.Settings,
-                                                    Modifier.testTag("nav_finetune").tourTarget("nav_finetune"),
+                                                    Modifier.testTag("nav_finetune"),
                                                 ),
                                             ),
                                             selectedKey = activeTabRoute,
@@ -561,84 +519,42 @@ class MainActivity : ComponentActivity() {
                                                 .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
                                                 .graphicsLayer(alpha = dockAlpha),
                                         )
-                                    } else if (dockAlpha > 0f) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
-                                                .fillMaxWidth()
-                                                .height(72.dp)
-                                                .graphicsLayer(alpha = dockAlpha)
-                                                .background(Color(0xFF040307).copy(alpha = 0.85f), androidx.compose.foundation.shape.RoundedCornerShape(36.dp))
-                                                .border(1.dp, Color.White.copy(alpha = 0.1f), androidx.compose.foundation.shape.RoundedCornerShape(36.dp))
-                                                .testTag("app_bottom_nav"),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth().height(72.dp),
-                                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                            FloatingDockItem(
-                                                selected = activeTabRoute == "home",
-                                                onClick = {
-                                                    activeTabRoute = "home"
-                                                    if (currentRoute != "home") {
-                                                        // Plain pop back to Home. The old popUpTo{saveState}+restoreState call restored the very
-                                    // sub-screen it had just popped, so "Home" could land on a stale screen.
-                                    navController.popBackStack("home", false)
-                                                    }
-                                                },
-                                                icon = Icons.Outlined.Home,
-                                                selectedIcon = Icons.Filled.Home,
-                                                label = if (currentLanguage == "ar") "الرئيسية" else "Home",
-                                                accentColor = AppTheme.colors.primary,
-                                                modifier = Modifier.testTag("nav_home").tourTarget("nav_home")
-                                            )
-
-                                            QuranDockItem(
-                                                selected = activeTabRoute == "quran",
-                                                onClick = {
-                                                    activeTabRoute = "quran"
-                                                    if (currentRoute != "home") {
-                                                        // Plain pop back to Home. The old popUpTo{saveState}+restoreState call restored the very
-                                    // sub-screen it had just popped, so "Home" could land on a stale screen.
-                                    navController.popBackStack("home", false)
-                                                    }
-                                                },
-                                                modifier = Modifier.testTag("nav_quran").tourTarget("nav_quran")
-                                            )
-
-                                            FloatingDockItem(
-                                                selected = activeTabRoute == "finetune",
-                                                onClick = {
-                                                    activeTabRoute = "finetune"
-                                                    if (currentRoute != "home") {
-                                                        // Plain pop back to Home. The old popUpTo{saveState}+restoreState call restored the very
-                                    // sub-screen it had just popped, so "Home" could land on a stale screen.
-                                    navController.popBackStack("home", false)
-                                                    }
-                                                },
-                                                icon = Icons.Outlined.Settings,
-                                                selectedIcon = Icons.Filled.Settings,
-                                                label = if (currentLanguage == "ar") "الإعدادات" else "Settings",
-                                                accentColor = AppTheme.colors.secondary,
-                                                modifier = Modifier.testTag("nav_finetune").tourTarget("nav_finetune")
-                                            )
-                                        } // End Row
-                                    } // End Box (dock layout)
-                                } // End if (dockAlpha > 0f)
+                                    } // End if (dockAlpha > 0f)
                             } // End if (!isLandscape)
                         } // End inner Box (content weight 1f) (Wait, no, the Box before NavHost)
                     } // row closing
                 } // scaffold closing
+
+                // One time, right after setup: why the adhan might not ring on some phones, and the one switch
+                // that fixes it, in plain words. Only shown on brands that have such a switch.
+                var showAlertsGuide by remember {
+                    mutableStateOf(
+                        SkyDebug.forceGuide ||
+                            io.github.sammynashed.emran.service.NotificationHealth.guideNeeded(context),
+                    )
+                }
+                if (showAlertsGuide) {
+                    AlertsGuide(ar = currentLanguage == "ar", onDone = { showAlertsGuide = false; SkyDebug.forceGuide = false })
+                }
+                // The splash sits on top of Home inside Home's own sky, and paints that same sky texture,
+                // so there is one sky to render and fading the splash out reveals Home with no seam.
+                if (showSplash) {
+                    SplashScreen(onSplashFinished = { showSplash = false })
+                }
                 
-                io.github.sammynashed.emran.ui.tour.TourOverlay(tourManager = tourManager, registry = tourRegistry)
                 
 
+                // A small update file opened from Telegram (or picked in Settings) shows over any screen.
+                io.github.sammynashed.emran.ui.screens.PatchUpdateHost(ar = currentLanguage == "ar")
                 } // my inner box closing
             } // my inner composition local provider
             } // else closing
+                // First run: setup has no sky of its own, so the splash brings one.
+                if (showSplash && (!isOnboardingCompleted || SkyDebug.forceOnboarding)) {
+                    SkyHost(viewModel = viewModel) {
+                        SplashScreen(onSplashFinished = { showSplash = false })
+                    }
+                }
             } // MyApplicationTheme closing
         } // outer CompositionLocalProvider closing
     } // setContent closing
@@ -648,6 +564,22 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         applyDesignDebugExtras(intent)
+        takeUpdateFile(intent)
+    }
+
+    /** An update file handed over by Telegram ("Open with") or by a share. */
+    private fun takeUpdateFile(intent: android.content.Intent?) {
+        val uri = when (intent?.action) {
+            android.content.Intent.ACTION_VIEW -> intent.data
+            android.content.Intent.ACTION_SEND -> {
+                @Suppress("DEPRECATION")
+                if (android.os.Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                else intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+            }
+            else -> null
+        } ?: return
+        if (uri.scheme != "content" && uri.scheme != "file") return
+        io.github.sammynashed.emran.data.update.PatchUpdate.incoming.value = uri
     }
 
     /** Lets a developer pin the sky's hour or the glass tier from adb; see [SkyDebug]. */
@@ -656,12 +588,34 @@ class MainActivity : ComponentActivity() {
         if (intent.hasExtra("SKY_DEBUG_MIN")) {
             SkyDebug.minuteOfDay = intent.getIntExtra("SKY_DEBUG_MIN", -1).takeIf { it in 0..1439 }
         }
+        if (intent.hasExtra("FORCE_GUIDE")) SkyDebug.forceGuide = intent.getBooleanExtra("FORCE_GUIDE", false)
+        intent.getStringExtra("QURAN_SEARCH")?.let { SkyDebug.searchQuery = it }
+        if (intent.hasExtra("AYAH_INDEX")) SkyDebug.ayahIndex = intent.getIntExtra("AYAH_INDEX", 0)
+        if (intent.hasExtra("WIDGET_DUMP")) lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Default) { runCatching { io.github.sammynashed.emran.glance.WidgetUpdater.dumpPreviews(applicationContext) } }
+        if (intent.hasExtra("FORCE_ONBOARDING")) SkyDebug.forceOnboarding = intent.getBooleanExtra("FORCE_ONBOARDING", false)
+        // Debug builds only: fire a prayer's alarm path right now, exactly as AlarmManager would
+        // (no TEST flag, so the user's bell switch is honoured): adb ... --es FIRE_PRAYER Isha
+        if (BuildConfig.DEBUG) intent.getStringExtra("FIRE_PRAYER")?.let {
+            sendBroadcast(android.content.Intent(this, io.github.sammynashed.emran.service.PrayerAlarmReceiver::class.java).putExtra("PRAYER_NAME", it))
+            intent.removeExtra("FIRE_PRAYER")
+        }
+        if (BuildConfig.DEBUG) intent.getStringExtra("FIRE_ADHKAR")?.let {
+            sendBroadcast(android.content.Intent(this, io.github.sammynashed.emran.service.AdhkarReminderReceiver::class.java).putExtra("ADHKAR_KIND", it))
+            intent.removeExtra("FIRE_ADHKAR")
+        }
+        if (intent.hasExtra("FORCE_FRIDAY")) SkyDebug.forceFriday = intent.getBooleanExtra("FORCE_FRIDAY", false)
         if (intent.hasExtra("LANG_DEBUG")) {
             SkyDebug.language = intent.getStringExtra("LANG_DEBUG")?.takeIf { it == "ar" || it == "en" }
         }
         if (intent.hasExtra("GLASS_TIER")) {
             SkyDebug.glassTier = runCatching { GlassTier.valueOf(intent.getStringExtra("GLASS_TIER").orEmpty()) }.getOrNull()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The phone's own 12/24-hour setting may have changed while we were away.
+        io.github.sammynashed.emran.data.TimeFormat.ensureLoaded(this)
     }
 
     override fun onStart() {
@@ -689,313 +643,6 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun RowScope.QuranDockItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (selected) 1.15f else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.65f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium),
-        label = "QuranScale"
-    )
-
-    val textColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (selected) Color.White else Color.White.copy(alpha = 0.4f),
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
-        label = "QuranTextColor"
-    )
-
-    val primaryColor = AppTheme.colors.primary
-
-    Box(
-        modifier = modifier
-            .weight(1.0f)
-            .height(72.dp)
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        // Center peak glowing indicator bar
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 0.dp)
-                    .width(28.dp)
-                    .height(3.dp)
-                    .background(primaryColor, androidx.compose.foundation.shape.RoundedCornerShape(
-                        bottomStart = 3.dp, bottomEnd = 3.dp, topStart = 0.dp, topEnd = 0.dp
-                    ))
-            )
-        }
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(top = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            val quranIcon = rememberQuranIcon(filled = selected)
-
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .graphicsLayer(scaleX = scale, scaleY = scale),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = quranIcon,
-                    contentDescription = "Quran",
-                    tint = primaryColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            val lang = io.github.sammynashed.emran.ui.localization.LocalAppLanguage.current
-            val label = if (lang == "ar") "القرآن" else "Qur'an"
-            Text(
-                text = label,
-                color = textColor,
-                fontSize = 9.5.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.3.sp
-            )
-        }
-    }
-}
-
-class ArchShape : androidx.compose.ui.graphics.Shape {
-    override fun createOutline(
-        size: androidx.compose.ui.geometry.Size,
-        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        density: androidx.compose.ui.unit.Density
-    ): androidx.compose.ui.graphics.Outline {
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(0f, size.height)
-            lineTo(0f, size.width / 2f)
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.width),
-                startAngleDegrees = 180f,
-                sweepAngleDegrees = 180f,
-                forceMoveTo = false
-            )
-            lineTo(size.width, size.height)
-            close()
-        }
-        return androidx.compose.ui.graphics.Outline.Generic(path)
-    }
-}
-
-@Composable
-fun rememberQuranIcon(filled: Boolean): ImageVector {
-    return remember(filled) {
-        ImageVector.Builder(
-            name = "Quran",
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = 24f,
-            viewportHeight = 24f
-        ).apply {
-            path(
-                stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
-                strokeLineWidth = 1.6f,
-                strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round,
-                fill = if (filled) androidx.compose.ui.graphics.SolidColor(Color.Black) else null
-            ) {
-                // Book left
-                moveTo(12f, 15f)
-                lineTo(12f, 8f)
-                quadTo(7.5f, 5.5f, 2f, 8f)
-                lineTo(2f, 13.5f)
-                quadTo(7.5f, 11f, 12f, 15f)
-                
-                // Book right
-                moveTo(12f, 8f)
-                quadTo(16.5f, 5.5f, 22f, 8f)
-                lineTo(22f, 13.5f)
-                quadTo(16.5f, 11f, 12f, 15f)
-            }
-            path(
-                stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
-                strokeLineWidth = 1.6f,
-                strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                fill = null
-            ) {
-                // Rehal legs
-                moveTo(12f, 15f)
-                lineTo(7f, 21f)
-                moveTo(12f, 15f)
-                lineTo(17f, 21f)
-                moveTo(9f, 18.5f)
-                lineTo(15f, 18.5f)
-            }
-        }.build()
-    }
-}
-
-@Composable
-private fun RowScope.FloatingDockItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    accentColor: Color,
-    modifier: Modifier = Modifier
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1.18f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium)
-    )
-
-    val iconColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (selected) accentColor else Color.White.copy(alpha = 0.45f),
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200)
-    )
-
-    val textColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (selected) Color.White else Color.White.copy(alpha = 0.4f),
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200)
-    )
-
-    Box(
-        modifier = modifier
-            .weight(1.0f)
-            .fillMaxHeight()
-            .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 0.dp)
-                    .width(28.dp)
-                    .height(3.dp)
-                    .background(accentColor, androidx.compose.foundation.shape.RoundedCornerShape(
-                        bottomStart = 3.dp, bottomEnd = 3.dp, topStart = 0.dp, topEnd = 0.dp
-                    ))
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = if (selected) selectedIcon else icon,
-                contentDescription = label,
-                tint = iconColor,
-                modifier = Modifier
-                    .size(24.dp)
-                    .graphicsLayer(scaleX = scale, scaleY = scale)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                color = textColor,
-                fontSize = 9.5.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.3.sp
-            )
-        }
-    }
-}
-
-class NavDomeShape : androidx.compose.ui.graphics.Shape {
-    override fun createOutline(
-        size: androidx.compose.ui.geometry.Size,
-        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        density: androidx.compose.ui.unit.Density
-    ): androidx.compose.ui.graphics.Outline {
-        val px = density.density
-        val width = size.width
-        val height = size.height
-        val cornerRadius = 28f * px
-        
-        // Beautiful side elevation height layout
-        val sideTopY = 24f * px 
-
-        val path = androidx.compose.ui.graphics.Path().apply {
-            // Start at bottom-left corner and walk clockwise
-            moveTo(cornerRadius, height)
-            
-            // Bottom edge
-            lineTo(width - cornerRadius, height)
-            
-            // Bottom Right Corner
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(width - cornerRadius * 2, height - cornerRadius * 2, width, height),
-                startAngleDegrees = 90f,
-                sweepAngleDegrees = -90f,
-                forceMoveTo = false
-            )
-            
-            // Right edge up to the side top height
-            lineTo(width, sideTopY + cornerRadius)
-            
-            // Top Right Corner
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(width - cornerRadius * 2, sideTopY, width, sideTopY + cornerRadius * 2),
-                startAngleDegrees = 0f,
-                sweepAngleDegrees = -90f,
-                forceMoveTo = false
-            )
-            
-            // Masterful continuous wave Bezier curve peaking at (width/2, 0)
-            val midX = width / 2f
-            cubicTo(
-                x1 = width - cornerRadius - (midX - cornerRadius) * 0.45f,
-                y1 = sideTopY,
-                x2 = midX + 32f * px,
-                y2 = 0f,
-                x3 = midX,
-                y3 = 0f
-            )
-            
-            // Symmetrical drop to top-left sides
-            cubicTo(
-                x1 = midX - 32f * px,
-                y1 = 0f,
-                x2 = cornerRadius + (midX - cornerRadius) * 0.45f,
-                y2 = sideTopY,
-                x3 = cornerRadius,
-                y3 = sideTopY
-            )
-            
-            // Top Left Corner
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(0f, sideTopY, cornerRadius * 2, sideTopY + cornerRadius * 2),
-                startAngleDegrees = 270f,
-                sweepAngleDegrees = -90f,
-                forceMoveTo = false
-            )
-            
-            // Left edge down
-            lineTo(0f, height - cornerRadius)
-            
-            // Bottom Left Corner
-            arcTo(
-                rect = androidx.compose.ui.geometry.Rect(0f, height - cornerRadius * 2, cornerRadius * 2, height),
-                startAngleDegrees = 180f,
-                sweepAngleDegrees = -90f,
-                forceMoveTo = false
-            )
-            close()
-        }
-        return androidx.compose.ui.graphics.Outline.Generic(path)
-    }
-}
-
-@Composable
 private fun LandscapeSideDock(
     currentRoute: String,
     onNavigateHome: () -> Unit,
@@ -1003,96 +650,40 @@ private fun LandscapeSideDock(
     onNavigateSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .width(84.dp)
-            .fillMaxHeight()
-            .background(Color(0xFF040307).copy(alpha = 0.94f))
-            .border(
-                width = 1.dp,
-                color = AppTheme.colors.primary.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-            )
-            .padding(vertical = 24.dp),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Column(
-            modifier = Modifier.fillMaxHeight(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // App short icon/logo
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(AppTheme.colors.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+    // Landscape: the dock stands up on the side, a glass pill on the sky with the same three tabs.
+    val sky = io.github.sammynashed.emran.ui.design.LocalSky.current
+    Box(modifier.width(88.dp).fillMaxHeight().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+        io.github.sammynashed.emran.ui.design.GlassPanel(cornerRadius = 36.dp) {
+            Column(
+                Modifier.padding(vertical = 14.dp, horizontal = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = "ع",
-                    color = AppTheme.colors.primary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Navigation Items
-            val homeSelected = currentRoute == "home"
-            val homeScale by animateFloatAsState(targetValue = if (homeSelected) 1.15f else 1.0f)
-            val homeColor = if (homeSelected) AppTheme.colors.primary else Color.White.copy(alpha = 0.45f)
-            IconButton(
-                onClick = onNavigateHome,
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer(scaleX = homeScale, scaleY = homeScale)
-                    .testTag("nav_home_landscape")
-            ) {
-                Icon(
-                    imageVector = if (homeSelected) Icons.Filled.Home else Icons.Outlined.Home,
-                    contentDescription = "Home",
-                    tint = homeColor,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            val quranSelected = currentRoute == "quran"
-            val quranScale by animateFloatAsState(targetValue = if (quranSelected) 1.15f else 1.0f)
-            val quranColor = if (quranSelected) AppTheme.colors.primary else Color.White.copy(alpha = 0.45f)
-            val quranIcon = rememberQuranIcon(filled = quranSelected)
-            IconButton(
-                onClick = onNavigateQuran,
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer(scaleX = quranScale, scaleY = quranScale)
-                    .testTag("nav_quran_landscape")
-            ) {
-                Icon(
-                    imageVector = quranIcon,
-                    contentDescription = "Quran",
-                    tint = quranColor,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            val setSelected = currentRoute == "finetune"
-            val setScale by animateFloatAsState(targetValue = if (setSelected) 1.15f else 1.0f)
-            val setColor = if (setSelected) AppTheme.colors.secondary else Color.White.copy(alpha = 0.45f)
-            IconButton(
-                onClick = onNavigateSettings,
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer(scaleX = setScale, scaleY = setScale)
-                    .testTag("nav_finetune_landscape")
-            ) {
-                Icon(
-                    imageVector = if (setSelected) Icons.Filled.Settings else Icons.Outlined.Settings,
-                    contentDescription = "Settings",
-                    tint = setColor,
-                    modifier = Modifier.size(28.dp)
-                )
+                io.github.sammynashed.emran.ui.design.EmranMark(36.dp)
+                Spacer(Modifier.height(4.dp))
+                listOf(
+                    Triple("home", Icons.Outlined.Home to Icons.Filled.Home, onNavigateHome),
+                    Triple("quran", Icons.AutoMirrored.Outlined.MenuBook to Icons.AutoMirrored.Filled.MenuBook, onNavigateQuran),
+                    Triple("finetune", Icons.Outlined.Settings to Icons.Filled.Settings, onNavigateSettings),
+                ).forEach { (key, icons, go) ->
+                    val selected = currentRoute == key
+                    Box(
+                        Modifier
+                            .size(56.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(if (selected) sky.ink.copy(alpha = 0.16f) else Color.Transparent)
+                            .clickable(onClick = go)
+                            .testTag("nav_${key}_landscape"),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            if (selected) icons.second else icons.first,
+                            contentDescription = key,
+                            tint = if (selected) sky.ink else sky.inkSoft,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
             }
         }
     }
