@@ -582,11 +582,61 @@ class MainActivity : ComponentActivity() {
         io.github.sammynashed.emran.data.update.PatchUpdate.incoming.value = uri
     }
 
+    private var skyTimelapse: kotlinx.coroutines.Job? = null
+
+    /** Moves [SkyDebug.minuteOfDay] along (seconds, minute) points, one step per frame. */
+    private fun runSkyPath(points: List<Pair<Double, Double>>, clouds: Float) {
+        skyTimelapse?.cancel()
+        skyTimelapse = lifecycleScope.launch(androidx.compose.ui.platform.AndroidUiDispatcher.Main) {
+            SkyDebug.clockSpeed = clouds
+            try {
+                var start = -1L
+                val end = points.last().first
+                while (true) {
+                    val t = androidx.compose.runtime.withFrameNanos { n ->
+                        if (start < 0) start = n
+                        ((n - start) / 1e9).coerceAtMost(end)
+                    }
+                    val i = points.indexOfLast { it.first <= t }.coerceIn(0, points.size - 2)
+                    val (t0, m0) = points[i]
+                    val (t1, m1) = points[i + 1]
+                    val f = if (t1 > t0) ((t - t0) / (t1 - t0)).coerceIn(0.0, 1.0) else 1.0
+                    SkyDebug.minuteOfDay = (m0 + (m1 - m0) * f).mod(1440.0)
+                    if (t >= end) break
+                }
+            } finally {
+                SkyDebug.clockSpeed = 1f
+            }
+        }
+    }
+
     /** Lets a developer pin the sky's hour or the glass tier from adb; see [SkyDebug]. */
     private fun applyDesignDebugExtras(intent: android.content.Intent?) {
         if (intent == null) return
         if (intent.hasExtra("SKY_DEBUG_MIN")) {
-            SkyDebug.minuteOfDay = intent.getIntExtra("SKY_DEBUG_MIN", -1).takeIf { it in 0..1439 }
+            skyTimelapse?.cancel()
+            SkyDebug.minuteOfDay = intent.getIntExtra("SKY_DEBUG_MIN", -1).takeIf { it in 0..1439 }?.toDouble()
+        }
+        // Sweep the sky's minute from one time to another for promo recordings, with the clouds
+        // sped up to match: adb ... --es SKY_TIMELAPSE 240,1320,20[,40]
+        // (04:00 -> 22:00 in 20 s, clouds 40x; wraps past midnight)
+        intent.getStringExtra("SKY_TIMELAPSE")?.let { spec ->
+            val parts = spec.split(",").mapNotNull { it.trim().toIntOrNull() }
+            if (parts.size in 3..4 && parts[2] > 0) {
+                runSkyPath(listOf(0.0 to parts[0].toDouble(), parts[2].toDouble() to parts[1].toDouble()), parts.getOrElse(3) { 40 }.toFloat())
+            }
+            intent.removeExtra("SKY_TIMELAPSE")
+        }
+        // The same with its own pacing, e.g. lingering on Maghrib: "clouds|sec:minute,sec:minute,..."
+        // adb ... --es SKY_PATH "8|0:240,20:1000,45:1120,55:1290"   (straight lines between the points)
+        intent.getStringExtra("SKY_PATH")?.let { spec ->
+            val clouds = spec.substringBefore("|", "40").trim().toFloatOrNull() ?: 40f
+            val points = spec.substringAfter("|").split(",").mapNotNull { p ->
+                val (t, m) = p.split(":").map { it.trim().toDoubleOrNull() }.takeIf { it.size == 2 } ?: return@mapNotNull null
+                if (t == null || m == null) null else t to m
+            }.sortedBy { it.first }
+            if (points.size >= 2) runSkyPath(points, clouds)
+            intent.removeExtra("SKY_PATH")
         }
         if (intent.hasExtra("FORCE_GUIDE")) SkyDebug.forceGuide = intent.getBooleanExtra("FORCE_GUIDE", false)
         intent.getStringExtra("QURAN_SEARCH")?.let { SkyDebug.searchQuery = it }

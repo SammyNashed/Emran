@@ -280,8 +280,17 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
      * should recompute when [prayerTimes] changes - it re-emits on every setting
      * (location, method, adjustments) this reads.
      */
-    fun prayerTimesOn(date: LocalDate): PrayerTimeCalculator.PrayerTimes =
-        PrayerTimeCalculator.calculateTimes(
+    // The sky and the countdown ask for the same few days many times a second during a
+    // timelapse; the times only change with the day or a setting, so the last few are kept.
+    private val timesCache = object : LinkedHashMap<List<Any?>, PrayerTimeCalculator.PrayerTimes>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<List<Any?>, PrayerTimeCalculator.PrayerTimes>?) = size > 6
+    }
+
+    fun prayerTimesOn(date: LocalDate): PrayerTimeCalculator.PrayerTimes {
+        val key = listOf(date, latitude.value, longitude.value, zoneId.value, calculationMethod.value,
+            asrSchool.value, highLatitudeRule.value, offsets.value)
+        synchronized(timesCache) { timesCache[key]?.let { return it } }
+        val times = PrayerTimeCalculator.calculateTimes(
             date = date,
             latitude = latitude.value,
             longitude = longitude.value,
@@ -291,6 +300,9 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
             highLatitudeRule = parseHighLatitudeRule(highLatitudeRule.value),
             adjustments = PrayerTimeCalculator.Adjustments.fromMap(offsets.value)
         )
+        synchronized(timesCache) { timesCache[key] = times }
+        return times
+    }
 
     // Countdown state (Next Prayer name, remaining time formatted, depleting ratio)
     data class CountdownState(
@@ -307,30 +319,20 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
     val countdownState: StateFlow<CountdownState> = _countdownState.asStateFlow()
 
     private suspend fun updateCountdown() {
-        val lat = latitude.value
-        val lon = longitude.value
-        val zone = zoneId.value
-        val adjustments = PrayerTimeCalculator.Adjustments.fromMap(offsets.value)
-        val resolvedZone = PrayerTimeCalculator.safeZone(zone)
+        val resolvedZone = PrayerTimeCalculator.safeZone(zoneId.value)
 
         // "Now" and the day boundary are both evaluated in the *location's* zone,
         // not the device's. A traveller who keeps Emran pinned to their home city
         // should see that city's countdown, and comparing a device-local clock
         // against home-zone prayer times would be off by the difference.
-        val now = LocalDateTime.now(resolvedZone)
+        val realNow = LocalDateTime.now(resolvedZone)
+        // The design debug hour (SkyDebug) moves the countdown with the sky, so a recording
+        // never shows a noon sky counting down to Isha. Alarms read their own clock, not this.
+        val now = io.github.sammynashed.emran.ui.design.SkyDebug.timeOfDay()?.let { realNow.with(it) } ?: realNow
         val today = now.toLocalDate()
         val tomorrow = today.plusDays(1)
 
-        fun timesFor(date: LocalDate) = PrayerTimeCalculator.calculateTimes(
-            date = date,
-            latitude = lat,
-            longitude = lon,
-            zoneId = zone,
-            method = parseMethod(calculationMethod.value),
-            school = parseSchool(asrSchool.value),
-            highLatitudeRule = parseHighLatitudeRule(highLatitudeRule.value),
-            adjustments = adjustments
-        )
+        fun timesFor(date: LocalDate) = prayerTimesOn(date)
 
         val timesToday = timesFor(today)
         val timesTomorrow = timesFor(tomorrow)
@@ -553,7 +555,8 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             while (true) {
                 updateCountdown()
-                delay(1000)
+                // A pinned debug hour (or a timelapse sweeping it) needs more than one frame a second.
+                delay(if (io.github.sammynashed.emran.ui.design.SkyDebug.minuteOfDay != null) 16 else 1000)
             }
         }
 

@@ -52,8 +52,14 @@ import java.time.LocalTime
  *   adb shell am start ... --es GLASS_TIER FLAT        (FLAT | BLUR | LENS)
  */
 object SkyDebug {
-    /** Minute of the day (0..1439) to show instead of the real time, or null. */
-    var minuteOfDay by mutableStateOf<Int?>(null)
+    /** Minute of the day (0 until 1440, fractional so a slow timelapse glides) to show instead of the real time, or null. */
+    var minuteOfDay by mutableStateOf<Double?>(null)
+
+    /** [minuteOfDay] as a time of day, or null when the real clock is in use. */
+    fun timeOfDay(): LocalTime? = minuteOfDay?.let { LocalTime.ofNanoOfDay((it * 60e9).toLong().coerceIn(0L, 86_399_999_999_999L)) }
+
+    /** How fast clouds and stars move; above 1 only during a SKY_TIMELAPSE, which also lifts the frame-rate caps. */
+    var clockSpeed by mutableFloatStateOf(1f)
 
     /** Preview the Friday states (Masbaha challenge) on any day: adb ... --ez FORCE_FRIDAY true */
     var forceFriday by mutableStateOf(false)
@@ -96,16 +102,22 @@ fun rememberSkyClock(animate: Boolean = true): State<Float> {
             val saver = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
             if (!motion || saver) return@repeatOnLifecycle
             var last = 0L
-            var start = -1L
+            var prev = -1L
+            var elapsed = 0.0
             while (true) {
                 withFrameNanos { n ->
-                    if (start < 0) start = n
-                    if (n - last >= 50_000_000L) {   // 20 fps: stars still twinkle smoothly, a third less work
+                    if (prev < 0) prev = n
+                    val speed = SkyDebug.clockSpeed
+                    elapsed += (n - prev) / 1_000_000_000.0 * speed
+                    prev = n
+                    // 20 fps: stars still twinkle smoothly, a third less work. A promo timelapse
+                    // (speed > 1) draws every frame, because a recording shows every dropped one.
+                    if (speed > 1f || n - last >= 50_000_000L) {
                         last = n
                         // Seconds since the sky started (plus a per-launch offset), NOT the phone's uptime:
                         // the cloud shader adds this to its noise coordinates, and a number in the tens of
                         // thousands leaves a low-precision GPU too few digits (flat blocky clouds).
-                        time.floatValue = (launchOffset + ((n - start) / 1_000_000_000.0)).toFloat()
+                        time.floatValue = (launchOffset + elapsed).toFloat()
                     }
                 }
             }
@@ -144,7 +156,7 @@ fun SkyHost(
     val sky = remember(tick / 20_000, pTimes, debugMinute) {
         val zoneNow = LocalDateTime.now(pTimes.zone)
         val day = LocalDate.now(pTimes.zone)
-        val now = debugMinute?.let { LocalDateTime.of(day, LocalTime.of(it / 60, it % 60)) } ?: zoneNow
+        val now = SkyDebug.timeOfDay()?.let { LocalDateTime.of(day, it) } ?: zoneNow
         SkyEngine.compute(now, viewModel.prayerTimesOn(day), viewModel.prayerTimesOn(day.plusDays(1)))
     }
 
@@ -166,7 +178,12 @@ fun SkyHost(
     val painter = remember { SkyPainter(appContext) }
     val layer = rememberGraphicsLayer()
     // The cloud texture refreshes ~12 times a second; stars and specks (cheap, and they need to look smooth) at 30.
-    val slowClock = remember(clock) { derivedStateOf { kotlin.math.floor(clock.value * SKY_TEXTURE_FPS) / SKY_TEXTURE_FPS } }
+    val slowClock = remember(clock) {
+        derivedStateOf {
+            if (SkyDebug.clockSpeed > 1f) clock.value   // timelapse recording: every frame
+            else kotlin.math.floor(clock.value * SKY_TEXTURE_FPS) / SKY_TEXTURE_FPS
+        }
+    }
     val recorded = remember { object { var time = -1f; var size = IntSize.Zero; var sky: SkyState? = null; var calm = false } }
     Box(
         modifier = modifier
