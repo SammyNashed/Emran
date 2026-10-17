@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" alt="Emran" width="128" height="128" />
+  <img src="docs/screenshots/icon.png" alt="Emran" width="128" height="128" />
 </p>
 
 <h1 align="center">Emran · عِمران</h1>
