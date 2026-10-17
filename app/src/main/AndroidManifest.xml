@@ -30,7 +30,6 @@
 
     <!-- Small updates from Telegram: Emran rebuilds the new version from itself and asks Android
          to install it (Android shows its own confirm screen). Nothing is downloaded by the app. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Used for exactly one thing: fetching the optional recitation model when
@@ -70,23 +69,6 @@
             android:launchMode="singleTask"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|density|uiMode"
             android:theme="@style/Theme.Emran">
-            <!-- Update files (.emran) opened from Telegram or shared to Emran. Telegram sends files
-                 it doesn't know as application/octet-stream; anything that isn't a patch is
-                 politely refused in the dialog. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="application/x-emran-patch" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="application/x-emran-patch" />
-            </intent-filter>
         </activity>
 
         <activity-alias
@@ -131,10 +113,6 @@
         <receiver
             android:name=".service.PrayerAlarmReceiver"
             android:enabled="true"
-            android:exported="false" />
-
-        <receiver
-            android:name=".data.update.InstallStatusReceiver"
             android:exported="false" />
 
         <receiver

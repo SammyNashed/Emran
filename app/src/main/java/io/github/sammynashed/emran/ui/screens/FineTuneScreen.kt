@@ -476,7 +476,8 @@ fun FineTuneScreen(
                     onClick = { waMessage(if (ar) "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: ") },
                     modifier = Modifier.weight(1f),
                 )
-                GlassTile(
+                // F-Droid builds are updated by F-Droid, so they have no update tile at all.
+                if (BuildConfig.SELF_UPDATE) GlassTile(
                     icon = Icons.Outlined.SystemUpdate,
                     label = when {
                         updateChecking -> if (ar) "تحقق…" else "Checking…"

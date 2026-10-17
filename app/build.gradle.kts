@@ -61,8 +61,29 @@ android {
     }
   }
 
+  // Two builds from one source. "full" is the Telegram APK, which can update itself
+  // from a patch file or ask GitHub whether there is a newer version. "fdroid" leaves
+  // all of that out: F-Droid updates the apps it ships, and in-app updaters are what
+  // its reviewers reject. Same applicationId and signing key, so a phone can move
+  // between the two without losing data.
+  flavorDimensions += "store"
+  productFlavors {
+    create("full") {
+      dimension = "store"
+      buildConfigField("boolean", "SELF_UPDATE", "true")
+    }
+    create("fdroid") {
+      dimension = "store"
+      buildConfigField("boolean", "SELF_UPDATE", "false")
+    }
+  }
+
   buildTypes {
     release {
+      // F-Droid rebuilds the fdroid APK from the git tag and ships ours only if the two
+      // are byte-identical. AGP would stamp the build's git commit into the APK, and our
+      // own builds are not made from a git checkout, so the stamp is left out.
+      vcsInfo { include = false }
       // splits{} decides which per-ABI APKs are produced; it does not decide
       // what goes into the universal one. Without this the "installs anywhere"
       // APK still carried x86 and x86_64 and stayed at 76 MB, which is the
@@ -111,10 +132,9 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
-// Emran's only network I/O is two user-started downloads (the Hifz model and the
-// optional Hadith packs), both over plain HttpURLConnection. It ships no API keys,
-// so there is deliberately no secrets plugin, no Firebase, and no Retrofit/OkHttp here. The unused entries
-// remain in gradle/libs.versions.toml if a future release ever needs them.
+// Emran's only network I/O is user-started: Check for updates and recitation
+// downloads, both over plain HttpURLConnection. It ships no API keys, so there is
+// deliberately no secrets plugin, no Firebase, no Play Services and no Retrofit/OkHttp.
 dependencies {
   implementation("ai.ratl:ratl-android:1.0.0-SNAPSHOT")
   implementation(platform(libs.androidx.compose.bom))

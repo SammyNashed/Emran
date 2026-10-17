@@ -1,0 +1,3 @@
+[submodule "ratl"]
+	path = ratl
+	url = https://github.com/SammyNashed/ratl.git

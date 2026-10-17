@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Self-updating, for the Telegram build only: installing patch files and the
+     receiver that reports the install result. The fdroid flavor is updated by
+     F-Droid and carries none of this. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <activity android:name=".MainActivity">
+            <!-- Update files (.emran) opened from Telegram or shared to Emran. Telegram sends files
+                 it doesn't know as application/octet-stream; anything that isn't a patch is
+                 politely refused in the dialog. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-emran-patch" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:mimeType="application/x-emran-patch" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".data.update.InstallStatusReceiver"
+            android:exported="false" />
+    </application>
+</manifest>
