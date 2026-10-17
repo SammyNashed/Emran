@@ -18,14 +18,7 @@ fastlane/metadata/android/
     ...same layout...
 ```
 
-## Still needed before submitting to F-Droid
-
-- [ ] `images/icon.png` (512x512)
-- [ ] `images/featureGraphic.png` (1024x500)
-- [ ] `images/phoneScreenshots/*.png` for both locales
-
-Screenshots should show: the home dashboard, today's prayers, the Qada forge,
-the Quran reader, the Adhkar list and the Qibla compass. Capture them in both
-light and dark mode if you want to show off the theme system.
+Screenshots are real captures from a phone (status bar cropped), shared by both
+locales. The icon is rendered from the adaptive-icon vectors (`docs/icon.svg`).
 
 [supply]: https://docs.fastlane.tools/actions/supply/

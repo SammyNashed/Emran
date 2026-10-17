@@ -1,0 +1,7 @@
+• Recitation: ten reciters, download a surah or the whole Qur'an, listen offline with the ayah highlighted and the page following along
+• Qur'an player: repeat an ayah or a surah, a queue, lock-screen controls
+• New Qur'an tab: search by words or 2:255, continue reading with a khatmah ring, bookmarks
+• Calmer reader with a fixed bottom bar; tap any ayah for its meaning
+• Adhan rounded to the nearest minute, so it matches the mosque
+• Jumu'ah on Fridays and a Surat Al-Kahf reminder
+• Text stays readable at Fajr and sunrise

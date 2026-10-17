@@ -1,43 +1,37 @@
-Emran is a free and open-source Islamic companion app that helps you build and sustain consistency in your daily prayers.
+Emran is a free, open-source Islamic companion, Arabic first. Prayer times and adhan, the Madinah mushaf with recitation and on-device Hifz checking, Qibla, a masbaha, adhkar and twelve hadith books, all under a sky that follows the real sun where you are.
 
-It is fully offline. The only network use is optional downloads you start yourself, such as extra Hadith collections and the Hifz speech model. There is no telemetry, no analytics, no advertising SDK and no account. Nothing you record can leave your device.
+No account, no ads, no analytics, no crash reporter. Prayer times, the Qur'an, Hifz, adhkar and every hadith book work with no internet at all. The app only goes online when you download a reciter's audio.
 
-FEATURES
+<b>A living sky</b>
+Every screen sits on a sky computed from the sun's position at your location: navy before Fajr, dawn colours at sunrise, bright day, ember at Maghrib. The text colour adapts so it stays readable at every hour.
 
-Prayer times and adhan
+<b>Prayer times and adhan</b>
 • Offline calculation for any coordinate or one of 164 bundled cities
-• Twelve published conventions: Muslim World League, ISNA, Egyptian General Authority, Umm al-Qura, Karachi, Dubai, Qatar, Kuwait, Singapore (MUIS), Diyanet, Tehran and Ja'fari, plus a Custom mode for your own angles
-• Correct across daylight saving time, because locations are stored as IANA time zones rather than fixed UTC offsets
-• High-latitude rules for places where the sun never reaches the Fajr or Isha angle
-• Exact adhan alarms that survive a reboot
-• Per-prayer manual calibration in minutes
+• Twelve published conventions (Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Dubai, Qatar, Kuwait, Singapore, Diyanet, Tehran, Ja'fari) plus custom angles, Shafi'i or Hanafi Asr, high-latitude rules and per-prayer fine-tuning
+• Correct across daylight saving time: locations are stored as IANA time zones, not fixed offsets
+• Exact adhan alarms, re-armed after a reboot, an update or a time zone change
+• Jumu'ah on Fridays, a Surat Al-Kahf reminder, morning and evening adhkar reminders
 
-Prayer ledger and Qada
-• Log all five daily prayers with categorised completion status
-• Track and work down a backlog of missed prayers
-• Consistency streaks with celebration animations
+<b>Qur'an</b>
+• The Madinah mushaf page: 604 pages, 15 lines, in the King Fahd Complex's Uthmanic Hafs font and text
+• Search by words (diacritics ignored) or by reference like 2:255, juz and surah lists, a khatmah ring, one bookmark per surah
+• Tap any ayah for its meaning (Tafsir al-Mukhtasar, or Saheeh International in English)
+• Recitation by ten reciters: download a surah or the whole Qur'an, listen offline with the ayah highlighted and the page following along, repeat an ayah or a surah, a queue, lock-screen controls
 
-Quran
-• All 114 surahs offline in Uthmani script, in a proper mushaf typeface
-• Navigate by Surah, Juz or page, with search and bookmarks
+<b>Hifz mode</b>
+Recite from memory and the words reveal themselves as you say them. Speech is checked on the phone by the open-source RATL engine; the model ships inside the app and nothing you say ever leaves the device.
 
-Adhkar
-• 55 supplications for morning, evening, after prayer, before sleep and upon waking
-• Every entry includes Arabic, transliteration, translation and its source: a surah and ayah, or a collection and hadith number
-• Narrated virtues where they exist, with repetition counters
+<b>Qibla</b>
+Compass with magnetic declination correction and calibration hints, plus an optional camera view with the Kaaba in the Qibla direction (preview only, nothing is recorded).
 
-Qibla compass
-• Sensor fusion with geomagnetic declination correction and live calibration guidance
+<b>Masbaha, adhkar and hadith</b>
+• A masbaha with a string of 33 beads, the classic tasbihat and your own
+• 55 core adhkar with Arabic, transliteration, translation and source, plus 223 items from Hisn al-Muslim in their own section
+• Twelve hadith books inside the app: Riyad as-Salihin, the Forty of an-Nawawi, the Forty Qudsi, Sahih al-Bukhari, Sahih Muslim, Abi Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah, Muwatta Malik, ad-Darimi and Bulugh al-Maram
+• Share any ayah, hadith or dhikr as a picture
 
-Dhikr counter
-• Digital masbaha with custom targets, lap counting and per-count haptics
+<b>Home-screen widgets</b>
+Ten glass widgets: next prayer with a live countdown, the day's prayer table, prayer progress, a clock, the day in Thuluth calligraphy or in English, the Hijri date and month, the ayah of the day and the next occasion.
 
-Personalisation
-• 20 Material 3 themes, each with a matching launcher icon
-• Light, dark or follow-system, with every theme available in both
-• Home-screen widget showing the next prayer, matching your chosen theme
-• Full Arabic interface with right-to-left layout and Arabic-Indic numerals
-
-NO MONETISATION
-
-Emran has no ads, no subscriptions and no in-app purchases. It is licensed under GPL-3.0. The author's wish is that nobody profits from it commercially, including the author.
+<b>Free, for the sake of Allah</b>
+No ads, no subscriptions, no in-app purchases. Emran is GPL-3.0, and the author's wish is that nobody profits from it commercially, including the author.
