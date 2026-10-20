@@ -196,7 +196,7 @@ fun OpenSourceDialog(ar: Boolean, onDismiss: () -> Unit) {
             Fine("Kotlin · Jetpack Compose · Room · WorkManager · Glance · Moshi · Coil · ONNX Runtime")
         }
         Spacer(Modifier.height(4.dp))
-        LinkPill(if (ar) "افتح المشروع على GitHub" else "Open the project on GitHub", Modifier.fillMaxWidth()) {
+        LinkPill(if (ar) "ادعم المشروع بنجمة على GitHub ⭐" else "Star the project on GitHub ⭐", Modifier.fillMaxWidth()) {
             context.openUrl("https://github.com/SammyNashed/Emran")
         }
     }
