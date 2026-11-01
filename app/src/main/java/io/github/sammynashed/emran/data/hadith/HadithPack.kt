@@ -12,14 +12,39 @@ import java.util.zip.Inflater
  * One hadith. [narrator] and [text] are the English; [arabic] is the source text.
  * [narrator] is empty for collections whose translation carries no separate
  * narrator line.
+ *
+ * [number] is an internal key for bookmarks and navigation, never shown to anyone. [ref] is the number
+ * people cite ("6018", "1907a", "5709-5712"), and is blank when it is not known: a missing number is honest,
+ * a guessed one gets quoted. [grade] names who graded it, blank for Bukhari and Muslim.
  */
 class Hadith(
     val number: Int,
     val arabic: String,
     val narrator: String,
-    val text: String
+    val text: String,
+    val ref: String = "",
+    val grade: String = ""
 ) {
     val english: String get() = if (narrator.isBlank()) text else "$narrator $text"
+
+    /** "صحيح · الألباني", or null for a hadith with no individual grade to show. */
+    fun gradeLabel(lang: String): String? = when (grade) {
+        GRADE_ALBANI -> if (lang == "ar") "صحيح · الألباني" else "Sahih · Al-Albani"
+        else -> null
+    }
+
+    /** True when someone searching for [query] ("6018", "1907", "1907a") means this hadith. */
+    fun matchesRef(query: String): Boolean {
+        if (ref.isEmpty()) return false
+        if (query.last().isLetter()) return ref.equals(query, ignoreCase = true)
+        val n = query.toIntOrNull() ?: return false
+        val parts = ref.split('-').map { it.trimEnd { c -> c.isLetter() }.toIntOrNull() ?: return false }
+        return if (parts.size == 2) n in parts[0]..parts[1] else parts[0] == n
+    }
+
+    companion object {
+        const val GRADE_ALBANI = "albani"
+    }
 }
 
 class HadithChapter(
@@ -85,7 +110,7 @@ private fun FileChannel.readFully(position: Long, length: Int): ByteArray {
 }
 
 /**
- * A `.hdp` pack (see tools/build_hadith_packs.py for the layout). Only the chapter
+ * A `.hdp` pack (see tools/build_hadith_library.py for the layout). Only the chapter
  * table is held in memory; a chapter is inflated when asked for.
  */
 class HadithPack private constructor(
@@ -97,10 +122,6 @@ class HadithPack private constructor(
     private val byId = chapters.associateBy { it.id }
 
     fun chapter(id: Int): HadithChapter? = byId[id]
-
-    /** The chapter holding hadith [number], or null if the pack has no such number. */
-    fun chapterOf(number: Int): HadithChapter? =
-        chapters.firstOrNull { number in it.firstNumber..it.lastNumber }
 
     fun load(chapter: HadithChapter): List<Hadith> {
         val z = source.readAt(chapter.offset, chapter.compressedLength)
@@ -127,7 +148,7 @@ class HadithPack private constructor(
         fun open(id: String, source: PackSource): HadithPack {
             val head = ByteBuffer.wrap(source.readAt(0, 14))
             val magic = ByteArray(4).also { head.get(it) }
-            require(String(magic, Charsets.US_ASCII) == "EHP1") { "$id is not a hadith pack" }
+            require(String(magic, Charsets.US_ASCII) == "EHP2") { "$id is not a hadith pack" }
             val chapterCount = head.short.toInt() and 0xFFFF
             val hadithCount = head.int
             val headerLength = head.int
@@ -184,7 +205,9 @@ class HadithPack private constructor(
             val ar = Array(n) { c.str() }
             val nar = Array(n) { c.str() }
             val txt = Array(n) { c.str() }
-            return List(n) { Hadith(nums[it], ar[it], nar[it], txt[it]) }
+            val ref = Array(n) { c.str() }
+            val grade = Array(n) { c.str() }
+            return List(n) { Hadith(nums[it], ar[it], nar[it], txt[it], ref[it], grade[it]) }
         }
     }
 }

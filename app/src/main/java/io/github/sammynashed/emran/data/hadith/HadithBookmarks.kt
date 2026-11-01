@@ -55,12 +55,38 @@ object HadithBookmarks {
     private const val PREFS = "emran_bookmarks"
     private const val KEY = "entries"
     private const val RIYAD_RENUMBERED = "riyad_standard_numbers_v1"
+    private const val LIBRARY_V2 = "hadith_library_v2"
+    private const val MIGRATION_ASSET = "hadith/migration_v2.tsv"
+
+    /** Chapter of a bookmark whose hadith left the library. It can never match a real chapter, so it stays "gone". */
+    const val REMOVED_CHAPTER = -1
 
     /**
      * The old Riyad pack numbered the opening Book of Miscellany 1218-1896 and everything after it from 1. The
      * standard (sunnah.com) numbering puts Miscellany at 1-679 and the rest from 680.
      */
     fun riyadStandardNumber(old: Int): Int = if (old >= 1218) old - 1217 else old + 679
+
+    /**
+     * The library was rebuilt in 2.4: books, chapters and internal numbers all changed. [table] holds one line per
+     * old hadith still in the library: book, old number, new chapter, new number. A saved hadith that left the
+     * library is kept and marked, so its owner is told instead of it quietly vanishing or opening another hadith.
+     */
+    fun migrateToLibraryV2(list: List<Bookmark>, table: Sequence<String>): List<Bookmark> {
+        val saved = list.filterIsInstance<Bookmark.HadithRef>()
+        if (saved.isEmpty()) return list
+        val wanted = saved.map { "${it.bookId}\t${it.number}" }.toSet()
+        val moved = HashMap<String, Pair<Int, Int>>()
+        for (line in table) {
+            val p = line.split('\t')
+            if (p.size == 4 && "${p[0]}\t${p[1]}" in wanted) moved["${p[0]}\t${p[1]}"] = p[2].toInt() to p[3].toInt()
+        }
+        return list.map { b ->
+            if (b !is Bookmark.HadithRef) return@map b
+            val to = moved["${b.bookId}\t${b.number}"]
+            if (to != null) b.copy(chapterId = to.first, number = to.second) else b.copy(chapterId = REMOVED_CHAPTER)
+        }
+    }
 
     private val _all = MutableStateFlow<List<Bookmark>>(emptyList())
     val all: StateFlow<List<Bookmark>> = _all.asStateFlow()
@@ -80,6 +106,10 @@ object HadithBookmarks {
                     if (b is Bookmark.HadithRef && b.bookId == "riyad") b.copy(number = riyadStandardNumber(b.number)) else b
                 }
                 prefs.edit().putStringSet(KEY, list.map(::serialize).toSet()).putBoolean(RIYAD_RENUMBERED, true).apply()
+            }
+            if (!prefs.getBoolean(LIBRARY_V2, false)) {
+                list = context.assets.open(MIGRATION_ASSET).bufferedReader().useLines { migrateToLibraryV2(list, it) }
+                prefs.edit().putStringSet(KEY, list.map(::serialize).toSet()).putBoolean(LIBRARY_V2, true).apply()
             }
             _all.value = list
             loaded = true

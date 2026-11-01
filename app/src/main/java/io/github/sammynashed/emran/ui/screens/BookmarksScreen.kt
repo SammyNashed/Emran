@@ -131,10 +131,15 @@ fun BookmarksScreen(
                 is Bookmark.HadithRef -> {
                     val h = HadithLibrary.hadith(context, b.bookId, b.chapterId, b.number)
                     val book = HadithLibrary.book(context, b.bookId)
-                    val title = "${book?.title(lang) ?: b.bookId} · ${b.number}"
+                    val title = listOfNotNull(book?.title(lang) ?: b.bookId, h?.ref?.ifBlank { null }).joinToString(" · ")
                     hadith += if (h == null) {
-                        // A downloaded book that has since been removed: keep the bookmark for its return.
-                        SavedItem(b, title, null, if (ar) "الكتاب غير مثبّت" else "This book is not installed.", ar)
+                        // It left the library: only sahih hadith stay, and some books wait for review. Say so, rather than dropping it silently.
+                        SavedItem(
+                            b, title, null,
+                            if (ar) "لم يعد هذا الحديث في عِمران: نُبقي الآن الأحاديث الصحيحة فقط، وبعض الكتب بانتظار المراجعة."
+                            else "This hadith is no longer in Emran: only sahih hadith remain, and some books await review.",
+                            ar
+                        )
                     } else {
                         val arabic = ar || h.english.isBlank()
                         SavedItem(b, title, null, if (arabic) h.arabic else h.english, arabic)

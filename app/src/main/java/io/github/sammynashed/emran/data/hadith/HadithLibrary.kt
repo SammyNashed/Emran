@@ -129,7 +129,7 @@ object HadithLibrary {
      * flat regardless of how many collections are installed, and checks for
      * cancellation between chapters so a new keystroke stops the old scan.
      *
-     * - digits only: jumps to that hadith number in each installed book
+     * - a reference ("6018", "1907a"): finds the hadith people cite by that number, in each installed book
      * - contains Arabic letters: matches on the Arabic with diacritics ignored
      * - otherwise: case-insensitive match on the English
      *
@@ -144,23 +144,22 @@ object HadithLibrary {
         val query = rawQuery.trim()
         val installed = installedBooks(context)
         val hits = ArrayList<HadithHit>()
-        if (query.length < 2 && !query.all { it.isDigit() }) {
+        val isRef = REF_QUERY.matches(query)
+        if (query.length < 2 && !isRef) {
             onProgress(hits, 0, installed.size)
             return@withContext
         }
 
-        if (query.all { it.isDigit() }) {
-            val n = query.toIntOrNull()
-            if (n != null) {
-                installed.forEachIndexed { idx, b ->
-                    val pack = pack(context, b.id)
-                    val ch = pack?.chapterOf(n)
-                    if (pack != null && ch != null) {
-                        chapter(context, b.id, ch.id).firstOrNull { it.number == n }
-                            ?.let { hits += HadithHit(b.id, ch, it) }
+        if (isRef) {
+            installed.forEachIndexed { idx, b ->
+                val pack = pack(context, b.id)
+                if (pack != null) {
+                    for (ch in pack.chapters) {
+                        coroutineContext.ensureActive()
+                        pack.load(ch).filter { it.matchesRef(query) }.forEach { hits += HadithHit(b.id, ch, it) }
                     }
-                    onProgress(hits.toList(), idx + 1, installed.size)
                 }
+                onProgress(hits.toList(), idx + 1, installed.size)
             }
             return@withContext
         }
@@ -194,9 +193,10 @@ object HadithLibrary {
     // ---- hadith of the day ----------------------------------------------
 
     private const val PREFS = "emran_hadith"
+    private val REF_QUERY = Regex("""\d+[a-zA-Z]?""")
 
     /**
-     * A short hadith from the bundled collections, the same one all day.
+     * A short hadith from Bukhari or Muslim, the same one all day.
      *
      * Chosen by date so it needs no network and no stored list; the pick is
      * cached so relaunching does not decode a chapter again. Short ones only, so
@@ -215,7 +215,7 @@ object HadithLibrary {
                 if (chapter != null && h != null) return HadithHit(bookId, chapter, h)
             }
         }
-        val pool = listOf("nawawi40", "qudsi40", "riyad", "riyad")
+        val pool = listOf("bukhari", "muslim")
         val bookId = pool[(epochDay % pool.size).toInt()]
         val pack = pack(context, bookId) ?: return null
         val chapter = pack.chapters[((epochDay * 7919) % pack.chapters.size).toInt()]

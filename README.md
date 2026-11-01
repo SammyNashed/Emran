@@ -19,7 +19,7 @@
 <p align="center">
   A free, open-source Islamic companion for Android, Arabic first. Prayer times and
   adhan, the Madinah mushaf with recitation and on-device Hifz checking, Qibla,
-  masbaha, adhkar and twelve hadith books, all under a sky that follows the real
+  masbaha, adhkar and six sahih hadith collections, all under a sky that follows the real
   sun where you are. No account, no ads, no analytics.
 </p>
 

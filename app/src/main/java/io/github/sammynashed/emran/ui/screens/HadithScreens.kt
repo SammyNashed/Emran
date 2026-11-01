@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import io.github.sammynashed.emran.ui.design.GlassSegmented
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 
@@ -138,10 +140,13 @@ private fun sizeLabel(bytes: Long): String =
 private fun countLabel(n: Int, lang: String): String = if (lang == "ar") "$n حديث" else "%,d hadith".format(n)
 
 private fun shareText(book: HadithBook?, lang: String, h: Hadith): String = buildString {
-    append(h.arabic)
-    if (h.english.isNotBlank()) append("\n\n").append(h.english)
-    append("\n\n— ").append(book?.title(lang) ?: "").append(" #").append(h.number)
+    append(if (lang != "ar" && h.english.isNotBlank()) h.english else h.arabic)
+    append("\n\n— ").append(sourceLine(book, lang, h))
 }
+
+/** "Sunan Ibn Majah · 1234 · Sahih · Al-Albani". The number and grade appear only when they are known. */
+private fun sourceLine(book: HadithBook?, lang: String, h: Hadith): String =
+    listOfNotNull(book?.title(lang), h.ref.ifBlank { null }, h.gradeLabel(lang)).joinToString(" · ")
 
 private fun copyToClipboard(context: Context, text: String) {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -228,6 +233,15 @@ fun HadithLibraryScreen(
                             onClick = onBookmarks
                         )
                     }
+                }
+                item(span = { full() }) {
+                    Text(
+                        text = if (lang == "ar") "الأحاديث الصحيحة فقط: البخاري ومسلم، ومن السنن ما صحّحه الألباني ولم يضعّفه أحد من العلماء المذكورين في مصادرنا. بعض الأحاديث بلا رقم حتى نتأكد منه."
+                        else "Sahih hadith only: Bukhari and Muslim, and from the Sunan what Al-Albani graded sahih and no scholar listed in our sources graded weak. Some hadith show no number until we can confirm it.",
+                        color = LocalSky.current.inkSoft,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
+                    )
                 }
                 item(span = { full() }) { SectionLabel(if (lang == "ar") "جاهزة للقراءة" else "READY TO READ") }
                 gridItems(ready, key = { "r-" + it.id }) { book ->
@@ -526,22 +540,15 @@ fun HadithChapterScreen(bookId: String, chapterId: Int, focusNumber: Int?, onBac
                         val key = Bookmark.hadithKey(bookId, chapterId, h.number)
                         HadithCard(
                             hadith = h,
-                            sourceLabel = "${book?.title(lang) ?: ""} · ${h.number}",
+                            sourceLabel = sourceLine(book, lang, h),
                             lang = lang,
                             bookmarked = bookmarks.any { it.key == key },
                             focused = h.number == focusNumber,
                             onToggleBookmark = { HadithBookmarks.toggleHadith(context, bookId, chapterId, h.number) },
                             onCopy = { copyToClipboard(context, shareText(book, lang, h)) },
                             onShare = {
-                                io.github.sammynashed.emran.ui.share.ShareCard.share(
-                                    context,
-                                    io.github.sammynashed.emran.ui.share.ShareCard.Content(
-                                        arabic = h.arabic,
-                                        english = h.text.ifBlank { null },
-                                        narrator = h.narrator.ifBlank { null },
-                                        source = "${book?.title(lang) ?: ""} · ${h.number}"
-                                    ),
-                                    lang
+                                io.github.sammynashed.emran.ui.share.PaperShare.shareHadith(
+                                    context, book, lang, h, shareText(book, lang, h)
                                 )
                             }
                         )
@@ -573,13 +580,20 @@ private fun HadithCard(
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(accent.copy(alpha = 0.15f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text("#${hadith.number}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, bypassNumerals = true)
+            // No pill rather than a guessed number.
+            if (hadith.ref.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(accent.copy(alpha = 0.15f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("#${hadith.ref}", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, bypassNumerals = true)
+                }
+            }
+            hadith.gradeLabel(lang)?.let { label ->
+                Spacer(Modifier.width(8.dp))
+                Text(label, color = LocalSky.current.inkSoft, fontSize = 12.sp)
             }
             Spacer(Modifier.weight(1f))
             ItemActions(
@@ -591,43 +605,35 @@ private fun HadithCard(
         }
         Spacer(Modifier.height(8.dp))
 
-        // Arabic is the text itself and always shown. The English follows it in English
-        // mode; in Arabic mode it would only be noise.
-        Text(
-            text = hadith.arabic,
-            color = LocalSky.current.ink,
-            fontSize = 21.sp,
-            lineHeight = 36.sp,
-            fontFamily = SurahNameFontFamily,
-            textAlign = TextAlign.Right,
-            modifier = Modifier.fillMaxWidth(),
-            bypassNumerals = true
-        )
+        // One language, the app's. Arabic only where a hadith has no translation.
         if (lang != "ar" && hadith.english.isNotBlank()) {
-            Spacer(Modifier.height(14.dp))
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(LocalSky.current.ink.copy(alpha = 0.08f))
-            )
-            Spacer(Modifier.height(14.dp))
             if (hadith.narrator.isNotBlank()) {
                 Text(
                     text = hadith.narrator,
                     color = accent.copy(alpha = 0.9f),
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    lineHeight = 20.sp,
+                    lineHeight = 21.sp,
                     bypassNumerals = true
                 )
                 Spacer(Modifier.height(4.dp))
             }
             Text(
                 text = hadith.text,
-                color = LocalSky.current.inkSoft,
-                fontSize = 15.sp,
-                lineHeight = 24.sp,
+                color = LocalSky.current.ink,
+                fontSize = 17.sp,
+                lineHeight = 27.sp,
+                bypassNumerals = true
+            )
+        } else {
+            Text(
+                text = hadith.arabic,
+                color = LocalSky.current.ink,
+                fontSize = 21.sp,
+                lineHeight = 36.sp,
+                fontFamily = SurahNameFontFamily,
+                textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth(),
                 bypassNumerals = true
             )
         }
@@ -678,6 +684,8 @@ fun HadithSearchScreen(
     var scanned by remember { mutableStateOf(0) }
     var total by remember { mutableStateOf(0) }
     var searching by remember { mutableStateOf(false) }
+    // Hadith and adhkar are different things: each has its own tab, and they never share a list.
+    var tab by remember { mutableStateOf("hadith") }
     val focus = remember { FocusRequester() }
     val folders by produceState<List<AdhkarFolder>>(emptyList()) { value = AdhkarRepository.loadAdhkar(context) }
     val installedCount = remember { HadithLibrary.installedBooks(context).size }
@@ -709,7 +717,11 @@ fun HadithSearchScreen(
                 onValueChange = { query = it },
                 placeholder = {
                     Text(
-                        if (lang == "ar") "ابحث في الأحاديث والأذكار…" else "Search hadith and adhkar, or a hadith number…",
+                        when {
+                            tab == "adhkar" -> if (lang == "ar") "ابحث في الأذكار…" else "Search adhkar…"
+                            lang == "ar" -> "ابحث في الأحاديث، أو اكتب رقم الحديث…"
+                            else -> "Search hadith, or type a hadith number…"
+                        },
                         color = LocalSky.current.inkSoft, fontSize = 14.sp
                     )
                 },
@@ -738,12 +750,25 @@ fun HadithSearchScreen(
                     .focusRequester(focus)
             )
             Spacer(Modifier.height(8.dp))
+            // Laid out left to right, so in Arabic the first tab sits on the right.
+            val tabs = listOf(
+                "hadith" to (if (lang == "ar") "الأحاديث" else "Hadith") + if (hits.isNotEmpty()) " · ${hits.size}" else "",
+                "adhkar" to (if (lang == "ar") "الأذكار" else "Adhkar") + if (dhikr.isNotEmpty()) " · ${dhikr.size}" else "",
+            )
+            GlassSegmented(
+                options = if (lang == "ar") tabs.reversed() else tabs,
+                selectedKey = tab,
+                onSelect = { tab = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            )
+            Spacer(Modifier.height(8.dp))
 
             val status = when {
                 query.trim().length < 2 && !query.trim().all { it.isDigit() && query.isNotEmpty() } ->
                     if (lang == "ar") "اكتب حرفين على الأقل" else "Type at least two letters."
                 searching -> if (lang == "ar") "جارٍ البحث… $scanned/$total" else "Searching… $scanned of $total books"
-                hits.isEmpty() && dhikr.isEmpty() -> if (lang == "ar") "لا نتائج" else "No results."
+                tab == "adhkar" && dhikr.isEmpty() -> if (lang == "ar") "لا نتائج في الأذكار" else "No results in adhkar."
+                tab == "hadith" && hits.isEmpty() -> if (lang == "ar") "لا نتائج في الأحاديث" else "No results in hadith."
                 else -> ""
             }
             if (status.isNotEmpty()) {
@@ -763,8 +788,7 @@ fun HadithSearchScreen(
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 140.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (dhikr.isNotEmpty()) {
-                    item { SectionLabel(if (lang == "ar") "الأذكار" else "ADHKAR") }
+                if (tab == "adhkar") {
                     items(dhikr) { d ->
                         ResultCard(
                             title = if (lang == "ar") d.folder.titleAr else d.folder.titleEn,
@@ -774,13 +798,12 @@ fun HadithSearchScreen(
                         )
                     }
                 }
-                if (hits.isNotEmpty()) {
-                    item { SectionLabel(if (lang == "ar") "الأحاديث" else "Hadith") }
+                if (tab == "hadith") {
                     items(hits, key = { "${it.bookId}|${it.chapter.id}|${it.hadith.number}" }) { hit ->
                         val book = HadithLibrary.book(context, hit.bookId)
                         val showArabic = lang == "ar" || arabicQuery || hit.hadith.english.isBlank()
                         ResultCard(
-                            title = "${book?.title(lang) ?: hit.bookId} · ${hit.hadith.number}",
+                            title = listOfNotNull(book?.title(lang) ?: hit.bookId, hit.hadith.ref.ifBlank { null }).joinToString(" · "),
                             body = if (showArabic) AnnotatedString(hit.hadith.arabic)
                             else highlight(hit.hadith.english, words, LocalSky.current.ink),
                             arabic = showArabic,

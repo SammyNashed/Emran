@@ -33,7 +33,7 @@ import java.io.File
  * and old ones are deleted on every share, so it never accumulates.
  */
 object ShareCard {
-    const val APP_URL = "https://github.com/SammyNashed/Emran"
+    const val APP_URL = "https://t.me/emran_app"
 
     private const val W = 1080
     private const val H = 1350
@@ -71,6 +71,15 @@ object ShareCard {
     /** Just the invitation; the picture already carries the words. */
     fun downloadCaption(lang: String): String =
         (if (lang == "ar") "حمّل عِمران" else "Get Emran") + "\n" + APP_URL
+
+    /** What Emran is and where to get it. The picture already carries the words. */
+    fun pitchCaption(lang: String): String {
+        val pitch = if (lang == "ar")
+            "مواقيت الصلاة والقبلة والقرآن والأذكار والأحاديث في تطبيق عِمران — مجاني ومفتوح المصدر ويعمل دون إنترنت."
+        else
+            "Prayer times, Qibla, Quran, adhkar and hadith in Emran — free, open source and fully offline."
+        return "$pitch\n$APP_URL"
+    }
 
     /** The text that travels with the picture (WhatsApp and others show it as the caption). */
     fun caption(content: Content, lang: String): String {
@@ -152,22 +161,21 @@ object ShareCard {
         })
     }
 
-    private fun drawHeader(c: Canvas, ui: Typeface, arabicUi: Boolean) {
+    /** The launcher icon itself, [s] pixels wide, centred on ([cx], [cy]). */
+    internal fun drawLauncherIcon(c: Canvas, cx: Float, cy: Float, s: Float) {
         // The launcher icon itself: dark tile, five pillars fading indigo to orange.
-        val cx = W / 2f
-        val cy = 150f
-        val k = 150f / 72f                       // the icon's visible 72-unit square -> 150 px
-        val ox = cx - 75f
-        val oy = cy - 75f
+        val k = s / 72f                       // the icon's visible 72-unit square -> s px
+        val ox = cx - s / 2f
+        val oy = cy - s / 2f
         fun X(v: Float) = ox + (v - 18f) * k
         fun Y(v: Float) = oy + (v - 18f) * k
-        val tile = RectF(ox, oy, ox + 150f, oy + 150f)
-        c.drawRoundRect(tile, 40f, 40f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#0A0A0A") })
-        c.drawRoundRect(tile, 40f, 40f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val tile = RectF(ox, oy, ox + s, oy + s)
+        c.drawRoundRect(tile, s * 0.267f, s * 0.267f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#0A0A0A") })
+        c.drawRoundRect(tile, s * 0.267f, s * 0.267f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(0f, Y(18f), 0f, Y(90f), Color.argb(38, 99, 102, 241), Color.argb(38, 249, 115, 22), Shader.TileMode.CLAMP)
         })
-        c.drawRoundRect(tile, 40f, 40f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; strokeWidth = 2f; color = Color.argb(60, 255, 255, 255)
+        c.drawRoundRect(tile, s * 0.267f, s * 0.267f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeWidth = s / 75f; color = Color.argb(60, 255, 255, 255)
         })
         listOf(51f to 31f, 43f to 41f, 35f to 51f, 43f to 61f, 51f to 71f).forEach { (top, left) ->
             val r = 3f * k
@@ -178,6 +186,11 @@ object ShareCard {
             c.drawRoundRect(rect, r, r, paint)
             c.drawRect(rect.left, rect.top + r, rect.right, rect.bottom, paint)
         }
+    }
+
+    private fun drawHeader(c: Canvas, ui: Typeface, arabicUi: Boolean) {
+        val cx = W / 2f
+        drawLauncherIcon(c, cx, 150f, 150f)
         val name = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE; typeface = ui; textSize = 46f; textAlign = Paint.Align.CENTER
             if (!arabicUi) letterSpacing = 0.28f

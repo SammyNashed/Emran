@@ -102,15 +102,14 @@ private fun copyDhikr(context: Context, item: AdhkarItem, lang: String) {
     android.widget.Toast.makeText(context, if (lang == "ar") "تم النسخ" else "Copied", android.widget.Toast.LENGTH_SHORT).show()
 }
 
-private fun shareDhikr(context: Context, item: AdhkarItem, lang: String) {
-    ShareCard.share(
-        context,
-        ShareCard.Content(
-            arabic = item.textAr,
-            english = item.textEn.takeIf { it != item.textAr },
-            source = item.sourceFor(lang)?.takeIf { it.isNotBlank() } ?: (if (lang == "ar") "عِمران" else "Emran"),
-        ),
-        lang,
+private fun shareDhikr(context: Context, folderId: String, title: String, item: AdhkarItem, lang: String) {
+    io.github.sammynashed.emran.ui.share.PaperShare.shareDhikr(
+        context, folderId, title,
+        arabic = item.textAr,
+        english = item.textEn.takeIf { it != item.textAr },
+        source = item.sourceFor(lang)?.takeIf { it.isNotBlank() },
+        lang = lang,
+        plainText = item.copyText(lang),
     )
 }
 
@@ -189,7 +188,7 @@ fun AdhkarDetailScreen(
                         bookmarked = bookmarks.any { it.key == bmKey },
                         onToggleBookmark = { HadithBookmarks.toggleDhikr(context, folder.id, itemKey) },
                         onCopy = { copyDhikr(context, item, lang) },
-                        onShare = { shareDhikr(context, item, lang) },
+                        onShare = { shareDhikr(context, folder.id, title, item, lang) },
                         // A tap starts counting this folder from here.
                         onClick = { masbahaStartIndex = index },
                         // A long press opens the whole dhikr with its virtue and source.
@@ -202,7 +201,7 @@ fun AdhkarDetailScreen(
 
     selectedItem?.let { item ->
         DhikrReader(
-            item, lang, onDismiss = { selectedItem = null },
+            item, lang, folderId, title, onDismiss = { selectedItem = null },
             onEdit = if (mine) ({ selectedItem = null; editing = item }) else null,
             onDelete = if (mine) ({ selectedItem = null; deleting = item }) else null,
         )
@@ -283,6 +282,8 @@ private fun MyDhikrEditor(item: AdhkarItem?, lang: String, onDismiss: () -> Unit
 private fun DhikrReader(
     item: AdhkarItem,
     lang: String,
+    folderId: String,
+    title: String,
     onDismiss: () -> Unit,
     /** Only for the user's own adhkar. */
     onEdit: (() -> Unit)? = null,
@@ -317,7 +318,7 @@ private fun DhikrReader(
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
             GlassButton(if (ar) "نسخ" else "Copy", onClick = { copyDhikr(context, item, lang); onDismiss() }, filled = false)
-            GlassButton(if (ar) "مشاركة" else "Share", onClick = { shareDhikr(context, item, lang) }, filled = true)
+            GlassButton(if (ar) "مشاركة" else "Share", onClick = { shareDhikr(context, folderId, title, item, lang) }, filled = true)
         }
         if (onEdit != null && onDelete != null) {
             Spacer(Modifier.height(8.dp))
