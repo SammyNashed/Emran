@@ -14,6 +14,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.Dp
+import io.github.sammynashed.emran.ui.design.GlassBackButton
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +59,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -125,6 +134,8 @@ fun AdhkarDetailScreen(
     // count, then on to the next. Entered by tapping a dhikr, which decides where the walk
     // starts. Null means the list is showing; reset when the folder changes.
     var masbahaStartIndex by remember(folderId) { mutableStateOf<Int?>(null) }
+    // The phone's back button does what the on-screen one does: leave counting for the list, not the whole folder.
+    androidx.activity.compose.BackHandler(enabled = masbahaStartIndex != null) { masbahaStartIndex = null }
 
     // The user's own folder can be written in: add, and (from the long-press view) edit or delete.
     val mine = folderId == MyAdhkar.FOLDER_ID
@@ -133,7 +144,7 @@ fun AdhkarDetailScreen(
     var deleting by remember { mutableStateOf<AdhkarItem?>(null) }
 
     Column(Modifier.fillMaxSize().padding(horizontal = Space.screen)) {
-        ScreenHeader(
+        if (masbahaStartIndex == null) ScreenHeader(
             title = title,
             subtitle = folder?.let { if (mine && it.items.isEmpty()) null else adhkarCountLabel(it.items.size, lang) },
             onBack = { if (masbahaStartIndex != null) masbahaStartIndex = null else onNavigateBack() },
@@ -146,7 +157,7 @@ fun AdhkarDetailScreen(
 
         val startIndex = masbahaStartIndex
         if (folder != null && startIndex != null) {
-            AdhkarMasbaha(items = folder.items, startIndex = startIndex, lang = lang, onExit = { masbahaStartIndex = null })
+            AdhkarMasbaha(items = folder.items, startIndex = startIndex, lang = lang, title = title, onExit = { masbahaStartIndex = null })
         } else if (folder != null && mine && folder.items.isEmpty()) {
             Column(
                 Modifier.fillMaxSize().padding(bottom = 124.dp, start = 12.dp, end = 12.dp),
@@ -331,6 +342,7 @@ fun AdhkarMasbaha(
     items: List<AdhkarItem>,
     startIndex: Int,
     lang: String,
+    title: String,
     onExit: () -> Unit,
 ) {
     val sky = LocalSky.current
@@ -375,70 +387,105 @@ fun AdhkarMasbaha(
         return
     }
 
-    // The dial is sized from the space left after the words and the hint, so on a short
-    // screen (or landscape) it shrinks instead of pushing anything off the bottom.
+    val source = remember { MutableInteractionSource() }
+    val tap = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        playClick()
+        if (count + 1 >= target) { index += 1; count = 0 } else count += 1
+    }
+    val pressed by source.collectIsPressedAsState()
+    val squeeze by animateFloatAsState(if (pressed) 0.985f else 1f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "card")
+
+    // The card is the counter: it hugs the words, shows the count inside, fills from the bottom as you recite,
+    // and the whole card is the tap target.
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val dialSize = (maxHeight - 260.dp).coerceIn(140.dp, 250.dp)
-        val tight = maxHeight < 560.dp
-        Column(
-            Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 112.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                if (ar) "${index + 1} من ${items.size}" else "${index + 1} of ${items.size}",
-                color = sky.inkSoft, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.height(Space.md))
-            // The dhikr being recited, in the app language only.
-            GlassPanel(Modifier.fillMaxWidth().weight(1f), cornerRadius = Radius.panel) {
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    if (item != null) {
-                        Text(
-                            text = if (ar) item.textAr else item.textEn,
-                            color = sky.ink,
-                            fontSize = if (ar) 22.sp else 17.sp,
-                            lineHeight = if (ar) 38.sp else 26.sp,
-                            fontFamily = if (ar) HafsFontFamily else null,
-                            textAlign = TextAlign.Center,
+        val wide = maxWidth > maxHeight
+        Column(Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = if (wide) 8.dp else 104.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = Space.sm, bottom = Space.sm), verticalAlignment = Alignment.CenterVertically) {
+                GlassBackButton(onExit)
+                Spacer(Modifier.width(Space.md))
+                Text(
+                    title, color = sky.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                )
+                Text(
+                    if (ar) "${index + 1} من ${items.size}" else "${index + 1} of ${items.size}",
+                    color = sky.inkSoft, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                )
+            }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val room = this
+                val numeralH = if (wide) 0.dp else 92.dp
+                val numeralW = if (wide) 130.dp else 0.dp
+                val text = if (item == null) "" else if (ar) item.textAr else item.textEn
+                val measurer = rememberTextMeasurer()
+                val density = LocalDensity.current
+                val family = if (ar) HafsFontFamily else null
+                val minSp = if (ar) 20 else 16
+                // The largest type that fits inside the card without scrolling; the card then wraps the result.
+                val size = remember(text, room.maxWidth, room.maxHeight, ar, wide) {
+                    val w = with(density) { (room.maxWidth - 32.dp - numeralW - 16.dp).roundToPx() }
+                    val h = with(density) { (room.maxHeight - 32.dp - numeralH).roundToPx() }
+                    var sp = if (ar) 38 else 28
+                    var best = minSp
+                    while (sp >= minSp) {
+                        val r = measurer.measure(
+                            text,
+                            androidx.compose.ui.text.TextStyle(fontSize = sp.sp, lineHeight = (sp * (if (ar) 1.75f else 1.5f)).sp, fontFamily = family, textAlign = TextAlign.Center),
+                            constraints = androidx.compose.ui.unit.Constraints(maxWidth = w),
                         )
+                        if (r.size.height <= h) { best = sp; break }
+                        sp -= 1
+                    }
+                    best
+                }
+                GlassPanel(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = room.maxHeight)
+                        .graphicsLayer { scaleX = squeeze; scaleY = squeeze }
+                        .clickable(interactionSource = source, indication = null) { tap() },
+                    cornerRadius = Radius.panel,
+                ) {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(Radius.panel))
+                            .drawBehind {
+                                // The water level: the card fills from the bottom as the count climbs.
+                                drawRect(sky.ink.copy(alpha = 0.10f), topLeft = Offset(0f, this.size.height * (1f - progress)), size = Size(this.size.width, this.size.height * progress))
+                            },
+                    ) {
+                        val words = @Composable { m: Modifier ->
+                            Column(m.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+                                Text(
+                                    text = text, color = sky.ink, fontSize = size.sp,
+                                    lineHeight = (size * (if (ar) 1.75f else 1.5f)).sp,
+                                    fontFamily = family, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                        }
+                        val numeral = @Composable { m: Modifier ->
+                            Column(m, horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("$count", color = sky.ink, fontSize = 56.sp, fontWeight = FontWeight.Light, style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"))
+                                Text(if (ar) "من $target" else "of $target", color = sky.inkSoft, fontSize = 14.sp)
+                            }
+                        }
+                        if (wide) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                words(Modifier.weight(1f, fill = false))
+                                Spacer(Modifier.width(16.dp))
+                                numeral(Modifier.width(numeralW - 16.dp))
+                            }
+                        } else {
+                            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                words(Modifier.weight(1f, fill = false))
+                                Spacer(Modifier.height(8.dp))
+                                numeral(Modifier)
+                            }
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(if (tight) 10.dp else 20.dp))
-
-            // Tap target: large and round, the whole thing counts, so it can be hit without looking.
-            val source = remember { MutableInteractionSource() }
-            val pressed by source.collectIsPressedAsState()
-            val squeeze by animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "dial")
-            GlassPanel(
-                Modifier
-                    .size(dialSize)
-                    .graphicsLayer { scaleX = squeeze; scaleY = squeeze }
-                    .clickable(interactionSource = source, indication = null) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        playClick()
-                        if (count + 1 >= target) { index += 1; count = 0 } else count += 1
-                    },
-                cornerRadius = dialSize / 2,
-            ) {
-                Canvas(Modifier.fillMaxSize().padding(10.dp)) {
-                    val stroke = 6.dp.toPx()
-                    val inset = stroke / 2
-                    val arcSize = Size(size.width - stroke, size.height - stroke)
-                    drawArc(sky.ink.copy(alpha = 0.12f), 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke))
-                    drawArc(sky.ink, -90f, 360f * progress, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
-                }
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$count", color = sky.ink, fontSize = if (tight) 44.sp else 60.sp, fontWeight = FontWeight.SemiBold)
-                    Text(if (ar) "من $target" else "of $target", color = sky.inkSoft, fontSize = 15.sp)
-                }
-            }
-            Spacer(Modifier.height(if (tight) 6.dp else 12.dp))
-            Text(if (ar) "اضغط للعدّ" else "Tap to count", color = sky.inkSoft, fontSize = 13.sp)
         }
     }
 }

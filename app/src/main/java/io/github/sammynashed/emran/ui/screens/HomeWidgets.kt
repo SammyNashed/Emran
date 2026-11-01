@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -60,6 +61,7 @@ import io.github.sammynashed.emran.ui.design.GlassPanel
 import io.github.sammynashed.emran.ui.design.LocalSky
 import io.github.sammynashed.emran.ui.design.Radius
 import io.github.sammynashed.emran.ui.design.glassEntrance
+import io.github.sammynashed.emran.ui.design.quietStars
 import io.github.sammynashed.emran.ui.localization.Text
 import io.github.sammynashed.emran.ui.theme.InterFontFamily
 import kotlinx.coroutines.Dispatchers
@@ -102,7 +104,8 @@ class DailyAyah(
 fun rememberDailyAyah(day: LocalDate, english: Boolean): DailyAyah? {
     val context = LocalContext.current
     val picks = io.github.sammynashed.emran.data.DailyAyat.version.intValue
-    return produceState<DailyAyah?>(null, day, english, io.github.sammynashed.emran.ui.design.SkyDebug.ayahIndex, picks) {
+    val tafsirPick = io.github.sammynashed.emran.data.TafsirLibrary.version.intValue
+    return produceState<DailyAyah?>(null, day, english, io.github.sammynashed.emran.ui.design.SkyDebug.ayahIndex, picks, tafsirPick) {
         value = withContext(Dispatchers.IO) {
             runCatching {
                 val (s, a) = io.github.sammynashed.emran.ui.design.SkyDebug.ayahIndex
@@ -113,8 +116,9 @@ fun rememberDailyAyah(day: LocalDate, english: Boolean): DailyAyah? {
                 DailyAyah(
                     s, a, t.text, t.surahAr, t.surahEn,
                     if (english) ex?.translation?.ifBlank { null } else null,
-                    ex?.tafsirAr?.ifBlank { null },
-                    ex?.tafsirEn?.ifBlank { null },
+                    // The tafsir the user chose for each language (Al-Mukhtasar unless they picked another).
+                    io.github.sammynashed.emran.data.TafsirLibrary.let { l -> l.get(context, l.selectedId(context, "ar"), s, a)?.text },
+                    io.github.sammynashed.emran.data.TafsirLibrary.let { l -> l.get(context, l.selectedId(context, "en"), s, a)?.text },
                 )
             }.getOrNull()
         }
@@ -127,6 +131,8 @@ fun AyahOfTheDayCard(
     ar: Boolean,
     onOpen: (surah: Int, ayah: Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** True when the card is handed a bounded height: it then uses all of it, centring the ayah in the room. */
+    fill: Boolean = false,
 ) {
     val sky = LocalSky.current
     val context = LocalContext.current
@@ -137,7 +143,7 @@ fun AyahOfTheDayCard(
         cornerRadius = Radius.row,
         enterIndex = 0,
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 6.dp, bottom = 10.dp)) {
+        Column((if (fill) Modifier.fillMaxSize() else Modifier.fillMaxWidth()).padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Outlined.MenuBook, null, tint = sky.inkSoft, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
@@ -161,7 +167,9 @@ fun AyahOfTheDayCard(
                                         english = if (ar) ayah.tafsirAr else ayah.tafsirEn,
                                         quran = true,
                                         source = if (ar) "القرآن الكريم · سورة ${ayah.surahAr} · ${ayah.surah}:${ayah.ayah}"
-                                        else "Qur'an · ${ayah.surahEn} ${ayah.surah}:${ayah.ayah} · Al-Mukhtasar",
+                                        else "Qur'an · ${ayah.surahEn} ${ayah.surah}:${ayah.ayah} · " + io.github.sammynashed.emran.data.TafsirLibrary.let { l ->
+                                            l.editions(context).firstOrNull { it.id == l.selectedId(context, "en") }?.nameEn ?: "Al-Mukhtasar"
+                                        },
                                     ),
                                     lang = if (ar) "ar" else "en",
                                     withCaption = false,
@@ -179,15 +187,17 @@ fun AyahOfTheDayCard(
             if (english != null) {
                 FitText(
                     text = "\u201C${standaloneTranslation(english)}\u201D",
-                    maxSp = 17f, minSp = 11.5f, maxLines = 5, lineHeightRatio = 1.24f,
+                    maxSp = 18f, minSp = 16f, maxLines = 3, lineHeightRatio = 1.3f,
                     fontFamily = null,
+                    moreLabel = "\u2026  Read the full ayah \u203A",
                     modifier = Modifier.fillMaxWidth().padding(top = 2.dp, end = 8.dp),
                 )
             } else {
                 FitText(
                     text = ayah?.text ?: " ",
-                    maxSp = 23f, minSp = 14f, maxLines = 4, lineHeightRatio = 1.6f,
+                    maxSp = 24f, minSp = 20f, maxLines = 3, lineHeightRatio = 1.6f,
                     fontFamily = MushafFontFamily,
+                    moreLabel = "\u2026  اقرأ الآية كاملة \u2039",
                     modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
                 )
             }
@@ -195,7 +205,11 @@ fun AyahOfTheDayCard(
     }
 }
 
-/** Centred text at the largest size (between [minSp] and [maxSp]) that fits in [maxLines] at this width. */
+/**
+ * The ayah as a teaser: shown whole when it fits [maxLines] comfortable lines, otherwise only its first lines
+ * (whole words) and a line saying "read the full ayah". Home is not the place to read a long ayah; the card
+ * is the door to it.
+ */
 @Composable
 private fun FitText(
     text: String,
@@ -204,36 +218,52 @@ private fun FitText(
     maxLines: Int,
     lineHeightRatio: Float,
     fontFamily: androidx.compose.ui.text.font.FontFamily?,
+    moreLabel: String,
     modifier: Modifier = Modifier,
 ) {
     val sky = LocalSky.current
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val base = androidx.compose.material3.LocalTextStyle.current
-    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val widthPx = constraints.maxWidth
-        val heightPx = constraints.maxHeight   // bounded on Home: whatever the arc and tiles leave
-        val size = remember(text, widthPx, heightPx, fontFamily) {
-            fun fitsAt(sp: Float): Boolean {
-                val style = base.copy(fontSize = sp.sp, lineHeight = (sp * lineHeightRatio).sp, fontFamily = fontFamily ?: base.fontFamily)
-                val r = measurer.measure(text, style, constraints = androidx.compose.ui.unit.Constraints(maxWidth = widthPx))
-                return r.lineCount <= maxLines && r.size.height <= heightPx
-            }
-            var sp = maxSp
-            while (sp > minSp && !fitsAt(sp)) sp -= 0.5f
-            sp
-        }
-        Text(
-            text = text,
-            color = sky.ink,
-            fontSize = size.sp,
-            lineHeight = (size * lineHeightRatio).sp,
-            fontFamily = fontFamily,
-            textAlign = TextAlign.Center,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-            bypassNumerals = true,
+        fun measure(t: String, sp: Float) = measurer.measure(
+            t,
+            base.copy(fontSize = sp.sp, lineHeight = (sp * lineHeightRatio).sp, fontFamily = fontFamily ?: base.fontFamily),
+            constraints = androidx.compose.ui.unit.Constraints(maxWidth = widthPx),
         )
+        // (size, the text to show, whether it is only the start of it)
+        val plan = remember(text, widthPx, maxLines, fontFamily) {
+            var sp = maxSp
+            while (sp > minSp && measure(text, sp).lineCount > maxLines) sp -= 0.5f
+            if (measure(text, sp).lineCount <= maxLines) Triple(sp, text, false)
+            else {
+                // Too long: keep the whole words that fill all but the last of the lines.
+                val words = text.split(' ')
+                var lo = 1
+                var hi = words.size
+                while (lo < hi) {
+                    val mid = (lo + hi + 1) / 2
+                    if (measure(words.take(mid).joinToString(" "), sp).lineCount <= maxLines - 1) lo = mid else hi = mid - 1
+                }
+                Triple(sp, words.take(lo).joinToString(" "), true)
+            }
+        }
+        val (size, shown, truncated) = plan
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = shown,
+                color = sky.ink,
+                fontSize = size.sp,
+                lineHeight = (size * lineHeightRatio).sp,
+                fontFamily = fontFamily,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().quietStars(),
+                bypassNumerals = true,
+            )
+            if (truncated) {
+                Text(moreLabel, color = sky.inkSoft, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
     }
 }
 
@@ -242,7 +272,7 @@ private fun FitText(
 /** A glass pane that gives under a finger; tap and (optionally) long-press. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PressGlass(
+internal fun PressGlass(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
@@ -277,150 +307,4 @@ private fun PressGlass(
         cornerRadius = cornerRadius,
         tint = glow,
     ) { content() }
-}
-
-@Composable
-private fun Tile(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
-    enterIndex: Int,
-    hapticOnTap: Boolean = true,
-    body: @Composable ColumnScope.() -> Unit,
-) {
-    val sky = LocalSky.current
-    PressGlass(onClick, modifier.height(88.dp), onLongClick, enterIndex = enterIndex, hapticOnTap = hapticOnTap) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp)) {
-            // A quiet label; the tile's one strong thing is its value below.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = sky.inkSoft, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(title, color = sky.inkSoft, fontSize = 13.5.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-            }
-            Spacer(Modifier.height(2.dp))
-            body()
-        }
-    }
-}
-
-private val ORDER = listOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha")
-
-/** Prayer times: the prayer AFTER the next one (the arc above already shows the next). */
-@Composable
-fun PrayerTimesTile(times: PrayerTimes, nextName: String, ar: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val sky = LocalSky.current
-    val next = nextName.removeSuffix(" (Tomorrow)")
-    val prayers = listOf("Fajr" to times.fajr, "Dhuhr" to times.dhuhr, "Asr" to times.asr, "Maghrib" to times.maghrib, "Isha" to times.isha)
-    val nextIdx = ORDER.indexOf(next).coerceAtLeast(0)
-    // First real prayer after `next` (Sunrise is not one); after Isha comes tomorrow's Fajr.
-    val after = prayers.firstOrNull { ORDER.indexOf(it.first) > nextIdx } ?: prayers.first()
-    val fmt = remember { DateTimeFormatter.ofPattern("HH:mm") }
-    Tile(Icons.Outlined.Schedule, if (ar) "المواقيت" else "Prayers", onOpen, modifier, enterIndex = 1) {
-        Spacer(Modifier.weight(1f))
-        Text(if (ar) "ثم" else "Then", color = sky.inkSoft, fontSize = 11.5.sp, lineHeight = 14.sp)
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(io.github.sammynashed.emran.data.PrayerNames.name(after.first, ar, after.second.toLocalDate()), color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
-            // The number stays big; "AM/PM" (ص/م) sits small beside it so the tile never clips it.
-            Text(
-                io.github.sammynashed.emran.data.TimeFormat.clock(after.second.toLocalTime()), color = sky.ink, fontSize = 20.sp, fontWeight = FontWeight.Normal,
-                fontFamily = InterFontFamily, bypassNumerals = true, maxLines = 1, softWrap = false,
-            )
-            io.github.sammynashed.emran.data.TimeFormat.suffix(after.second.toLocalTime(), ar)?.let {
-                Spacer(Modifier.width(3.dp))
-                Text(it, color = sky.inkSoft, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1, modifier = Modifier.padding(bottom = 3.dp))
-            }
-        }
-    }
-}
-
-/** Qibla: a door, like the other tiles. No sensor on Home; the turning happens on the Qibla screen. */
-@Composable
-fun QiblaTile(ar: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val sky = LocalSky.current
-    Tile(Icons.Outlined.Explore, if (ar) "القبلة" else "Qibla", onOpen, modifier, enterIndex = 2) {
-        Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                if (ar) "اعرف اتجاه القبلة" else "Find the Qibla",
-                color = sky.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium, lineHeight = 17.sp,
-                maxLines = 2, modifier = Modifier.weight(1f),
-            )
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.prayer_mat),
-                contentDescription = null,
-                modifier = Modifier.size(30.dp),
-            )
-        }
-    }
-}
-
-private val PRESET_DHIKR = listOf(
-    "سبحان الله" to "SubhanAllah",
-    "الحمد لله" to "Alhamdulillah",
-    "لا إله إلا الله" to "La ilaha illallah",
-    "الله أكبر" to "Allahu Akbar",
-)
-
-/**
- * Tasbeeh: a door to the masbaha, like every other tile. It shows where you left off there
- * (the same view model the masbaha uses, so the numbers always match); counting happens in
- * the masbaha itself, never by brushing Home.
- */
-@Composable
-fun TasbeehTile(ar: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val sky = LocalSky.current
-    val context = LocalContext.current
-    val owner = context as? androidx.lifecycle.ViewModelStoreOwner
-    val vm: io.github.sammynashed.emran.ui.viewmodel.DhikrViewModel =
-        if (owner != null) androidx.lifecycle.viewmodel.compose.viewModel(viewModelStoreOwner = owner)
-        else androidx.lifecycle.viewmodel.compose.viewModel()
-    val custom by vm.customTasbeehs.collectAsState()
-    val selected by vm.selectedIndex
-    val phrase by vm.activePresetPhraseIndex
-
-    val customItem = if (selected in 1..custom.size) custom[selected - 1] else null
-    val (label, count, target) = when {
-        selected == 999 -> Triple(if (ar) "تحدي الجمعة" else "Friday challenge", vm.fridayCount.value, 1000)
-        customItem != null -> Triple(customItem.textArabic.ifBlank { customItem.textTransliteration }, customItem.count, customItem.target)
-        else -> {
-            val p = PRESET_DHIKR[phrase.coerceIn(0, PRESET_DHIKR.lastIndex)]
-            Triple(if (ar) p.first else p.second, vm.presetCounts[phrase.coerceIn(0, PRESET_DHIKR.lastIndex)], 33)
-        }
-    }
-
-    Tile(
-        icon = ImageVector.vectorResource(R.drawable.ic_misbaha),
-        title = if (ar) "التسبيح" else "Tasbeeh",
-        onClick = onOpen,
-        modifier = modifier,
-        enterIndex = 3,
-    ) {
-        Spacer(Modifier.weight(1f))
-        Text(label, color = sky.inkSoft, fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        // One font, one weight, steady-width digits: "11 / 33" reads as one number.
-        Text(
-            "\u2066$count / $target\u2069",
-            color = sky.ink,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Normal,
-            fontFamily = InterFontFamily,
-            style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"),
-            bypassNumerals = true,
-        )
-    }
-}
-
-@Composable
-fun MoreTile(ar: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val sky = LocalSky.current
-    Tile(Icons.Outlined.MoreHoriz, if (ar) "المزيد" else "More", onOpen, modifier, enterIndex = 4) {
-        Spacer(Modifier.weight(1f))
-        Text(
-            if (ar) "الأذكار · الحديث\nالمحفوظات" else "Adhkar · Hadith\nSaved",
-            color = sky.ink, fontSize = if (ar) 14.sp else 13.sp, fontWeight = FontWeight.Medium, lineHeight = 17.sp, maxLines = 2,
-        )
-    }
 }

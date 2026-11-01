@@ -92,6 +92,39 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         defaultAdhanSound.value = soundKey
     }
 
+    /** Which date the calendar icon on Home carries: the Gregorian day (default) or the Hijri one. */
+    val calendarBadgeHijri = MutableStateFlow(preferences.getBoolean("calendar_badge_hijri", false))
+
+    fun setCalendarBadgeHijri(on: Boolean) {
+        preferences.edit().putBoolean("calendar_badge_hijri", on).apply()
+        calendarBadgeHijri.value = on
+    }
+
+    /** True once the user lets Emran follow where they are (see [io.github.sammynashed.emran.data.LocationFollower]). */
+    val followLocation = MutableStateFlow(preferences.getBoolean("follow_location", false))
+
+    fun setFollowLocation(on: Boolean) {
+        preferences.edit().putBoolean("follow_location", on).apply()
+        followLocation.value = on
+    }
+
+    /** "Pick the method for me": while following, a new country brings its usual method. */
+    val autoMethod = MutableStateFlow(preferences.getBoolean("follow_auto_method", false))
+
+    fun setAutoMethod(on: Boolean) {
+        preferences.edit().putBoolean("follow_auto_method", on).apply()
+        autoMethod.value = on
+    }
+
+    /** Minutes from each adhan to its iqama (see [io.github.sammynashed.emran.data.Iqama]). */
+    val iqamaMinutes = MutableStateFlow(io.github.sammynashed.emran.data.Iqama.load(preferences))
+
+    fun setIqamaMinutes(key: String, minutes: Int) {
+        val m = minutes.coerceIn(0, io.github.sammynashed.emran.data.Iqama.MAX_MINUTES)
+        preferences.edit().putInt("iqama_$key", m).apply()
+        iqamaMinutes.value = iqamaMinutes.value + (key to m)
+    }
+
     val currentDate = MutableStateFlow(LocalDate.now())
 
     val calculationMethod = MutableStateFlow(preferences.getString("calculation_method", "MWL") ?: "MWL")

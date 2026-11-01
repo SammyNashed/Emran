@@ -11,7 +11,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import io.github.sammynashed.emran.glance.WidgetUpdater
-import io.github.sammynashed.emran.glance.TodayFiveWidgetReceiver
+import io.github.sammynashed.emran.glance.NextPrayerWidgetReceiver
 import io.github.sammynashed.emran.glance.state.EmranWidgetStateDefinition
 import kotlinx.coroutines.runBlocking
 import android.util.Log
@@ -26,16 +26,10 @@ class WorkerTest {
             // Create a fake widget ID so GlanceAppWidgetManager sees it
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val shadowAppWidgetManager = shadowOf(appWidgetManager)
-            val widgetId = shadowAppWidgetManager.createWidget(TodayFiveWidgetReceiver::class.java, 0)
+            val widgetId = shadowAppWidgetManager.createWidget(NextPrayerWidgetReceiver::class.java, android.R.layout.simple_list_item_1)
             
-            try {
-                println("GlanceDebug: TEST START")
-                WidgetUpdater.updateAllWidgets(context)
-                println("GlanceDebug: Test complete")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                throw e
-            }
+            // Smoke test: refreshing every placed widget must not throw.
+            WidgetUpdater.updateAllWidgets(context)
         }
     }
 }

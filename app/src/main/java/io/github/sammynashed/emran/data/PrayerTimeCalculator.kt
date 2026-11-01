@@ -83,7 +83,12 @@ object PrayerTimeCalculator {
          * Wired but inert: see the `useRamadanIshaInterval` parameter on
          * [calculateTimes], which defaults to false until the Ramadan module lands.
          */
-        val ramadanIshaIntervalMinutes: Int = 0
+        val ramadanIshaIntervalMinutes: Int = 0,
+        /**
+         * Fixed minutes the authority itself adds after the astronomical times (Diyanet's "temkin"). They are part
+         * of the method, so they come before the user's own fine-tuning.
+         */
+        val temkin: Adjustments = Adjustments.NONE,
     ) {
         MWL("Muslim World League", 18.0, 17.0),
         ISNA("Islamic Society of North America", 15.0, 15.0),
@@ -100,7 +105,8 @@ object PrayerTimeCalculator {
         QATAR("Qatar", 18.0, 0.0, ishaIntervalMinutes = 90),
         KUWAIT("Kuwait", 18.0, 17.5),
         SINGAPORE("Singapore (MUIS)", 20.0, 18.0),
-        TURKEY("Diyanet, Turkey", 18.0, 17.0),
+        // Diyanet publishes its times with temkin: sunrise -7, Dhuhr +5, Asr +4, Maghrib +7 (what its own calendar shows).
+        TURKEY("Diyanet, Turkey", 18.0, 17.0, temkin = Adjustments(sunrise = -7, dhuhr = 5, asr = 4, maghrib = 7)),
         TEHRAN(
             displayName = "Institute of Geophysics, Tehran",
             fajrAngle = 17.7,
@@ -375,25 +381,21 @@ object PrayerTimeCalculator {
             )
         }
 
-        // The clock shows whole minutes, so the seconds have to go somewhere. Every prayer goes to the
-        // NEAREST minute (half a minute rounds up), the way mosque timetables and other prayer apps
-        // read: Isha of 19:16:15 is 19:16, Fajr of 05:08:46 is 05:09. The adhan can therefore fall up to
-        // 30 s before the exact astronomical moment, never a whole minute after it.
-        // (The first version rounded UP so the adhan could never run ahead of the sun; that put it up to
-        // 59 s after the mosque's call, which a user in Aleppo heard as "Emran is a minute late".)
-        // Sunrise is not a prayer: it marks the END of Fajr, so its partial minute is dropped.
+        // Times keep their seconds: the adhan fires at the exact second the sun reaches the angle, the way
+        // the mosque's call does. Rounding to a minute (up, or to the nearest) put Emran up to 59 s away from
+        // the call in Aleppo. Only sub-second noise is dropped.
         return PrayerTimes(
-            fajr = toLocalDateTime(date, fajrUt, zone).roundToMinute(),
-            sunrise = toLocalDateTime(date, sunriseUt, zone).truncatedTo(java.time.temporal.ChronoUnit.MINUTES),
-            dhuhr = toLocalDateTime(date, noonUt, zone).roundToMinute(),
-            asr = toLocalDateTime(date, asrUt, zone).roundToMinute(),
-            maghrib = toLocalDateTime(date, maghribUt, zone).roundToMinute(),
-            isha = toLocalDateTime(date, ishaUt, zone).roundToMinute(),
+            fajr = toLocalDateTime(date, fajrUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            sunrise = toLocalDateTime(date, sunriseUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            dhuhr = toLocalDateTime(date, noonUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            asr = toLocalDateTime(date, asrUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            maghrib = toLocalDateTime(date, maghribUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            isha = toLocalDateTime(date, ishaUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
             date = date,
             zone = zone,
             hasTrueSunriseAndSunset = hasTrueSunriseAndSunset,
             twilightIsAstronomical = fajrAttainable && ishaAttainable
-        ).withAdjustments(adjustments)
+        ).withAdjustments(method.temkin).withAdjustments(adjustments)
     }
 
     /** Convenience overload for callers that hold an IANA id string. */
@@ -622,12 +624,6 @@ object PrayerTimeCalculator {
     // -----------------------------------------------------------------------
     // Small helpers
     // -----------------------------------------------------------------------
-
-    /** The nearest whole minute: 30 seconds or more rounds up. */
-    private fun LocalDateTime.roundToMinute(): LocalDateTime {
-        val floor = truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-        return if (second >= 30) floor.plusMinutes(1) else floor
-    }
 
     private fun sinDeg(degrees: Double) = sin(Math.toRadians(degrees))
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -74,15 +75,18 @@ fun AyahExplainScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    val page by produceState<AyahPage?>(null, surah, ayah, ar) {
+    val pickTick = io.github.sammynashed.emran.data.TafsirLibrary.version.intValue
+    val page by produceState<AyahPage?>(null, surah, ayah, ar, pickTick) {
         value = withContext(Dispatchers.IO) {
             runCatching {
                 val repo = QuranRepository(context.applicationContext)
                 val chapter = repo.getChapters().first { it.id == surah }
                 val verse = repo.getSurahVerses(surah).verses[ayah - 1]
                 val ex = io.github.sammynashed.emran.data.AyahTafsir.get(context.applicationContext, surah, ayah)
-                val tafsir = (if (ar) ex?.tafsirAr else ex?.tafsirEn)?.ifBlank { null }
-                AyahPage(chapter.name, chapter.transliteration, verse.text, ex?.translation?.ifBlank { null }, tafsir, ex?.group)
+                // The tafsir the user chose (Al-Mukhtasar by default).
+                val lib = io.github.sammynashed.emran.data.TafsirLibrary
+                val picked = lib.get(context.applicationContext, lib.selectedId(context, if (ar) "ar" else "en"), surah, ayah)
+                AyahPage(chapter.name, chapter.transliteration, verse.text, ex?.translation?.ifBlank { null }, picked?.text, picked?.group ?: ex?.group)
             }.getOrNull()
         }
     }
@@ -117,7 +121,9 @@ fun AyahExplainScreen(
                                     english = p.explanation,
                                     quran = true,
                                     source = if (ar) "القرآن الكريم · سورة ${p.surahAr} · $surah:$ayah"
-                                    else "Qur'an · ${p.surahEn} $surah:$ayah · Al-Mukhtasar",
+                                    else "Qur'an · ${p.surahEn} $surah:$ayah · " + io.github.sammynashed.emran.data.TafsirLibrary.let { l ->
+                                        l.editions(context).firstOrNull { it.id == l.selectedId(context, "en") }?.nameEn ?: "Al-Mukhtasar"
+                                    },
                                 ),
                                 lang = if (ar) "ar" else "en",
                                 withCaption = false,
@@ -154,6 +160,9 @@ fun AyahExplainScreen(
                                 if (ar) "التفسير" else "Explanation",
                                 color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                             )
+                            Spacer(Modifier.height(6.dp))
+                            val darkSky = sky.ink.luminance() > 0.5f
+                            TafsirChip(ar, sky.ink, if (darkSky) androidx.compose.ui.graphics.Color(0xFF16213A) else androidx.compose.ui.graphics.Color(0xFFF4F7FC), sky.ink)
                             p.group?.let { g ->
                                 // Al-Mukhtasar explains a few ayat together; say so, so it never reads as a mismatch.
                                 Spacer(Modifier.height(4.dp))
@@ -168,9 +177,14 @@ fun AyahExplainScreen(
                                 lineHeight = if (ar) 32.sp else 26.sp,
                             )
                             Spacer(Modifier.height(14.dp))
+                            val lib = io.github.sammynashed.emran.data.TafsirLibrary
+                            val name = remember(pickTick, ar) {
+                                lib.editions(context).firstOrNull { it.id == lib.selectedId(context, if (ar) "ar" else "en") }
+                            }
                             Text(
-                                if (ar) "المختصر في تفسير القرآن الكريم، مركز تفسير للدراسات القرآنية"
-                                else "Al-Mukhtasar in Interpreting the Noble Quran (Tafsir Center for Quranic Studies), via QuranEnc.com",
+                                if (name?.id == lib.MUKHTASAR_AR) "المختصر في تفسير القرآن الكريم، مركز تفسير للدراسات القرآنية"
+                                else if (name?.id == lib.MUKHTASAR_EN) "Al-Mukhtasar in Interpreting the Noble Quran (Tafsir Center for Quranic Studies), via QuranEnc.com"
+                                else name?.name(ar).orEmpty(),
                                 color = sky.inkSoft, fontSize = 12.sp, lineHeight = 17.sp,
                             )
                         }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -285,7 +286,7 @@ fun DhikrScreen(
                 if (circlePressed) 0.94f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "circle",
             )
             GlassPanel(
-                Modifier.size(92.dp).graphicsLayer { scaleX = circleScale; scaleY = circleScale }
+                Modifier.size((92 * (androidx.compose.ui.platform.LocalDensity.current.fontScale / 1.15f).coerceIn(1f, 1.6f)).dp).graphicsLayer { scaleX = circleScale; scaleY = circleScale }
                     .clickable(interactionSource = circleSource, indication = null) { tap() },
                 cornerRadius = 46.dp, tint = if (circlePressed) 1.9f else 1f,
             ) {
@@ -416,8 +417,10 @@ private fun FridayBanner(ar: Boolean, count: Int, selected: Boolean, modifier: M
 @Composable
 private fun SquareGlass(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
     val sky = LocalSky.current
+    // A fixed square that grows only with the user's font size (a "minimum" size here made the glass fill the page).
+    val side = (64 * (androidx.compose.ui.platform.LocalDensity.current.fontScale / 1.15f).coerceIn(1f, 1.4f)).dp
     GlassPanel(
-        Modifier.size(64.dp).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        Modifier.size(side).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
         cornerRadius = 24.dp, tint = 0.8f,
     ) {
         Column(

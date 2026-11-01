@@ -16,6 +16,16 @@ import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellati
 import androidx.compose.foundation.gestures.horizontalDrag
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,6 +100,7 @@ import io.github.sammynashed.emran.ui.design.Space
 import io.github.sammynashed.emran.ui.localization.LocalAppLanguage
 import io.github.sammynashed.emran.ui.localization.Text
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URLEncoder
@@ -134,12 +145,11 @@ fun TestersScreen(onBack: () -> Unit) {
                 if (BuildConfig.DEBUG) GlassIconButton(Icons.Outlined.PersonAdd, if (ar) "إضافة" else "Add", { adding = true })
             },
         )
+        // The page itself never scrolls: the list takes exactly the space left under the drifting row.
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            Modifier.weight(1f).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Crescent(Modifier.size(40.dp))
-            Spacer(Modifier.height(Space.sm))
             Text(
                 if (ar) "صار أفضل بفضلكم" else "Made better by you",
                 color = sky.ink, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
@@ -159,11 +169,12 @@ fun TestersScreen(onBack: () -> Unit) {
                     modifier = Modifier.background(sky.ink.copy(alpha = 0.10f), CircleShape).padding(horizontal = 14.dp, vertical = 5.dp),
                 )
             }
-            Spacer(Modifier.height(Space.lg))
+            Spacer(Modifier.height(Space.md))
             rows.forEachIndexed { i, row ->
+                if (i > 0) return@forEachIndexed
                 // Different speeds, so the rows slide past each other like a website's wall.
-                Marquee(speedDp = listOf(26f, 20f, 32f)[i], gap = 14.dp) {
-                    row.forEach { c -> TesterChip(c, lang, onTap = if (BuildConfig.DEBUG) ({ editing = c }) else null) }
+                Marquee(speedDp = listOf(26f, 20f, 32f)[i], gap = 14.dp, equalHeight = i == 0) {
+                    row.forEach { c -> TesterChip(c, lang, fixed = i == 0, onTap = if (BuildConfig.DEBUG) ({ editing = c }) else null) }
                 }
                 Spacer(Modifier.height(14.dp))
             }
@@ -173,13 +184,17 @@ fun TestersScreen(onBack: () -> Unit) {
                     color = sky.inkSoft, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(32.dp),
                 )
             }
-            Spacer(Modifier.height(Space.md))
+            // Everyone not in the drifting row, as a list you scroll by hand.
+            if (rows.size > 1) VerticalChipList(rows.drop(1).flatten(), lang, Modifier.weight(1f), onTap = if (BuildConfig.DEBUG) ({ c -> editing = c }) else null)
+            else Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(12.dp))
         }
         // Pinned under the wall so it is on screen without scrolling.
         Column(
             Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 6.dp, bottom = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            if (io.github.sammynashed.emran.data.SupportContact.available) {
             Text(
                 if (ar) "لتظهر في صفحة الشكر بالتحديث القادم، أرسل رأيك مع صورتك (كلاهما مطلوب)."
                 else "To appear on the next update's thank-you wall, send your opinion and your photo (both are required).",
@@ -193,10 +208,11 @@ fun TestersScreen(onBack: () -> Unit) {
                 onClick = {
                     val msg = if (ar) "السلام عليكم، رأيي في تطبيق عِمران (وصورتي مرفقة): " else "Assalamu Alaikum Sammy, my thoughts on Emran (my photo is attached): "
                     try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/963986157471?text=" + URLEncoder.encode(msg, "UTF-8"))))
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(io.github.sammynashed.emran.data.SupportContact.whatsappUrl(msg))))
                     } catch (e: Exception) { /* no app to open the link */ }
                 },
             )
+            }
         }
     }
 
@@ -287,24 +303,25 @@ private fun Avatar(tester: Tester, lang: String, size: Dp) {
 }
 
 @Composable
-private fun TesterChip(chip: Chip, lang: String, onTap: (() -> Unit)? = null) {
+private fun TesterChip(chip: Chip, lang: String, fixed: Boolean = false, onTap: (() -> Unit)? = null) {
     val sky = LocalSky.current
     val words = chip.words
     // The words keep the direction of the language they were written in.
     val textRtl = (words ?: chip.tester.name(lang)).any { it in '؀'..'ۿ' }
     CompositionLocalProvider(LocalLayoutDirection provides if (lang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         GlassPanel(
-            modifier = if (onTap != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap) else Modifier,
+            modifier = (if (fixed) Modifier.width(320.dp).fillMaxHeight() else Modifier)
+                .then(if (onTap != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap) else Modifier),
             cornerRadius = 36.dp, lens = false,
         ) {
             Row(
-                Modifier.widthIn(max = 320.dp).padding(start = 10.dp, end = 22.dp, top = 10.dp, bottom = 10.dp),
+                (if (fixed) Modifier.fillMaxSize() else Modifier.widthIn(max = 320.dp)).padding(start = 10.dp, end = 22.dp, top = 10.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Avatar(chip.tester, lang, 52.dp)
                 Spacer(Modifier.width(14.dp))
                 Column {
-                    Text(chip.tester.name(lang), color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, bypassNumerals = true)
+                    Text(chip.tester.name(lang), color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, bypassNumerals = true)
                     val line = words?.let { "“$it”" } ?: chip.tester.role(lang)
                     if (line != null) {
                         CompositionLocalProvider(LocalLayoutDirection provides if (textRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
@@ -428,6 +445,7 @@ private fun Marquee(
     gap: Dp,
     modifier: Modifier = Modifier,
     reverse: Boolean = false,
+    equalHeight: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -478,9 +496,9 @@ private fun Marquee(
                 horizontalArrangement = Arrangement.spacedBy(gap),
             ) {
                 // Three repeats, so even a short strip always covers the screen.
-                Row(Modifier.onSizeChanged { period = it.width + gapPx }, horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
-                Row(horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
-                Row(horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
+                Row((if (equalHeight) Modifier.height(IntrinsicSize.Max) else Modifier).onSizeChanged { period = it.width + gapPx }, horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
+                Row(if (equalHeight) Modifier.height(IntrinsicSize.Max) else Modifier, horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
+                Row(if (equalHeight) Modifier.height(IntrinsicSize.Max) else Modifier, horizontalArrangement = Arrangement.spacedBy(gap)) { content() }
             }
         }
     }
@@ -497,3 +515,56 @@ private fun Modifier.fadeEdges(width: Dp = 40.dp): Modifier = this
             blendMode = BlendMode.DstIn,
         )
     }
+
+/** A fixed-height list the user scrolls by hand: one glass card, rows split by thin dividers. */
+@Composable
+private fun VerticalChipList(chips: List<Chip>, lang: String, modifier: Modifier, onTap: ((Chip) -> Unit)?) {
+    val sky = LocalSky.current
+    Box(modifier.fillMaxWidth().padding(horizontal = Space.screen)) {
+        GlassPanel(Modifier.fillMaxSize(), cornerRadius = 24.dp, lens = false) {
+            // Keeps a swipe that runs past the list's bottom from moving the page; past the top it may go back up.
+            val keep = remember {
+                object : NestedScrollConnection {
+                    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource) =
+                        if (available.y < 0f) available else Offset.Zero
+                    override suspend fun onPostFling(consumed: Velocity, available: Velocity) =
+                        if (available.y < 0f) available else Velocity.Zero
+                }
+            }
+            Column(Modifier.fillMaxSize().nestedScroll(keep).verticalScroll(rememberScrollState())) {
+                chips.forEachIndexed { i, c ->
+                    if (i > 0) Box(Modifier.padding(start = 76.dp, end = 16.dp).fillMaxWidth().height(1.dp).background(sky.ink.copy(alpha = 0.12f)))
+                    ListRow(c, lang, onTap?.let { t -> { t(c) } })
+                }
+            }
+        }
+    }
+}
+
+/** One list row: small photo on the leading side, name on top, the full quote under it. */
+@Composable
+private fun ListRow(chip: Chip, lang: String, onTap: (() -> Unit)?) {
+    val sky = LocalSky.current
+    val words = chip.words
+    val textRtl = (words ?: chip.tester.name(lang)).any { it in '؀'..'ۿ' }
+    CompositionLocalProvider(LocalLayoutDirection provides if (lang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        Row(
+            Modifier.fillMaxWidth()
+                .then(if (onTap != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap) else Modifier)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Avatar(chip.tester, lang, 44.dp)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(chip.tester.name(lang), color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, bypassNumerals = true)
+                val line = words ?: chip.tester.role(lang)
+                if (line != null) {
+                    CompositionLocalProvider(LocalLayoutDirection provides if (textRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                        Text(line, color = sky.inkSoft, fontSize = 14.sp, lineHeight = 20.sp, bypassNumerals = true, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+        }
+    }
+}

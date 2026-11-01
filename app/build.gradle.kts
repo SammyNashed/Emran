@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -16,8 +18,8 @@ android {
     applicationId = "io.github.sammynashed.emran"
     minSdk = 24
     targetSdk = 36
-    versionCode = 10
-    versionName = "2.3.0"
+    versionCode = 12
+    versionName = "2.3.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -71,10 +73,16 @@ android {
     create("full") {
       dimension = "store"
       buildConfigField("boolean", "SELF_UPDATE", "true")
+      // Contact number for Report/Suggest, from the git-ignored local.properties. Never in source.
+      val localProps = Properties()
+      rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { localProps.load(it) }
+      buildConfigField("String", "SUPPORT_WHATSAPP", "\"${localProps.getProperty("support.whatsapp", "")}\"")
     }
     create("fdroid") {
       dimension = "store"
       buildConfigField("boolean", "SELF_UPDATE", "false")
+      // Always empty: F-Droid rebuilds this flavor and its APK must match ours byte for byte.
+      buildConfigField("String", "SUPPORT_WHATSAPP", "\"\"")
     }
   }
 

@@ -54,6 +54,13 @@ sealed class Bookmark {
 object HadithBookmarks {
     private const val PREFS = "emran_bookmarks"
     private const val KEY = "entries"
+    private const val RIYAD_RENUMBERED = "riyad_standard_numbers_v1"
+
+    /**
+     * The old Riyad pack numbered the opening Book of Miscellany 1218-1896 and everything after it from 1. The
+     * standard (sunnah.com) numbering puts Miscellany at 1-679 and the rest from 680.
+     */
+    fun riyadStandardNumber(old: Int): Int = if (old >= 1218) old - 1217 else old + 679
 
     private val _all = MutableStateFlow<List<Bookmark>>(emptyList())
     val all: StateFlow<List<Bookmark>> = _all.asStateFlow()
@@ -63,9 +70,18 @@ object HadithBookmarks {
         if (loaded) return
         synchronized(this) {
             if (loaded) return
-            val set = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getStringSet(KEY, emptySet()).orEmpty()
-            _all.value = set.mapNotNull(::parse).sortedByDescending { it.savedAt }
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val set = prefs.getStringSet(KEY, emptySet()).orEmpty()
+            var list = set.mapNotNull(::parse).sortedByDescending { it.savedAt }
+            // Riyad as-Salihin moved to the standard numbering (2.3.x): saved Riyad bookmarks are converted once,
+            // so each still opens the very hadith that was saved.
+            if (!prefs.getBoolean(RIYAD_RENUMBERED, false)) {
+                list = list.map { b ->
+                    if (b is Bookmark.HadithRef && b.bookId == "riyad") b.copy(number = riyadStandardNumber(b.number)) else b
+                }
+                prefs.edit().putStringSet(KEY, list.map(::serialize).toSet()).putBoolean(RIYAD_RENUMBERED, true).apply()
+            }
+            _all.value = list
             loaded = true
         }
     }

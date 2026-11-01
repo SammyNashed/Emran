@@ -15,6 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -315,7 +316,7 @@ private fun HadithBookCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
+            .heightIn(min = 150.dp)
             .glassSurface(24.dp)
             .clickable(enabled = installed || state !is PackState.Downloading) {
                 if (installed) onClick() else onDownload()
@@ -385,7 +386,7 @@ private fun EntryChip(
 ) {
     Row(
         modifier = modifier
-            .height(52.dp)
+            .heightIn(min = 52.dp)
             .glassSurface(16.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
@@ -393,7 +394,7 @@ private fun EntryChip(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Icon(icon, contentDescription = null, tint = LocalSky.current.ink, modifier = Modifier.size(20.dp))
-        Text(label, color = LocalSky.current.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(label, color = LocalSky.current.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 

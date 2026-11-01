@@ -88,7 +88,7 @@ fun Text(
         softWrap = softWrap,
         maxLines = maxLines,
         minLines = minLines,
-        onTextLayout = onTextLayout,
+        onTextLayout = { r -> reportOverflow(r, maxLines, overflow); onTextLayout(r) },
         style = style
     )
 }
@@ -136,8 +136,35 @@ fun Text(
         softWrap = softWrap,
         maxLines = maxLines,
         minLines = minLines,
-        onTextLayout = onTextLayout,
+        onTextLayout = { r -> reportOverflow(r, maxLines, overflow); onTextLayout(r) },
         style = style
     )
 }
 
+
+
+/**
+ * Debug builds only: any text that does not fit the room it was given (cut off, running into its neighbour,
+ * or shortened with "…") reports itself in logcat under TEXTCLIP, so a sweep over every screen and font size
+ * can prove nothing breaks instead of hoping a screenshot catches it.
+ */
+private val reported = java.util.Collections.synchronizedSet(HashSet<String>())
+
+private fun reportOverflow(
+    r: androidx.compose.ui.text.TextLayoutResult,
+    maxLines: Int,
+    overflow: androidx.compose.ui.text.style.TextOverflow,
+) {
+    if (!io.github.sammynashed.emran.BuildConfig.DEBUG || !r.hasVisualOverflow) return
+    val kind = when {
+        overflow == androidx.compose.ui.text.style.TextOverflow.Ellipsis -> "TRUNC"  // shortened with "…"
+        r.didOverflowWidth -> "CUT-W"  // runs past its box sideways (into a neighbour)
+        else -> "CUT-H"  // lines cut off at the top or bottom
+    }
+    val line = "$kind \"${r.layoutInput.text.text.replace('\n', ' ').take(48)}\" box=${r.layoutInput.constraints.maxWidth}x${r.layoutInput.constraints.maxHeight}"
+    if (!reported.add(line)) return  // Home redraws every second: say each problem once per launch
+    android.util.Log.w(
+        "TEXTCLIP",
+        "$kind \"${r.layoutInput.text.text.replace('\n', ' ').take(48)}\" size=${r.size} box=${r.layoutInput.constraints.maxWidth}x${r.layoutInput.constraints.maxHeight} lines=${r.lineCount}/$maxLines",
+    )
+}

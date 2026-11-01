@@ -3,6 +3,7 @@ package io.github.sammynashed.emran.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -150,7 +151,7 @@ fun QuranHomePage(
             Spacer(Modifier.height(Space.md))
             // Search the words of the Qur'an, or go straight to 2:255.
             GlassPanel(Modifier.fillMaxWidth(), cornerRadius = 28.dp, tint = 0.9f, lens = false) {
-                Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Search, null, tint = sky.inkSoft, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(12.dp))
                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
@@ -290,7 +291,7 @@ fun QuranHomePage(
                 GlassPanel(Modifier.fillMaxWidth().clickable { open(ch, null) }, cornerRadius = 24.dp, tint = 0.8f, lens = false) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(42.dp).clip(CircleShape).background(sky.ink.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                            Text(ch.id.toString(), color = sky.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(ch.id.toString(), color = sky.ink, fontSize = (14f * minOf(androidx.compose.ui.platform.LocalDensity.current.fontScale, 1.3f) / androidx.compose.ui.platform.LocalDensity.current.fontScale).sp, lineHeight = (16f * minOf(androidx.compose.ui.platform.LocalDensity.current.fontScale, 1.3f) / androidx.compose.ui.platform.LocalDensity.current.fontScale).sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                         }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {

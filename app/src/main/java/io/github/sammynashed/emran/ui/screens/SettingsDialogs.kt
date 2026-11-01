@@ -18,6 +18,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.draw.alpha
@@ -138,7 +139,7 @@ fun AdhanSoundDialog(
     GlassDialog(
         onDismiss = onDismiss,
         title = if (ar) "صوت الأذان" else "Adhan sound",
-        subtitle = if (ar) "اضغط على صوت لتسمعه" else "Tap a voice to hear it",
+        subtitle = if (ar) "أذان قصير: اضغط على صوت لتسمعه" else "A short adhan: tap a voice to hear it",
         confirmLabel = if (ar) "حفظ" else "Save",
         onConfirm = { onSave(selected) },
         dismissLabel = if (ar) "إلغاء" else "Cancel",
@@ -164,9 +165,90 @@ fun AdhanSoundDialog(
 
 // ---- Reliable alerts ----------------------------------------------------------------------
 
+/** The reliability checks: the same rows in the Reliable alerts dialog and on its page. */
+@Composable
+fun ColumnScope.ReliabilityRows(ar: Boolean, health: NotificationHealth) {
+    val context = LocalContext.current
+    HealthRow(
+        title = if (ar) "الإشعارات" else "Notifications",
+        detail = if (ar) "بدونها لا يمكن عرض أي تنبيه" else "Without this no alert can show",
+        ok = health.notificationsAllowed,
+        action = if (ar) "فتح الإعدادات" else "Open settings",
+        onAction = { NotificationHealth.openNotificationSettings(context) },
+    )
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        HealthRow(
+            title = if (ar) "المنبّهات الدقيقة" else "Exact alarms",
+            detail = if (ar) "يطلق الأذان في ثانيته لا بعدها بدقائق" else "Fires the adhan on the second, not minutes late",
+            ok = health.exactAlarmAllowed,
+            action = if (ar) "السماح" else "Allow",
+            onAction = {
+                try {
+                    context.startActivity(
+                        Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            .apply { data = Uri.parse("package:${context.packageName}") },
+                    )
+                } catch (e: Exception) {
+                    NotificationHealth.openNotificationSettings(context)
+                }
+            },
+        )
+    }
+    HealthRow(
+        title = if (ar) "البطارية بلا قيود" else "Battery unrestricted",
+        detail = if (ar) "يمنع النظام من تجميد التطبيق في الخلفية" else "Stops Android freezing Emran in the background",
+        ok = health.batteryUnrestricted,
+        action = if (ar) "السماح" else "Allow",
+        onAction = {
+            try {
+                context.startActivity(
+                    Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .apply { data = Uri.parse("package:${context.packageName}") },
+                )
+            } catch (e: Exception) {
+                runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+            }
+        },
+    )
+    health.oem?.let { oem ->
+        // Xiaomi can be read from the system; on the other brands there is no way to read it, so it
+        // counts as done only once the person says so.
+        var confirmed by remember { mutableStateOf(health.autostartAllowed == true) }
+        HealthRow(
+            title = oem.title(ar),
+            detail = if (ar) "من دونه قد يوقف هاتفك عِمران فلا يُسمع الأذان" else "Without it your phone may stop Emran, and the adhan won't ring",
+            ok = confirmed,
+            action = if (ar) "افتح الإعداد" else "Open the setting",
+            onAction = { NotificationHealth.openAutostartSettings(context) },
+        )
+        if (!confirmed && oem != OemFamily.XIAOMI) {
+            Text(
+                if (ar) "فعّلته بالفعل" else "I've already done this",
+                color = LocalSky.current.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        NotificationHealth.confirmAutostart(context)
+                        confirmed = true
+                    }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+    Spacer(Modifier.height(6.dp))
+    GlassButton(
+        label = if (ar) "إرسال تنبيه تجريبي" else "Send a test alert",
+        onClick = {
+            NotificationHealth.sendTest(context)
+            Toast.makeText(context, if (ar) "أُرسل تنبيه تجريبي" else "Test alert sent", Toast.LENGTH_SHORT).show()
+        },
+        filled = false,
+        modifier = Modifier.align(Alignment.CenterHorizontally),
+    )
+}
+
 @Composable
 fun ReliabilityDialog(ar: Boolean, health: NotificationHealth, onDismiss: () -> Unit) {
-    val context = LocalContext.current
     GlassDialog(
         onDismiss = onDismiss,
         title = if (ar) "وصول التنبيه" else "Reliable alerts",
@@ -175,82 +257,7 @@ fun ReliabilityDialog(ar: Boolean, health: NotificationHealth, onDismiss: () -> 
         confirmLabel = if (ar) "تم" else "Done",
         onConfirm = onDismiss,
     ) {
-        HealthRow(
-            title = if (ar) "الإشعارات" else "Notifications",
-            detail = if (ar) "بدونها لا يمكن عرض أي تنبيه" else "Without this no alert can show",
-            ok = health.notificationsAllowed,
-            action = if (ar) "فتح الإعدادات" else "Open settings",
-            onAction = { NotificationHealth.openNotificationSettings(context) },
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            HealthRow(
-                title = if (ar) "المنبّهات الدقيقة" else "Exact alarms",
-                detail = if (ar) "يطلق الأذان في ثانيته لا بعدها بدقائق" else "Fires the adhan on the second, not minutes late",
-                ok = health.exactAlarmAllowed,
-                action = if (ar) "السماح" else "Allow",
-                onAction = {
-                    try {
-                        context.startActivity(
-                            Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                                .apply { data = Uri.parse("package:${context.packageName}") },
-                        )
-                    } catch (e: Exception) {
-                        NotificationHealth.openNotificationSettings(context)
-                    }
-                },
-            )
-        }
-        HealthRow(
-            title = if (ar) "البطارية بلا قيود" else "Battery unrestricted",
-            detail = if (ar) "يمنع النظام من تجميد التطبيق في الخلفية" else "Stops Android freezing Emran in the background",
-            ok = health.batteryUnrestricted,
-            action = if (ar) "السماح" else "Allow",
-            onAction = {
-                try {
-                    context.startActivity(
-                        Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                            .apply { data = Uri.parse("package:${context.packageName}") },
-                    )
-                } catch (e: Exception) {
-                    runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-                }
-            },
-        )
-        health.oem?.let { oem ->
-            // Xiaomi can be read from the system; on the other brands there is no way to read it, so it
-            // counts as done only once the person says so.
-            var confirmed by remember { mutableStateOf(health.autostartAllowed == true) }
-            HealthRow(
-                title = oem.title(ar),
-                detail = if (ar) "من دونه قد يوقف هاتفك عِمران فلا يُسمع الأذان" else "Without it your phone may stop Emran, and the adhan won't ring",
-                ok = confirmed,
-                action = if (ar) "افتح الإعداد" else "Open the setting",
-                onAction = { NotificationHealth.openAutostartSettings(context) },
-            )
-            if (!confirmed && oem != OemFamily.XIAOMI) {
-                Text(
-                    if (ar) "فعّلته بالفعل" else "I've already done this",
-                    color = LocalSky.current.ink, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                            NotificationHealth.confirmAutostart(context)
-                            confirmed = true
-                        }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        GlassButton(
-            label = if (ar) "إرسال تنبيه تجريبي" else "Send a test alert",
-            onClick = {
-                NotificationHealth.sendTest(context)
-                Toast.makeText(context, if (ar) "أُرسل تنبيه تجريبي" else "Test alert sent", Toast.LENGTH_SHORT).show()
-            },
-            filled = false,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
+        ReliabilityRows(ar, health)
     }
 }
 

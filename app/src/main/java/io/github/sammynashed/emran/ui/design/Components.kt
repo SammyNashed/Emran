@@ -98,14 +98,14 @@ private fun rememberPress(): Pair<MutableInteractionSource, Float> {
 fun Modifier.glassEntrance(index: Int): Modifier = composed {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        delay(index * 55L)
-        progress.animateTo(1f, spring(dampingRatio = 0.78f, stiffness = 170f))
+        delay(index * 32L)
+        progress.animateTo(1f, spring(dampingRatio = 0.86f, stiffness = 420f))
     }
     graphicsLayer {
         val p = progress.value
         alpha = p.coerceIn(0f, 1f)
-        translationY = (1f - p) * 30.dp.toPx()
-        val sc = 0.94f + 0.06f * p
+        translationY = (1f - p) * 16.dp.toPx()
+        val sc = 0.975f + 0.025f * p
         scaleX = sc; scaleY = sc
     }
 }
@@ -236,7 +236,7 @@ fun GlassDock(
     GlassPanel(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height((72 * (density.fontScale / 1.15f).coerceIn(1f, 1.35f)).dp)
             .testTag("app_bottom_nav")
             .onGloballyPositioned { dockOrigin = it.positionInRoot() }
             .onSizeChanged { dockW = it.width.toFloat(); dockH = it.height.toFloat() }
@@ -389,7 +389,10 @@ private fun DockRow(
                 Text(
                     tab.label,
                     color = tint,
-                    fontSize = 11.sp,
+                    // The dock is a fixed-height bar: its labels grow with the user's font only up to 1.2x.
+                    fontSize = (11f * minOf(LocalDensity.current.fontScale, 1.2f) / LocalDensity.current.fontScale).sp,
+                    lineHeight = (14f * minOf(LocalDensity.current.fontScale, 1.2f) / LocalDensity.current.fontScale).sp,
+                    maxLines = 1,
                     fontWeight = if (magnified) FontWeight.SemiBold else FontWeight.Medium,
                 )
             }
@@ -465,8 +468,9 @@ fun ScreenHeader(
             Text(
                 title, color = sky.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold,
                 maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.quietStars(),
             )
-            if (subtitle != null) Text(subtitle, color = sky.inkSoft, fontSize = 13.sp, maxLines = 1)
+            if (subtitle != null) Text(subtitle, color = sky.inkSoft, fontSize = 13.sp, maxLines = 3, modifier = Modifier.quietStars())
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Space.sm), verticalAlignment = Alignment.CenterVertically, content = actions)
     }
@@ -558,7 +562,7 @@ fun SettingsRow(
             color = sky.ink,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            maxLines = 1,
+            maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = if (trailing != null && value == null) Modifier.weight(1f).padding(end = 10.dp) else Modifier,
         )
@@ -569,9 +573,10 @@ fun SettingsRow(
                 value,
                 color = sky.inkSoft,
                 fontSize = 14.sp,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 160.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.widthIn(max = 170.dp),
             )
         }
         if (trailing != null) trailing()
@@ -661,7 +666,7 @@ fun GlassSegmented(
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Box(
             modifier
-                .height(40.dp)
+                .height((40 * (androidx.compose.ui.platform.LocalDensity.current.fontScale / 1.15f).coerceIn(1f, 1.6f)).dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(sky.ink.copy(alpha = 0.10f)),
         ) {
@@ -762,7 +767,7 @@ fun GlassTile(
                 value,
                 color = sky.inkSoft,
                 fontSize = 13.sp,
-                maxLines = 1,
+                maxLines = 2,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 modifier = Modifier.padding(top = 0.dp),
             )

@@ -21,8 +21,12 @@ class BootReceiver : BroadcastReceiver() {
                 io.github.sammynashed.emran.data.update.PatchUpdate.announceIfUpdated(context)
             }
             Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED -> reschedule(context)
+            Intent.ACTION_TIME_CHANGED -> reschedule(context)
+            Intent.ACTION_TIMEZONE_CHANGED -> {
+                reschedule(context)
+                // A new time zone usually means a trip: let "follow my location" look again on the next open.
+                io.github.sammynashed.emran.data.LocationFollower.flagMoved(context)
+            }
         }
     }
 

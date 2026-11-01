@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.WbTwilight
+import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.NightsStay
@@ -78,7 +79,10 @@ import java.net.URLEncoder
 fun FineTuneScreen(
     viewModel: PrayerViewModel,
     modifier: Modifier = Modifier,
-    onOpenAcknowledgements: () -> Unit = {}
+    onOpenAcknowledgements: () -> Unit = {},
+    onOpenAdhanBehavior: () -> Unit = {},
+    onOpenCalculation: () -> Unit = {},
+    onOpenReliableAlerts: () -> Unit = {},
 ) {
     val lang = LocalAppLanguage.current
     val context = LocalContext.current
@@ -98,17 +102,9 @@ fun FineTuneScreen(
     val health = rememberNotificationHealth()
 
     // Dialog triggering states
-    var showLocationPopup by remember { mutableStateOf(false) }
-    var showMethodDialog by remember { mutableStateOf(false) }
-    var showSchoolDialog by remember { mutableStateOf(false) }
-    var showHighLatDialog by remember { mutableStateOf(false) }
-    var showAdhanDialog by remember { mutableStateOf(false) }
-    var showOffsetsGroup by remember { mutableStateOf(false) }
-    var locationSearchQuery by remember { mutableStateOf("") }
     
     // Immersive dialog states
-    var showNotificationPrecisionDialog by remember { mutableStateOf(false) }
-    var showCalculationSettingsDialog by remember { mutableStateOf(false) }
+    var showAboutMenu by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var showAboutEmranDialog by remember { mutableStateOf(false) }
     var showAboutDeveloperDialog by remember { mutableStateOf(false) }
     var showOpenSourceDialog by remember { mutableStateOf(false) }
@@ -129,27 +125,10 @@ fun FineTuneScreen(
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     var reminderDialogFor by remember { mutableStateOf<io.github.sammynashed.emran.service.AdhkarReminders.Kind?>(null) }
     var reminderVersion by remember { mutableStateOf(0) }
-    var showClockDialogFor by remember { mutableStateOf<Triple<String, String, java.time.LocalDateTime>?>(null) }
 
     BackHandler(enabled = true) {
         if (reminderDialogFor != null) {
             reminderDialogFor = null
-        } else if (showClockDialogFor != null) {
-            showClockDialogFor = null
-        } else if (showMethodDialog) {
-            showMethodDialog = false
-        } else if (showSchoolDialog) {
-            showSchoolDialog = false
-        } else if (showHighLatDialog) {
-            showHighLatDialog = false
-        } else if (showAdhanDialog) {
-            showAdhanDialog = false
-        } else if (showLocationPopup) {
-            showLocationPopup = false
-        } else if (showNotificationPrecisionDialog) {
-            showNotificationPrecisionDialog = false
-        } else if (showCalculationSettingsDialog) {
-            showCalculationSettingsDialog = false
         } else if (showAboutEmranDialog) {
             showAboutEmranDialog = false
         } else if (showAboutDeveloperDialog) {
@@ -166,8 +145,8 @@ fun FineTuneScreen(
             showUpdateUnreachable = false
         } else if (showVersionDialog) {
             showVersionDialog = false
-        } else if (showOffsetsGroup) {
-            showOffsetsGroup = false
+        } else if (showAboutMenu) {
+            showAboutMenu = false
         } else {
             showExitConfirmDialog = true
         }
@@ -181,75 +160,11 @@ fun FineTuneScreen(
         )
     }
 
-    val baseTimes = remember(activeLat, activeLon, activeZoneId, activeMethod, activeSchool, activeHighLatRule) {
-        val methodEnum = try { PrayerTimeCalculator.CalculationMethod.valueOf(activeMethod) } catch(e: Exception) { PrayerTimeCalculator.CalculationMethod.MWL }
-        val schoolEnum = try { PrayerTimeCalculator.AsrSchool.valueOf(activeSchool) } catch(e: Exception) { PrayerTimeCalculator.AsrSchool.SHAFII }
-        val ruleEnum = try { PrayerTimeCalculator.HighLatitudeRule.valueOf(activeHighLatRule) } catch(e: Exception) { PrayerTimeCalculator.HighLatitudeRule.AUTOMATIC }
-        val zone = PrayerTimeCalculator.safeZone(activeZoneId)
-
-        PrayerTimeCalculator.calculateTimes(
-            date = LocalDate.now(zone),
-            latitude = activeLat,
-            longitude = activeLon,
-            zone = zone,
-            method = methodEnum,
-            school = schoolEnum,
-            highLatitudeRule = ruleEnum
-        )
-    }
-
-    val adjustables = remember(lang, baseTimes) {
-        listOf(
-            Triple("FAJR", if (lang == "ar") "الفجر" else "Fajr", baseTimes.fajr),
-            Triple("SUNRISE", if (lang == "ar") "الشروق" else "Sunrise", baseTimes.sunrise),
-            Triple("DHUHR", if (lang == "ar") "الظهر" else "Dhuhr", baseTimes.dhuhr),
-            Triple("ASR", if (lang == "ar") "العصر" else "Asr", baseTimes.asr),
-            Triple("MAGHRIB", if (lang == "ar") "المغرب" else "Maghrib", baseTimes.maghrib),
-            Triple("ISHA", if (lang == "ar") "العشاء" else "Isha", baseTimes.isha)
-        )
-    }
-
-    val methods = remember(lang) {
-        listOf(
-            "EGYPTIAN" to if (lang == "ar") "الهيئة المصرية العامة للمساحة" else "Egyptian General Authority",
-            "UMM_AL_QURA" to if (lang == "ar") "جامعة أم القرى (مكة المكرمة)" else "Umm Al-Qura (Mecca)",
-            "MWL" to if (lang == "ar") "رابطة العالم الإسلامي" else "Muslim World League",
-            "ISNA" to if (lang == "ar") "الجمعية الإسلامية لأمريكا الشمالية" else "Islamic Society of North America",
-            "KARACHI" to if (lang == "ar") "جامعة العلوم الإسلامية بكراتشي" else "University of Islamic Sciences, Karachi",
-            "DUBAI" to if (lang == "ar") "دبي (الإمارات)" else "Dubai (UAE)",
-            "QATAR" to if (lang == "ar") "قطر" else "Qatar",
-            "KUWAIT" to if (lang == "ar") "الكويت" else "Kuwait",
-            "SINGAPORE" to if (lang == "ar") "سنغافورة (المجلس الإسلامي)" else "Singapore (MUIS)",
-            "TURKEY" to if (lang == "ar") "الديانة التركية" else "Diyanet (Turkey)",
-            "TEHRAN" to if (lang == "ar") "معهد الجيوفيزياء، طهران" else "Institute of Geophysics, Tehran",
-            "JAFARI" to if (lang == "ar") "الجعفري (الإثنا عشري)" else "Shia Ithna Ashari (Ja'fari)"
-        )
-    }
-
-    val schools = remember(lang) {
-        listOf(
-            "SHAFII" to if (lang == "ar") "الجمهور (شافعي، مالكي، حنبلي)" else "Standard (Shafi'i, Maliki, Hanbali)",
-            "HANAFI" to if (lang == "ar") "المذهب الحنفي" else "Hanafi School"
-        )
-    }
-
     val themeModes = remember(lang) {
         listOf(
             "DARK" to if (lang == "ar") "داكن" else "Dark",
             "LIGHT" to if (lang == "ar") "فاتح" else "Light",
             "SYSTEM" to if (lang == "ar") "حسب النظام" else "Follow system"
-        )
-    }
-
-    // Only meaningful above roughly 48 degrees, where the sun may never reach the
-    // Fajr or Isha depression angle. AUTOMATIC leaves lower latitudes untouched.
-    val highLatitudeRules = remember(lang) {
-        listOf(
-            "AUTOMATIC" to if (lang == "ar") "تلقائي (موصى به)" else "Automatic (recommended)",
-            "MIDDLE_OF_NIGHT" to if (lang == "ar") "منتصف الليل" else "Middle of the night",
-            "ONE_SEVENTH_OF_NIGHT" to if (lang == "ar") "سُبع الليل" else "One-seventh of the night",
-            "ANGLE_BASED" to if (lang == "ar") "حسب الزاوية (تناسبي)" else "Angle-based (proportional)",
-            "NONE" to if (lang == "ar") "بدون تعديل (فلكي بحت)" else "None (astronomical only)"
         )
     }
 
@@ -282,7 +197,6 @@ fun FineTuneScreen(
     // (the adhan, the language) are one tap or fewer; the rest sit in four short groups.
     val sky = LocalSky.current
     val ar = lang == "ar"
-    var showAboutMenu by remember { mutableStateOf(false) }
     Box(
         modifier = modifier.fillMaxSize()
     ) {
@@ -314,15 +228,14 @@ fun FineTuneScreen(
                 "saad_alghamdi" -> if (ar) "سعد الغامدي" else "Saad Alghamdy"
                 else -> adhanDisplayName(currentAdhanFromFlow, ar)
             }
-            val methodLabel = methods.find { it.first == activeMethod }?.second ?: activeMethod
             GlassSectionLabel(if (ar) "الصلاة" else "PRAYER")
             GlassGroup(Modifier.glassEntrance(0)) {
                 SettingsRow(
                     icon = Icons.Default.Notifications,
                     minHeight = 50.dp,
-                    title = if (ar) "صوت الأذان" else "Adhan sound",
+                    title = if (ar) "الأذان" else "Adhan",
                     value = adhanLabel,
-                    onClick = { showAdhanDialog = true },
+                    onClick = onOpenAdhanBehavior,
                 )
                 GlassDivider()
                 SettingsRow(
@@ -330,14 +243,14 @@ fun FineTuneScreen(
                     minHeight = 50.dp,
                     title = if (ar) "طريقة الحساب" else "Calculation",
                     value = LocationPresets.getLocalizedName(activeLocationName, lang),
-                    onClick = { showCalculationSettingsDialog = true },
+                    onClick = onOpenCalculation,
                 )
                 GlassDivider()
                 SettingsRow(
                     icon = Icons.Default.Alarm,
                     minHeight = 50.dp,
                     title = if (ar) "وصول التنبيه" else "Reliable alerts",
-                    onClick = { showNotificationPrecisionDialog = true },
+                    onClick = onOpenReliableAlerts,
                     trailing = {
                         val ok = health.allGood
                         val dot = if (ok) Color(0xFF5BD58A) else Color(0xFFFFB74D)
@@ -402,7 +315,7 @@ fun FineTuneScreen(
                             options = listOf("en" to "English", "ar" to "العربية"),
                             selectedKey = lang,
                             onSelect = { viewModel.setCurrentLanguage(it) },
-                            modifier = Modifier.width(172.dp),
+                            modifier = Modifier.width(segW(172)),
                         )
                     },
                 )
@@ -420,7 +333,7 @@ fun FineTuneScreen(
                                 io.github.sammynashed.emran.data.TimeFormat.set(context, it == "24")
                                 updateScope.launch { runCatching { io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(context.applicationContext) } }
                             },
-                            modifier = Modifier.width(132.dp),
+                            modifier = Modifier.width(segW(132)),
                         )
                     },
                 )
@@ -437,7 +350,7 @@ fun FineTuneScreen(
                                 .let { if (ar) it.reversed() else it },
                             selectedKey = if (io.github.sammynashed.emran.ui.design.SkySettings.calm) "calm" else "live",
                             onSelect = { io.github.sammynashed.emran.ui.design.SkySettings.set(context, it == "calm") },
-                            modifier = Modifier.width(172.dp),
+                            modifier = Modifier.width(segW(if (ar) 172 else 150)),
                         )
                     },
                 )
@@ -448,7 +361,7 @@ fun FineTuneScreen(
             GlassSectionLabel(if (ar) "المساعدة وحول التطبيق" else "HELP & ABOUT")
             val waMessage = { text: String ->
                 try {
-                    val url = "https://wa.me/963986157471?text=" + URLEncoder.encode(text, "UTF-8")
+                    val url = io.github.sammynashed.emran.data.SupportContact.whatsappUrl(text)
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                 } catch (e: Exception) {
                     Toast.makeText(context, if (ar) "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
@@ -464,6 +377,8 @@ fun FineTuneScreen(
             }
             // Four small tiles in one row: everything here is a single tap, and the page stays one screen.
             Row(Modifier.fillMaxWidth().glassEntrance(2), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Only builds that carry a contact number can send these.
+                if (io.github.sammynashed.emran.data.SupportContact.available) {
                 GlassTile(
                     icon = Icons.Outlined.BugReport,
                     label = if (ar) "إبلاغ" else "Report",
@@ -476,6 +391,7 @@ fun FineTuneScreen(
                     onClick = { waMessage(if (ar) "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: ") },
                     modifier = Modifier.weight(1f),
                 )
+                }
                 // F-Droid builds are updated by F-Droid, so they have no update tile at all.
                 if (BuildConfig.SELF_UPDATE) GlassTile(
                     icon = Icons.Outlined.SystemUpdate,
@@ -544,7 +460,7 @@ fun FineTuneScreen(
                     if (i > 0) GlassDivider()
                     RichRow(
                         icon = it.icon, title = it.title, subtitle = it.sub,
-                        onClick = { showAboutMenu = false; it.open() },
+                        onClick = { it.open() },
                     )
                 }
             }
@@ -552,38 +468,6 @@ fun FineTuneScreen(
     }
 
     // ---- Dialogs in the glass style (see SettingsDialogs.kt) ----
-    if (showNotificationPrecisionDialog) {
-        ReliabilityDialog(ar = ar, health = health, onDismiss = { showNotificationPrecisionDialog = false })
-    }
-
-    if (showCalculationSettingsDialog) {
-        CalculationDialog(
-            ar = ar,
-            locationLabel = LocationPresets.getLocalizedName(activeLocationName, lang),
-            methodLabel = methods.find { it.first == activeMethod }?.second ?: activeMethod,
-            schoolLabel = schools.find { it.first == activeSchool }?.second ?: activeSchool,
-            highLatLabel = if (kotlin.math.abs(activeLat) > 48.0)
-                highLatitudeRules.find { it.first == activeHighLatRule }?.second ?: activeHighLatRule else null,
-            hasOffsets = offsets.values.any { it != 0 },
-            onLocation = { showLocationPopup = true },
-            onMethod = { showMethodDialog = true },
-            onSchool = { showSchoolDialog = true },
-            onHighLat = { showHighLatDialog = true },
-            onOffsets = { showOffsetsGroup = true },
-            onDismiss = { showCalculationSettingsDialog = false },
-        )
-    }
-
-    if (showOffsetsGroup) {
-        OffsetsDialog(
-            ar = ar,
-            rows = adjustables,
-            offsets = offsets,
-            onPick = { showClockDialogFor = it },
-            onDismiss = { showOffsetsGroup = false },
-        )
-    }
-
     if (showAboutEmranDialog) AboutEmranDialog(ar = ar, onDismiss = { showAboutEmranDialog = false })
     if (showAboutDeveloperDialog) AboutDeveloperDialog(ar = ar, onDismiss = { showAboutDeveloperDialog = false })
     if (showOpenSourceDialog) OpenSourceDialog(ar = ar, onDismiss = { showOpenSourceDialog = false })
@@ -654,70 +538,6 @@ fun FineTuneScreen(
         )
     }
 
-    if (showLocationPopup) {
-        LocationDialog(
-            ar = ar, lang = lang,
-            activeName = activeLocationName, activeLat = activeLat, activeLon = activeLon, activeZone = activeZoneId,
-            onPick = { viewModel.setLocation(it); showLocationPopup = false },
-            onDismiss = { showLocationPopup = false },
-        )
-    }
-
-    if (showAdhanDialog) {
-        AdhanSoundDialog(
-            ar = ar,
-            current = currentAdhanFromFlow,
-            onSave = {
-                viewModel.setDefaultAdhanSound(it)
-                showAdhanDialog = false
-                Toast.makeText(context, if (ar) "تم الحفظ" else "Saved", Toast.LENGTH_SHORT).show()
-            },
-            onDismiss = { showAdhanDialog = false },
-        )
-    }
-
-    if (showMethodDialog) {
-        ChoiceDialog(
-            title = if (ar) "طريقة الحساب" else "Calculation method",
-            options = methods, selectedKey = activeMethod,
-            onPick = { viewModel.setCalculationMethod(it); showMethodDialog = false },
-            onDismiss = { showMethodDialog = false },
-        )
-    }
-
-    if (showSchoolDialog) {
-        ChoiceDialog(
-            title = if (ar) "وقت العصر" else "Asr time",
-            options = schools, selectedKey = activeSchool,
-            onPick = { viewModel.setAsrSchool(it); showSchoolDialog = false },
-            onDismiss = { showSchoolDialog = false },
-        )
-    }
-
-    if (showHighLatDialog) {
-        ChoiceDialog(
-            title = if (ar) "خطوط العرض العليا" else "High latitude",
-            subtitle = if (ar) "للمناطق التي قد لا تبلغ الشمس فيها زاوية الفجر أو العشاء."
-            else "For places where the sun may never reach the Fajr or Isha angle.",
-            options = highLatitudeRules, selectedKey = activeHighLatRule,
-            onPick = { viewModel.setHighLatitudeRule(it); showHighLatDialog = false },
-            onDismiss = { showHighLatDialog = false },
-        )
-    }
-
-    showClockDialogFor?.let { target ->
-        ClockPopupDialog(
-            label = target.second,
-            baseDateTime = target.third,
-            currentOffset = offsets[target.first] ?: 0,
-            onDismiss = { showClockDialogFor = null },
-            onSave = { newOffset ->
-                viewModel.updateOffset(target.first, newOffset)
-                showClockDialogFor = null
-            },
-        )
-    }
-
     reminderDialogFor?.let { kind ->
         AdhkarReminderDialog(
             title = kind.title(ar),
@@ -743,3 +563,9 @@ fun FineTuneScreen(
 // ============ REUSABLE COMPONENTS ==========
 // ==========================================
 
+
+
+/** A switch's width in dp, growing with the user's font size so its labels never collide (up to 1.6x). */
+@androidx.compose.runtime.Composable
+private fun segW(base: Int): androidx.compose.ui.unit.Dp =
+    (base * (androidx.compose.ui.platform.LocalDensity.current.fontScale / 1.15f).coerceIn(1f, 1.3f)).dp

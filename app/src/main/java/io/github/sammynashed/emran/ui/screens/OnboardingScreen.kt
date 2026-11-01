@@ -37,6 +37,8 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -76,6 +78,8 @@ import io.github.sammynashed.emran.data.LocationPreset
 import io.github.sammynashed.emran.data.LocationPresets
 import io.github.sammynashed.emran.ui.design.ChoiceDialog
 import io.github.sammynashed.emran.ui.design.GlassPanel
+import io.github.sammynashed.emran.ui.design.GlassSegmented
+import io.github.sammynashed.emran.service.AdhanPolicy
 import io.github.sammynashed.emran.ui.design.LocalSky
 import io.github.sammynashed.emran.ui.design.SkyHost
 import io.github.sammynashed.emran.ui.design.Space
@@ -129,6 +133,8 @@ fun OnboardingScreen(
     var method by remember { mutableStateOf("MWL") }
     var school by remember { mutableStateOf("SHAFII") }
     var sound by remember { mutableStateOf("default") }
+    // How the adhan should behave: follow the phone (default), a quiet day, or wake me for Fajr.
+    var behavior by remember { mutableStateOf("phone") }
     var notifications by remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -174,7 +180,7 @@ fun OnboardingScreen(
                     when (s) {
                         0 -> WelcomeStep(ar, onLanguageSelect)
                         1 -> PlaceStep(ar, location) { location = it }
-                        2 -> ReminderStep(ar, notifications, asked, sound, { sound = it }) {
+                        2 -> ReminderStep(ar, notifications, asked, sound, { sound = it }, behavior, { behavior = it }) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
                             else notifications = true
                         }
@@ -198,6 +204,12 @@ fun OnboardingScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     if (last) {
                         val loc = location ?: (LocationPresets.list.firstOrNull { it.name.contains("Mecca") } ?: LocationPresets.list[0])
+                        // The behaviour preset is plain preferences, read by the alarm receiver.
+                        io.github.sammynashed.emran.service.AdhanPolicy.apply {
+                            setWakeForFajr(context, behavior == "wake")
+                            val quiet = behavior == "quiet"
+                            listOf("Dhuhr", "Asr").forEach { setMode(context, it, if (quiet) AdhanPolicy.Mode.VIBRATE else AdhanPolicy.Mode.ADHAN) }
+                        }
                         onFinished("EXPRESSIVE", loc, notifications, method, school, sound)
                     } else step += 1
                 }
@@ -367,6 +379,8 @@ private fun ReminderStep(
     asked: Boolean,
     sound: String,
     onSound: (String) -> Unit,
+    behavior: String,
+    onBehavior: (String) -> Unit,
     onAllow: () -> Unit,
 ) {
     val sky = LocalSky.current
@@ -425,6 +439,7 @@ private fun ReminderStep(
             }
             Spacer(Modifier.weight(1.4f))
         } else {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
             Text(
                 if (ar) "اختر صوت الأذان" else "Choose the adhan",
                 color = sky.inkSoft, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -457,6 +472,33 @@ private fun ReminderStep(
                         }
                     }
                 }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(
+                if (ar) "كيف يصلك الأذان؟" else "How should the adhan reach you?",
+                color = sky.inkSoft, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 6.dp, bottom = 8.dp),
+            )
+            val opts = listOf(
+                "phone" to (if (ar) "حسب هاتفي" else "My phone"),
+                "quiet" to (if (ar) "نهار هادئ" else "Quiet day"),
+                "wake" to (if (ar) "أيقظني" else "Wake me"),
+            )
+            GlassSegmented(
+                options = if (ar) opts.reversed() else opts,
+                selectedKey = behavior,
+                onSelect = onBehavior,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                when (behavior) {
+                    "quiet" -> if (ar) "الظهر والعصر اهتزاز فقط، والباقي أذان. يحترم الصامت دائمًا." else "Dhuhr and Asr only vibrate; the rest play the adhan. Silent is always respected."
+                    "wake" -> if (ar) "أذان الفجر كاملًا بصوت المنبّه حتى لو كان الهاتف صامتًا. غيّره لاحقًا من الإعدادات." else "Fajr plays in full at alarm volume, even on silent. Change it any time in Settings."
+                    else -> if (ar) "يتبع الأذان صوت إشعارات هاتفك ووضع الصامت وعدم الإزعاج." else "The adhan follows your phone's notification volume, silent mode and Do Not Disturb."
+                },
+                color = sky.inkSoft, fontSize = 13.sp,
+                modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 8.dp),
+            )
             }
         }
     }

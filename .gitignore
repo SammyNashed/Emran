@@ -40,3 +40,6 @@ undo_*.js
 /app/build/
 *.apk
 settings.gradle.kts.ratl-backup
+
+# Python bytecode
+__pycache__/

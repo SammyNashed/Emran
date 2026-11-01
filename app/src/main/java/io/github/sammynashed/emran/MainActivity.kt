@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Build
 
+import androidx.compose.material.icons.outlined.LocalLibrary
+import androidx.compose.material.icons.filled.LocalLibrary
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -47,7 +49,6 @@ import io.github.sammynashed.emran.ui.design.GlassDock
 import io.github.sammynashed.emran.ui.design.GlassTier
 import io.github.sammynashed.emran.ui.design.SkyDebug
 import io.github.sammynashed.emran.ui.design.SkyHost
-import io.github.sammynashed.emran.ui.screens.MoreScreen
 
 import io.github.sammynashed.emran.ui.viewmodel.PrayerViewModel
 import io.github.sammynashed.emran.ui.viewmodel.QuranViewModel
@@ -156,7 +157,7 @@ class MainActivity : ComponentActivity() {
                     }
                     LaunchedEffect(route) {
                         if (route == "more") {
-                            navController.navigate("more") { launchSingleTop = true }
+                            navController.navigate("library") { launchSingleTop = true }
                         } else if (route == "PRAYER_TAB" || route == "prayer_times") {
                             activeTabRoute = "home"
                             navController.navigate("prayer_times") {
@@ -192,9 +193,9 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "quran" &&
                                 quranState !is io.github.sammynashed.emran.ui.viewmodel.QuranUiState.SuccessVerses) ||
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
-                            currentRoute == "prayer_times" || currentRoute == "more" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
+                            currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "library" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
                             currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
-                            currentRoute == "testers" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
+                            currentRoute == "testers" || currentRoute == "adhan_behavior" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
                             currentRoute?.startsWith("adhkar_detail/") == true ||
                             currentRoute == "hadith" || currentRoute?.startsWith("hadith_") == true || currentRoute?.startsWith("bookmarks") == true
                         SkyHost(
@@ -267,32 +268,36 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize(),
                                     // Screens move like iOS: the new one slides in from the edge while the old
                                     // one recedes; going back is the reverse. Soft deceleration, no bounce.
+                                    // A push, like iOS: the new screen slides in from the edge while the old one slides a little
+                                    // the other way, both moving (so nothing sits half-transparent on top of anything).
                                     enterTransition = {
-                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, easing = NavEase)) +
-                                            slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start,
-                                                androidx.compose.animation.core.tween(400, easing = NavEase), initialOffset = { it / 5 })
+                                        slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start,
+                                            androidx.compose.animation.core.tween(320, easing = NavEase), initialOffset = { it / 4 }) +
+                                            androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(140))
                                     },
                                     exitTransition = {
-                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) +
-                                            androidx.compose.animation.scaleOut(targetScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(400, easing = NavEase))
+                                        slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Start,
+                                            androidx.compose.animation.core.tween(320, easing = NavEase), targetOffset = { it / 8 }) +
+                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180))
                                     },
                                     popEnterTransition = {
-                                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, easing = NavEase)) +
-                                            androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = androidx.compose.animation.core.tween(400, easing = NavEase))
+                                        slideIntoContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End,
+                                            androidx.compose.animation.core.tween(300, easing = NavEase), initialOffset = { it / 8 }) +
+                                            androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(160))
                                     },
                                     popExitTransition = {
-                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) +
-                                            slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End,
-                                                androidx.compose.animation.core.tween(340, easing = NavEase), targetOffset = { it / 5 })
+                                        slideOutOfContainer(androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.End,
+                                            androidx.compose.animation.core.tween(300, easing = NavEase), targetOffset = { it / 4 }) +
+                                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
                                     },
                                 ) {
                                     composable("home") {
                                         androidx.compose.animation.AnimatedContent(
                                             targetState = activeTabRoute,
                                             transitionSpec = {
-                                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300, delayMillis = 60, easing = NavEase)) +
-                                                    androidx.compose.animation.scaleIn(initialScale = 0.965f, animationSpec = androidx.compose.animation.core.tween(380, easing = NavEase))) togetherWith
-                                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160))
+                                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(150)) +
+                                                    androidx.compose.animation.scaleIn(initialScale = 0.985f, animationSpec = androidx.compose.animation.core.tween(240, easing = NavEase))) togetherWith
+                                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(110))
                                             },
                                             label = "tabs",
                                         ) { tab ->
@@ -304,7 +309,11 @@ class MainActivity : ComponentActivity() {
                                                     onNavigateToPrayers = { navController.navigate("prayer_times") { launchSingleTop = true } },
                                                     onNavigateToQibla = { navController.navigate("compass") { launchSingleTop = true } },
                                                     onNavigateToTasbeeh = { navController.navigate("dhikr") { launchSingleTop = true } },
-                                                    onNavigateToMore = { navController.navigate("more") { launchSingleTop = true } },
+                                                    onNavigateToLocation = { navController.navigate("calculation") { launchSingleTop = true } },
+                                                    onOpenCalendar = { navController.navigate("calendar") { launchSingleTop = true } },
+                                                    onOpenLibrary = { navController.navigate("library") { launchSingleTop = true } },
+                                                    onOpenAdhkarDetail = { navController.navigate("adhkar_detail/$it") { launchSingleTop = true } },
+                                                    onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
                                                     onOpenAyah = { surah, ayah ->
                                                         navController.navigate("ayah/$surah/$ayah") { launchSingleTop = true }
                                                     },
@@ -325,7 +334,10 @@ class MainActivity : ComponentActivity() {
                                             "finetune" -> {
                                                 FineTuneScreen(
                                                     viewModel = viewModel,
-                                                    onOpenAcknowledgements = { navController.navigate("testers") }
+                                                    onOpenAcknowledgements = { navController.navigate("testers") },
+                                                    onOpenAdhanBehavior = { navController.navigate("adhan_behavior") { launchSingleTop = true } },
+                                                    onOpenCalculation = { navController.navigate("calculation") { launchSingleTop = true } },
+                                                    onOpenReliableAlerts = { navController.navigate("reliable_alerts") { launchSingleTop = true } }
                                                 )
                                             }
                                         }
@@ -421,13 +433,20 @@ class MainActivity : ComponentActivity() {
                                              onOpenDhikr = { navController.navigate("adhkar_detail/$it") }
                                          )
                                      }
-                                     composable("more") {
-                                        MoreScreen(
+                                    composable("library") {
+                                        io.github.sammynashed.emran.ui.screens.LibraryScreen(
                                             onBack = { navController.popBackStack() },
                                             onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
                                             onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
                                             onOpenSaved = { navController.navigate("bookmarks?tab=quran") { launchSingleTop = true } },
                                             onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
+                                        )
+                                    }
+                                    composable("calendar") {
+                                        io.github.sammynashed.emran.ui.screens.CalendarScreen(
+                                            viewModel = viewModel,
+                                            lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
                                         )
                                     }
                                     composable("quran_player") {
@@ -470,6 +489,27 @@ class MainActivity : ComponentActivity() {
                                         DhikrScreen(
                                              onBack = { navController.popBackStack() }
                                          )
+                                    }
+
+                                    composable("calculation") {
+                                        io.github.sammynashed.emran.ui.screens.CalculationScreen(
+                                            viewModel = viewModel,
+                                            lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                    composable("reliable_alerts") {
+                                        io.github.sammynashed.emran.ui.screens.ReliableAlertsScreen(
+                                            lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                    composable("adhan_behavior") {
+                                        io.github.sammynashed.emran.ui.screens.AdhanBehaviorScreen(
+                                            viewModel = viewModel,
+                                            lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
+                                        )
                                     }
 
                                     composable("compass") {
@@ -666,6 +706,8 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // The phone's own 12/24-hour setting may have changed while we were away.
         io.github.sammynashed.emran.data.TimeFormat.ensureLoaded(this)
+        // "Follow my location": move the prayer times if the phone has moved (throttled, see LocationFollower).
+        lifecycleScope.launch { runCatching { io.github.sammynashed.emran.data.LocationFollower.refresh(applicationContext, viewModel) } }
     }
 
     override fun onStart() {

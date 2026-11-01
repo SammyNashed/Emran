@@ -617,6 +617,10 @@ fun QuranScreen(
 
                 // The bars are always there; the bottom bar's Listen / Display open one panel at a time.
                 var openPanel by remember { mutableStateOf<ReaderPanel?>(null) }
+                // Sideways the page owns the whole screen, like the printed mushaf: bars and status bar are hidden
+                // until a tap on the page brings them back.
+                val sideways = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                var chromeOn by remember { mutableStateOf(false) }
                 BackHandler(enabled = openPanel != null) { openPanel = null }
                 var showSurahSelector by remember { mutableStateOf(false) }
                 val recitationContext = androidx.compose.ui.platform.LocalContext.current
@@ -683,6 +687,22 @@ fun QuranScreen(
                 var isAutoScrolling by remember { mutableStateOf(false) }
                 var autoScrollSpeed by remember { mutableStateOf(3) } // Speeds from 1 (slow) to 10 (very fast)
 
+                val showChrome = !sideways || chromeOn || openPanel != null || hifzMode || playingAyah != null
+                val hostActivity = androidx.compose.ui.platform.LocalContext.current.let { c ->
+                    var x = c
+                    while (x is android.content.ContextWrapper && x !is android.app.Activity) x = x.baseContext
+                    x as? android.app.Activity
+                }
+                DisposableEffect(showChrome, hostActivity) {
+                    val w = hostActivity?.window
+                    val c = w?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
+                    if (c != null && !showChrome) {
+                        c.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        c.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    }
+                    onDispose { c?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars()) }
+                }
+
                 val arabicDigits = remember { listOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩') }
 
                 Box(
@@ -700,7 +720,7 @@ fun QuranScreen(
                     // hiding them never re-lays-out the page underneath.
                     Column(modifier = Modifier.fillMaxSize()) {
                         // TOP BAR: always there.
-                        Box(Modifier.zIndex(1f)) {
+                        if (showChrome) Box(Modifier.zIndex(1f)) {
                             TopAppBar(
                                 title = {
                                     Row(
@@ -779,7 +799,7 @@ fun QuranScreen(
                                 .pointerInput(Unit) {
                                     detectTapGestures(
                                         // A tap on the page only closes an open panel; it never hides the bars.
-                                        onTap = { openPanel = null }
+                                        onTap = { openPanel = null; if (sideways) chromeOn = !chromeOn }
                                     )
                                 }
                         ) {
@@ -1123,7 +1143,8 @@ fun QuranScreen(
                                                 onlySurah = if (isContinuous) null else state.chapter.id,
                                                 focusAyah = playingAyah ?: selectedAyah ?: focusAyah,
                                                 onAyahTap = onAyahTap,
-                                                modifier = Modifier.fillParentMaxHeight(),
+                                                flow = sideways,
+                                                modifier = if (sideways) Modifier else Modifier.fillParentMaxHeight(),
                                             )
                                             return@itemsIndexed
                                         }
@@ -1209,7 +1230,7 @@ fun QuranScreen(
                                 }
                             }
                         }
-                        QuranBottomBar(
+                        if (showChrome) QuranBottomBar(
                             theme = currentTheme,
                             lang = lang,
                             open = openPanel,

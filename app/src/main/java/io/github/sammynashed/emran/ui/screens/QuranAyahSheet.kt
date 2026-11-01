@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sammynashed.emran.data.AyahTafsir
+import io.github.sammynashed.emran.data.TafsirLibrary
 import io.github.sammynashed.emran.ui.localization.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -78,6 +79,17 @@ fun AyahMeaningSheet(
 
     val entry by produceState<AyahTafsir.Entry?>(null, surah, ayah) {
         value = withContext(Dispatchers.IO) { AyahTafsir.get(context.applicationContext, surah, ayah) }
+    }
+
+    // The tafsir the reader chose (Al-Mukhtasar unless they picked or added another); follows the choice live.
+    val pickTick = TafsirLibrary.version.intValue
+    val shown by produceState<TafsirLibrary.Text?>(null, surah, ayah, pickTick, lang) {
+        value = withContext(Dispatchers.IO) {
+            TafsirLibrary.get(context.applicationContext, TafsirLibrary.selectedId(context, lang), surah, ayah)
+        }
+    }
+    val editionName = remember(pickTick, lang) {
+        TafsirLibrary.editions(context).firstOrNull { it.id == TafsirLibrary.selectedId(context, lang) }?.name(ar).orEmpty()
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides if (ar) LayoutDirection.Rtl else LayoutDirection.Ltr) {
@@ -143,14 +155,16 @@ fun AyahMeaningSheet(
                                 color = ink, fontSize = 18.sp, lineHeight = 27.sp,
                             )
                         }
-                        val tafsir = if (ar) e.tafsirAr else e.tafsirEn
-                        if (tafsir.isNotBlank()) {
+                        val tafsir = shown?.text.orEmpty()
+                        TafsirChip(ar, ink, panel, theme.ornament, Modifier.padding(top = if (ar) 0.dp else 6.dp))
+                        if (tafsir.isBlank() && shown == null && entry != null) {
                             Text(
-                                if (ar) "المعنى" else "Explanation",
-                                color = theme.ornament, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(top = if (ar) 0.dp else 6.dp),
+                                if (ar) "لا يتوفر شرح لهذه الآية في هذا التفسير." else "This tafsir has nothing on this ayah.",
+                                color = ink.copy(alpha = 0.6f), fontSize = 14.sp,
                             )
-                            e.group?.let { g ->
+                        }
+                        if (tafsir.isNotBlank()) {
+                            shown?.group?.let { g ->
                                 // Al-Mukhtasar explains a few ayat together; say so, so it never reads as a mismatch.
                                 Text(
                                     if (ar) "تفسير الآيات ${g.first}–${g.last} معًا" else "Explains ayat ${g.first}–${g.last} together",
@@ -163,8 +177,10 @@ fun AyahMeaningSheet(
                             )
                         }
                         Text(
-                            if (ar) "المختصر في تفسير القرآن الكريم"
-                            else "Saheeh International · Al-Mukhtasar (Tafsir Center for Quranic Studies)",
+                            if (ar) editionName else buildString {
+                                if (e.translation.isNotBlank()) append("Saheeh International · ")
+                                append(editionName)
+                            },
                             color = ink.copy(alpha = 0.45f), fontSize = 11.sp, lineHeight = 15.sp,
                         )
                     }

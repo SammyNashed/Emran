@@ -85,13 +85,26 @@ def clean(s: str) -> str:
     return " ".join(s.replace("‏", "").split()) if s else ""
 
 
-def build(src: Path, out: Path):
+# Books whose source numbering is not the standard one. Riyad as-Salihin's source gives the opening Book of
+# Miscellany (where "إنما الأعمال بالنيات" is #1 everywhere else) chapter id 0 but numbers it 1218-1896, after
+# the rest of the book. Renumbering in book order (chapter by chapter) restores sunnah.com's 1-1896.
+RENUMBER = {"riyad"}
+
+
+def build(src: Path, out: Path, renumber: bool = False):
     d = json.loads(src.read_text(encoding="utf-8"))
     chapters = {int(c["id"]): c for c in d["chapters"]}
     by_ch = {}
     for h in d["hadiths"]:
         # Some sources carry chapter ids as floats (1.0); normalise.
         by_ch.setdefault(int(h["chapterId"]), []).append(h)
+
+    if renumber:
+        n = 0
+        for cid in sorted(by_ch):
+            for h in sorted(by_ch[cid], key=lambda h: h["idInBook"]):
+                n += 1
+                h["idInBook"] = n
 
     blobs, table = [], []
     for cid in sorted(by_ch):
@@ -141,7 +154,7 @@ def main():
             print("skip", bid, "(missing)")
             continue
         dest = outp / f"{bid}.hdp"
-        chapters, count = build(f, dest)
+        chapters, count = build(f, dest, renumber=bid in RENUMBER)
         data = dest.read_bytes()
         manifest.append({
             "id": bid, "titleEn": en, "titleAr": ar, "bundled": bundled,

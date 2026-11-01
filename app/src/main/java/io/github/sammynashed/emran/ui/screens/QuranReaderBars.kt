@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,7 +54,8 @@ import io.github.sammynashed.emran.data.audio.Reciters
 enum class ReaderPanel { LISTEN, DISPLAY }
 
 /** Height of [QuranBottomBar] above the system navigation area; panels sit on top of it. */
-val ReaderBarHeight = 80.dp
+val ReaderBarHeight: androidx.compose.ui.unit.Dp
+    @Composable get() = if (androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) 48.dp else 80.dp
 
 /**
  * The reader's bottom bar: three labelled buttons that are always there, so nothing has to be
@@ -84,7 +86,7 @@ fun QuranBottomBar(
             }
             .navigationBarsPadding()
             .height(ReaderBarHeight)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = if (ReaderBarHeight < 60.dp) 4.dp else 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -98,6 +100,27 @@ fun QuranBottomBar(
 private fun BarButton(icon: ImageVector, label: String, on: Boolean, theme: QuranThemeMode, onClick: () -> Unit, modifier: Modifier) {
     val haptic = LocalHapticFeedback.current
     val ink = if (on) theme.ornament else theme.textColor.copy(alpha = 0.78f)
+    // Sideways there is no height to spare: icon and label sit side by side.
+    val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    if (landscape) {
+        Row(
+            modifier
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (on) theme.ornament.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = ink, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = ink, fontSize = 14.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+        }
+        return
+    }
     Column(
         modifier
             .clip(RoundedCornerShape(16.dp))

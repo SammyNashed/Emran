@@ -1,6 +1,11 @@
 package io.github.sammynashed.emran.ui.design
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -214,6 +219,16 @@ val LocalSkySlowTime = androidx.compose.runtime.staticCompositionLocalOf<State<F
 }
 const val SKY_TEXTURE_FPS = 8f
 
+/**
+ * The clock glass panes redraw their copy of the sky by: much slower than the sky itself. Behind a pane the sky
+ * is blurred and under a frosted film, so cloud drift there is invisible, while re-blurring it every tick cost
+ * up to half the frames on Android 12 (measured 2026-10-26: 49% janky with BLUR, 10-15% with LENS on Home).
+ */
+val LocalSkyGlassTime = androidx.compose.runtime.staticCompositionLocalOf<State<Float>> {
+    androidx.compose.runtime.mutableFloatStateOf(0f)
+}
+const val SKY_GLASS_FPS = 2f
+
 val LocalSkyTime = androidx.compose.runtime.staticCompositionLocalOf<State<Float>> {
     object : State<Float> { override val value: Float = 0f }
 }
@@ -354,16 +369,49 @@ class SkyClouds private constructor(private val bitmap: android.graphics.Bitmap)
     }
 }
 
+/**
+ * Places where stars fade out, so a star never sits next to a word and reads as a stray full stop.
+ * Text that matters registers its bounds (see [quietStars]); the sky reads them every frame.
+ */
+object StarQuiet {
+    internal val zones = java.util.concurrent.ConcurrentHashMap<Any, androidx.compose.ui.geometry.Rect>()
+
+    /** 0 on top of a registered zone, rising to 1 a short way away from it. */
+    internal fun visibility(x: Float, y: Float, margin: Float, fade: Float): Float {
+        var v = 1f
+        for (r in zones.values) {
+            val dx = maxOf(r.left - margin - x, 0f, x - (r.right + margin))
+            val dy = maxOf(r.top - margin - y, 0f, y - (r.bottom + margin))
+            val d = kotlin.math.sqrt(dx * dx + dy * dy)
+            if (d < fade) v = minOf(v, d / fade)
+        }
+        return v
+    }
+}
+
+/** Fade the night sky's stars out behind (and just around) this element. */
+fun Modifier.quietStars(): Modifier = composed {
+    val key = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(key) { onDispose { StarQuiet.zones.remove(key) } }
+    onGloballyPositioned { StarQuiet.zones[key] = it.boundsInRoot() }
+}
+
 /** Twinkling stars, drawn at full resolution (they would wash out in the low-res sky texture). */
 fun DrawScope.drawStars(sky: SkyState, size: Size, time: Float) {
     if (size.width <= 0f || size.height <= 0f) return
     if (sky.stars > 0.01f) {
+        val margin = 6f * density
+        val fade = 26f * density
         STARS.forEachIndexed { i, s ->
             val twinkle = 0.78f + 0.22f * kotlin.math.sin(time * (0.8f + (i % 5) * 0.35f) + i * 1.7f)
+            val x = s.x * size.width
+            val y = s.y * size.height
+            val quiet = StarQuiet.visibility(x, y, margin, fade)
+            if (quiet <= 0.01f) return@forEachIndexed
             drawCircle(
-                color = Color.White.copy(alpha = (sky.stars * s.a * twinkle).coerceIn(0f, 1f)),
+                color = Color.White.copy(alpha = (sky.stars * s.a * twinkle * quiet).coerceIn(0f, 1f)),
                 radius = s.r * density,
-                center = Offset(s.x * size.width, s.y * size.height),
+                center = Offset(x, y),
             )
         }
     }

@@ -2,6 +2,7 @@ package io.github.sammynashed.emran.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -205,7 +206,8 @@ fun AdhkarFolderWidget(
     GlassPanel(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
+            // At least near-square, taller when a big font needs it (a fixed square cut the count off).
+            .heightIn(min = 150.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable(interactionSource = source, indication = null) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)

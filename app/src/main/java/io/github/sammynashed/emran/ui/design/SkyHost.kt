@@ -184,6 +184,12 @@ fun SkyHost(
             else kotlin.math.floor(clock.value * SKY_TEXTURE_FPS) / SKY_TEXTURE_FPS
         }
     }
+    val glassClock = remember(clock) {
+        derivedStateOf {
+            if (SkyDebug.clockSpeed > 1f) clock.value   // timelapse recording: every frame
+            else kotlin.math.floor(clock.value * SKY_GLASS_FPS) / SKY_GLASS_FPS
+        }
+    }
     val recorded = remember { object { var time = -1f; var size = IntSize.Zero; var sky: SkyState? = null; var calm = false } }
     Box(
         modifier = modifier
@@ -223,7 +229,7 @@ fun SkyHost(
             },
         )
         CompositionLocalProvider(
-            LocalSky provides sky, LocalSkySize provides size, LocalSkyTime provides clock, LocalSkySlowTime provides slowClock,
+            LocalSky provides sky, LocalSkySize provides size, LocalSkyTime provides clock, LocalSkySlowTime provides slowClock, LocalSkyGlassTime provides glassClock,
             LocalSkyLayer provides layer,
         ) {
             content()

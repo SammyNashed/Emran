@@ -71,4 +71,17 @@ class HadithPackTest {
         val hit = pack.load(pack.chapters.single()).firstOrNull { ArabicText.normalize(it.arabic).contains(q) }
         assertEquals(1, hit?.number)
     }
+
+    @Test
+    fun oldRiyadBookmarksMapToTheStandardNumbers() {
+        // Old pack: Miscellany was 1218-1896 and the rest 1-1217. Standard: Miscellany 1-679, the rest 680-1896.
+        assertEquals(1, HadithBookmarks.riyadStandardNumber(1218))    // "إنما الأعمال بالنيات"
+        assertEquals(679, HadithBookmarks.riyadStandardNumber(1896))
+        assertEquals(680, HadithBookmarks.riyadStandardNumber(1))
+        assertEquals(1896, HadithBookmarks.riyadStandardNumber(1217))
+        // The new pack really is in that numbering: #1 is the hadith of intentions.
+        val first = open("riyad").let { it.load(it.chapters.first()) }.first()
+        assertEquals(1, first.number)
+        assertTrue(first.arabic.contains("أمير المؤمنين أبي حفص عمر بن الخطاب"))
+    }
 }

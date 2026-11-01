@@ -30,7 +30,6 @@ class WidgetStateTest {
             currentPrayerName = "Isha",
             currentPrayerEpochMillis = 500L,
             locationName = "Aleppo",
-            streakCount = 5,
             quranProgressPages = 10,
             quranTotalPages = 604,
             hijriDay = 1,
@@ -38,14 +37,8 @@ class WidgetStateTest {
             hijriYear = 1445
         )
         
-        try {
-            val json = adapter.toJson(state)
-            println("GlanceDebug Serialization success: $json")
-            val decoded = adapter.fromJson(json)
-            println("GlanceDebug Deserialization success: $decoded")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
-        }
+        // The widget state is stored as JSON: it must come back exactly as it went in.
+        val decoded = adapter.fromJson(adapter.toJson(state))
+        org.junit.Assert.assertEquals(state, decoded)
     }
 }

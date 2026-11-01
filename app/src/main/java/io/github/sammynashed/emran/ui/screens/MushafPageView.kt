@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
@@ -124,6 +128,8 @@ fun MushafPageView(
      * used, so the reader's own tap (show / hide the bars) does not fire as well.
      */
     onAyahTap: ((surah: Int, ayah: Int) -> Boolean)? = null,
+    /** Sideways inside a list: the page is as tall as its lines and the list scrolls, instead of scrolling inside itself. */
+    flow: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -186,6 +192,9 @@ fun MushafPageView(
             val measurer = rememberTextMeasurer(cacheSize = 0)
             val sideMargin = 15.dp
             val stripH = 26.dp
+            // Turned sideways the screen is wider than the page is tall: instead of shrinking a whole page into the
+            // height (a tiny strip of text in a sea of margin), the page is set as wide as the screen and scrolls.
+            val landscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
             val areaW = maxWidth - sideMargin * 2
             val areaH = maxHeight - stripH * 2
             val areaWPx = with(density) { areaW.toPx() }
@@ -198,7 +207,7 @@ fun MushafPageView(
             // lines without any condensing), and never so tall that diacritics touch.
             val fontSp = remember(areaW, unitH, slots, special) {
                 with(density) {
-                    val byHeight = unitH.toPx() / LINE_HEIGHT_EMS
+                    val byHeight = if (landscape) Float.MAX_VALUE else unitH.toPx() / LINE_HEIGHT_EMS
                     val byWidth = if (special) {
                         // Pages 1-2: short centred lines, set larger, inside a narrower column.
                         val widest = slots.filterIsInstance<Slot.Line>()
@@ -211,6 +220,12 @@ fun MushafPageView(
                 }
             }
 
+            // Portrait: the lines share the height. Landscape: each line is as tall as its type needs and the page scrolls.
+            val fixedH = special || landscape
+            val lineH = if (landscape) with(density) { fontSp.sp.toDp() } * LINE_HEIGHT_EMS else unitH
+            // The page is only as wide as its type needs, centred, so justified lines are not stretched across the screen.
+            val pageMaxW = maxWidth
+
             // The band fades in, so the eye catches it arriving rather than finding it already there.
             val focusIn = remember(focusAyah) { androidx.compose.animation.core.Animatable(0f) }
             LaunchedEffect(focusAyah) { if (focusAyah != null) focusIn.animateTo(1f, androidx.compose.animation.core.tween(700)) }
@@ -219,7 +234,10 @@ fun MushafPageView(
                 focus = focusAyah, focusColor = ornament.copy(alpha = (if (dark) 0.26f else 0.20f) * focusIn.value),
             )
 
-            Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier
+                    .then(if (landscape) Modifier.widthIn(max = pageMaxW).align(Alignment.TopCenter).then(if (flow) Modifier else Modifier.fillMaxHeight().verticalScroll(rememberScrollState())) else Modifier.fillMaxSize()),
+            ) {
                 // Running head: the surah on the right, the juzʾ on the left.
                 RunningHead(
                     right = nameOf(firstSurahOf(lines)).takeIf { it.isNotEmpty() }?.let { "سورة $it" } ?: "",
@@ -231,7 +249,7 @@ fun MushafPageView(
 
                 Box(
                     Modifier
-                        .weight(1f)
+                        .then(if (landscape) Modifier.height(lineH * weights.sum() + 8.dp) else Modifier.weight(1f))
                         .fillMaxWidth()
                         .drawBehind {
                             // A fine double rule around the text block, as on the printed page.
@@ -253,12 +271,12 @@ fun MushafPageView(
                         Modifier
                             .fillMaxSize()
                             .padding(horizontal = sideMargin, vertical = 4.dp),
-                        verticalArrangement = if (special) Arrangement.Center else Arrangement.Top,
+                        verticalArrangement = if (special && !landscape) Arrangement.Center else Arrangement.Top,
                     ) {
                         slots.forEachIndexed { i, slot ->
                             val slotModifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (special) Modifier.height(unitH * weights[i]) else Modifier.weight(weights[i]))
+                                .then(if (fixedH) Modifier.height(lineH * weights[i]) else Modifier.weight(weights[i]))
                             when (slot) {
                                 is Slot.Header -> Box(slotModifier) {
                                     SurahHeader(nameOf(slot.surah), ink, ornament)

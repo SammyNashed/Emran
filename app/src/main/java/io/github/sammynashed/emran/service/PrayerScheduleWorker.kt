@@ -132,6 +132,7 @@ class PrayerScheduleWorker(
 
             if (!globalEnabled || !isEnabled) {
                 alarmManager.cancel(pendingIntent)
+                PrayerCountdown.schedule(applicationContext, name, ("cd" + date + name).hashCode(), 0L, false)
                 Log.d("PrayerScheduleWorker", "Skipped/Cancelled alarm for $name on $date (disabled)")
                 continue
             }
@@ -141,6 +142,7 @@ class PrayerScheduleWorker(
             // reinterpreted a home-city wall time as a device-local one.
             val triggerAtMillis = times.epochMillisOf(prayer)
             val scheduledTime = times.timeOf(prayer)
+            PrayerCountdown.schedule(applicationContext, name, ("cd" + date + name).hashCode(), triggerAtMillis, true)
 
             if (triggerAtMillis > System.currentTimeMillis()) {
                 try {

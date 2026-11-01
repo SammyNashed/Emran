@@ -54,9 +54,11 @@ import androidx.compose.ui.unit.Dp
  */
 enum class GlassTier { FLAT, BLUR, LENS }
 
+// Android 12 used to get BLUR: its RenderEffect blur is redone on every frame the sky draws, and measured 49-51%
+// janky frames on Home (2026-10-26) against 4% for FLAT, which looks the same under the frosted film. So only
+// LENS (Android 13+) bends the sky; everything else shows it unblurred.
 fun currentGlassTier(): GlassTier = SkyDebug.glassTier ?: when {
     Build.VERSION.SDK_INT >= 33 -> GlassTier.LENS
-    Build.VERSION.SDK_INT >= 31 -> GlassTier.BLUR
     else -> GlassTier.FLAT
 }
 
@@ -177,8 +179,7 @@ fun GlassPanel(
                     renderEffect = when (tier) {
                         GlassTier.LENS -> (if (Build.VERSION.SDK_INT >= 33)
                             lensEffect?.let { runCatching { it.effect(size.width, size.height, radiusPx, density.density) }.getOrNull() }
-                        else null)
-                            ?: BlurEffect(2.5f * density.density, 2.5f * density.density, TileMode.Clamp)
+                        else null)  // a GPU that cannot compile the lens shows the sky unblurred, like FLAT (a blur here is costly)
                         GlassTier.BLUR -> BlurEffect(2.5f * density.density, 2.5f * density.density, TileMode.Clamp)
                         GlassTier.FLAT -> null
                     }
