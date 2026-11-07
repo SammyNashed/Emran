@@ -1,0 +1,6 @@
+• Whole adhan (optional): Settings > Adhan > Adhan length
+• Fajr sound: "As-salatu khayrun min an-nawm" in Alafasy's voice instead of the adhan, if you like
+• New reciter: Islam Sobhi, the whole Qur'an
+• Widgets redraw themselves at every prayer and at midnight, even when the phone holds back background work
+• Aleppo: Maghrib now matches the mosques' adhan
+• More accurate times for Jordan, Morocco, Tunisia, the UAE, Malaysia and Indonesia

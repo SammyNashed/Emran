@@ -12,15 +12,16 @@
   <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-AGSL%20sky-4285F4.svg?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" /></a>
   <a href="https://github.com/SammyNashed/ratl"><img src="https://img.shields.io/badge/Hifz-RATL%20on--device-0F766E.svg?style=flat-square" alt="RATL" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-green.svg?style=flat-square" alt="GPL-3.0" /></a>
-  <img src="https://img.shields.io/badge/Version-2.3.0-orange.svg?style=flat-square" alt="2.3.0" />
+  <img src="https://img.shields.io/badge/Version-2.3.3-orange.svg?style=flat-square" alt="2.3.3" />
   <img src="https://img.shields.io/badge/Tracking-none-blue.svg?style=flat-square" alt="No tracking" />
 </p>
 
 <p align="center">
-  A free, open-source Islamic companion for Android, Arabic first. Prayer times and
-  adhan, the Madinah mushaf with recitation and on-device Hifz checking, Qibla,
-  masbaha, adhkar and six sahih hadith collections, all under a sky that follows the real
-  sun where you are. No account, no ads, no analytics.
+  A free, open-source Islamic companion for Android, in Arabic and English. Prayer
+  times with iqama and an adhan that respects your phone, the Madinah mushaf with
+  eleven reciters, a choice of tafsir and on-device Hifz checking, sahih hadith,
+  adhkar, a Hijri calendar and twenty home-screen widgets, all under a sky that
+  follows the real sun where you are. No account, no ads, no analytics.
 </p>
 
 <p align="center">
@@ -39,20 +40,20 @@
 ---
 
 <p align="center">
-  <img src="docs/screenshots/home-night.png" alt="Home at night" width="19%" />
-  <img src="docs/screenshots/home-maghrib.png" alt="Home at Maghrib" width="19%" />
-  <img src="docs/screenshots/home.png" alt="Home by day" width="19%" />
-  <img src="docs/screenshots/prayer-times.png" alt="Prayer times" width="19%" />
-  <img src="docs/screenshots/compass.png" alt="Qibla" width="19%" />
+  <img src="docs/screenshots/home-maghrib.png" alt="Home at Maghrib, in Arabic" width="19%" />
+  <img src="docs/screenshots/calendar.png" alt="Hijri calendar, in Arabic" width="19%" />
+  <img src="docs/screenshots/reader.png" alt="Madinah mushaf page" width="19%" />
+  <img src="docs/screenshots/hadith.png" alt="Hadith library, in Arabic" width="19%" />
+  <img src="docs/screenshots/adhan.png" alt="Adhan settings, in Arabic" width="19%" />
 </p>
 <p align="center">
-  <img src="docs/screenshots/quran.png" alt="Quran tab" width="19%" />
-  <img src="docs/screenshots/reader.png" alt="Madinah mushaf page" width="19%" />
-  <img src="docs/screenshots/player.png" alt="Recitation player" width="19%" />
-  <img src="docs/screenshots/dhikr.png" alt="Masbaha" width="19%" />
-  <img src="docs/screenshots/hadith.png" alt="Hadith library" width="19%" />
+  <img src="docs/screenshots/home-night-en.png" alt="Home at night, in English" width="19%" />
+  <img src="docs/screenshots/calendar-en.png" alt="Hijri calendar, in English" width="19%" />
+  <img src="docs/screenshots/quran-en.png" alt="Qur'an tab, in English" width="19%" />
+  <img src="docs/screenshots/hadith-en.png" alt="Hadith library, in English" width="19%" />
+  <img src="docs/screenshots/adhan-en.png" alt="Adhan settings, in English" width="19%" />
 </p>
-<p align="center"><sub>The same Home screen at night, at Maghrib and by day: the sky follows the real sun.</sub></p>
+<p align="center"><sub>The whole app works in Arabic and in English. The sky is the real one: ember at Maghrib, bright by day, navy at night.</sub></p>
 
 ## ✨ What's inside
 
@@ -63,55 +64,79 @@ an AGSL shader rendered at low resolution, and the text colour switches between
 light and dark ink as the sky changes, so it stays readable at every hour. Cards
 and the dock are frosted glass.
 
-### 🕌 Prayer times & adhan
-* Offline calculation for any coordinate or bundled city, with twelve published
-  conventions (Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Dubai,
-  Qatar, Kuwait, Singapore, Diyanet, Tehran, Ja'fari) plus custom angles, Shafi'i or
-  Hanafi Asr, high-latitude rules and per-prayer fine-tuning.
-* Home shows the day as an arc with every prayer on it, the next prayer and a
-  countdown, the Hijri date in words, and an ayah of the day with its tafsir.
-* Exact alarms for the adhan, re-armed after a reboot, an app update, or a time or
-  time zone change. A one-time guide walks people through the battery and
-  autostart settings that Xiaomi, Samsung and others use to kill alarms.
-* Morning and evening adhkar reminders, 12 or 24 hour clock.
+### 🕌 Prayer times, iqama & calendar
+* **Home** counts down to the next adhan, then to its iqama. Under it are the day's
+  five prayers in one strip (swipe or use the arrows to see another day), the ayah
+  of the day and shortcuts to the masbaha, adhkar, Qibla and hadith.
+* **Iqama times** per prayer, set to your mosque's delay after the adhan.
+* Offline calculation for any coordinate or one of 164 bundled cities, with
+  seventeen published conventions: Muslim World League, ISNA, Egyptian, Karachi,
+  Umm al-Qura, Dubai, Jordan, Morocco, Tunisia, JAKIM (Malaysia), Kemenag
+  (Indonesia), Qatar, Kuwait, Singapore, Diyanet, Tehran and Ja'fari. Custom angles,
+  Shafi'i or Hanafi Asr, high-latitude rules and per-prayer fine-tuning are there
+  too. Malaysia, Indonesia and Turkey were checked minute by minute against their
+  governments' own timetables.
+* **Follow my location** (optional) updates the times when you travel and picks the
+  convention used where you are.
+* **Hijri calendar**: today in Hijri and Gregorian, the days left to Ramadan, Eid and
+  Arafah, and a month grid with both dates (Umm al-Qura).
+
+### 🔔 An adhan that respects your phone
+* Silent, vibrate and Do Not Disturb are respected, and the adhan follows the
+  notification volume and fades in instead of blasting.
+* Per prayer: adhan or vibrate only. Quiet hours for lectures or work, a loudness
+  cap, and an optional countdown notification before the adhan.
+* **Adhan length**: the opening only, or the whole adhan, by Ahmad Al-Nafees,
+  Mishary Alafasy or Saad Al-Ghamdi.
+* **Fajr sound**: the adhan, or only "As-salatu khayrun min an-nawm" in Alafasy's
+  voice.
+* **Wake me for Fajr** (off by default): rings like an alarm, even on silent, at a
+  volume you choose.
+* Exact alarms, re-armed after a reboot, an app update, or a time or time zone
+  change. A one-time guide walks people through the battery and autostart settings
+  that Xiaomi, Samsung and others use to kill alarms.
 
 ### 📖 Qur'an
 * **The Madinah mushaf page**: 604 pages, 15 lines each, set in the KFGQPC Uthmanic
   Hafs font with the King Fahd Complex's own text, drawn line by line on a canvas.
+  Turn the phone sideways to read at full width.
 * Search by words (diacritics ignored) or by reference like `2:255`, surah and juz
   lists, a continue card with a khatmah ring, and one bookmark per surah.
-* Tap any ayah for its meaning (Tafsir al-Muyassar, or Saheeh International in
-  English).
-* **Recitation**: ten reciters (Alafasy, Al-Muaiqly, Al-Dosari, Al-Juhany,
-  Al-Shatri, Al-Qatami, Al-Ghamdi, Al-Husary, Abdul Basit, Al-Minshawi). Download a
-  surah or the whole Qur'an, then listen offline with the playing ayah highlighted
-  and the page following along. A full player has a whole-surah seek bar, repeat
-  for an ayah or a surah, a queue, lock-screen controls, and the Emran logo moving
-  with the reciter's voice.
+* **Tafsir of your choice**: tap any ayah for its meaning in Al-Mukhtasar (Arabic or
+  English), Al-Muyassar, As-Sa'di or Al-Jalalayn, or add another tafsir from a file.
+* **Recitation**: eleven reciters (Alafasy, Al-Muaiqly, Al-Dosari, Al-Juhany,
+  Al-Shatri, Al-Qatami, Al-Ghamdi, Al-Husary, Abdul Basit, Al-Minshawi and Islam
+  Sobhi). Download a surah or the whole Qur'an, then listen offline with the playing
+  ayah highlighted and the page following along (Islam Sobhi plays whole surahs,
+  without the highlight). A full player has a whole-surah seek bar, repeat for an
+  ayah or a surah, a queue and lock-screen controls.
 * **Hifz mode**: recite from memory and the words reveal themselves as you say
   them. Speech is checked on the phone by [RATL](https://github.com/SammyNashed/ratl);
   the model ships inside the app and nothing you say ever leaves the device.
+
+### 📚 Hadith, adhkar & masbaha
+* **Sahih hadith only**: Sahih al-Bukhari and Sahih Muslim in full, and from Abu
+  Dawud, at-Tirmidhi, an-Nasa'i and Ibn Majah only the hadith that al-Albani graded
+  sahih and that no scholar in the sources graded weak. Search finds the numbers
+  people actually cite.
+* Morning and evening adhkar, Hisn al-Muslim and your own adhkar, with sources.
+* A masbaha with a string of 33 beads, the classic tasbihat and your own, with sound
+  and vibration.
+* Share any ayah, hadith or dhikr as a picture: a hadith becomes an open book, a
+  dhikr sits over a city at the hour it is said.
 
 ### 🧭 Qibla
 A compass with magnetic-declination correction and calibration hints. With camera
 permission it becomes a camera view with the Kaaba floating in the Qibla direction
 (preview only, nothing is recorded or stored).
 
-### 📿 Masbaha, adhkar & hadith
-* A masbaha with a string of 33 beads, the classic tasbihat and your own, with sound
-  and vibration.
-* 55 core adhkar with Arabic, transliteration, translation and source, plus 223
-  items from Hisn al-Muslim kept in their own section, and your own adhkar.
-* **Twelve hadith books inside the app**: Riyad as-Salihin, the Forty of an-Nawawi,
-  the Forty Qudsi, Sahih al-Bukhari, Sahih Muslim, Abi Dawud, at-Tirmidhi,
-  an-Nasa'i, Ibn Majah, Muwatta Malik, ad-Darimi and Bulugh al-Maram. Search,
-  bookmarks, and Hadith of the Day.
-* Share any ayah, hadith or dhikr as a picture card.
-
 ### 🪟 Home-screen widgets
-Ten glass widgets: next prayer with a live countdown, the day's prayer table,
-prayer progress, a clock, the day name in Thuluth calligraphy or in English, the
-Hijri date, the Hijri month, the ayah of the day, and the next occasion.
+Twenty glass widgets: the next prayer with a live countdown, the day's prayers as a
+table, a row or a progress bar, clocks in Western or Arabic digits, the weekday and
+the Hijri month in Arabic calligraphy, the Hijri and Gregorian dates, a month
+calendar, the year in dots, the ayah of the day and the next occasion. They redraw
+themselves at every prayer time and at midnight, so a phone that holds back
+background work can't leave one stuck on the wrong prayer.
 
 <p align="center">
   <img src="docs/screenshots/widgets.png" alt="Emran widgets" width="860" />
@@ -137,10 +162,11 @@ in Settings, and **downloading a reciter's audio**.
 | `POST_NOTIFICATIONS` | Prayer and adhkar alerts on Android 13+ |
 | `RECORD_AUDIO` | Hifz mode. Audio is processed on the phone and never stored or sent |
 | `CAMERA` | Optional camera Qibla view, preview only |
-| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` / `_DATA_SYNC` | Playing recitation and downloading it in the background |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` / `_DATA_SYNC` | Playing recitation or a whole adhan, and downloading recitation in the background |
 | `REQUEST_INSTALL_PACKAGES` | Applying a small update file you open from the Telegram channel; Android asks you to confirm |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Optional, from Settings, keeps the adhan reliable under Doze |
-| `VIBRATE` | Masbaha and button feedback |
+| `VIBRATE` | Masbaha, button feedback and vibrate-only prayers |
+| `SYSTEM_ALERT_WINDOW` | Optional floating dhikr card over other apps, off by default (in the source now, arrives in the next update) |
 
 ---
 
@@ -171,28 +197,31 @@ The calculation is covered by tests that cross-check sunrise and sunset against 
 * **AGSL** shaders for the sky, a custom liquid-glass dock and frosted panes
 * **Media3** for recitation (gapless per-ayah playlists, media session)
 * **ONNX Runtime** running RATL's alignment model for Hifz
-* **Glance** + bitmap-drawn widgets, **Room**, **WorkManager**, **AlarmManager**
+* Bitmap-drawn **RemoteViews** widgets redrawn by exact alarms, **Room**,
+  **WorkManager**, **AlarmManager**
 
 ---
 
 ## ⚡ Building
 
-Emran compiles against the [RATL](https://github.com/SammyNashed/ratl) engine as a
-Gradle composite build, so clone both side by side:
+The [RATL](https://github.com/SammyNashed/ratl) engine is a git submodule, built
+together with the app, so clone recursively:
 
 ```bash
-git clone https://github.com/SammyNashed/ratl.git
-git clone https://github.com/SammyNashed/Emran.git
+git clone --recursive https://github.com/SammyNashed/Emran.git
 cd Emran
 
-./gradlew assembleDebug        # debug APK
-./gradlew testDebugUnitTest    # tests
-./gradlew assembleRelease      # release APKs (per ABI + universal)
+./gradlew assembleFullDebug        # debug APK
+./gradlew testFullDebugUnitTest    # tests
+./gradlew assembleFullRelease      # release APKs (per ABI + universal)
+./gradlew assembleFdroidRelease    # the F-Droid / Obtainium flavour
 ```
 
-Needs Android SDK 36 (`minSdk` 24) and JDK 21. Release signing is read from
-`KEYSTORE_PATH`, `STORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`; without them the
-release build is unsigned rather than failing.
+Two flavours: `full` can install the small update files from the Telegram channel;
+`fdroid` has no self-update and no install permission. Needs Android SDK 36
+(`minSdk` 24) and JDK 21. Release signing is read from `KEYSTORE_PATH`,
+`STORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`; without them the release build is
+unsigned rather than failing.
 
 ---
 
@@ -215,10 +244,15 @@ someone wakes for Fajr.
 
 * Qur'an text and font: King Fahd Glorious Qur'an Printing Complex (KFGQPC Uthmanic
   Hafs v22, via [nuqayah/qpc-fonts](https://github.com/nuqayah/qpc-fonts))
-* Translation: Saheeh International · Tafsir: al-Muyassar
-* Recitation audio: [EveryAyah](https://everyayah.com)
-* Fonts: Inter, Readex Pro, Amiri, Bodoni Moda, Scheherazade New (SIL OFL, licences in
-  `assets/licenses/`)
+* Translation: Saheeh International · Tafsir: Al-Mukhtasar, Al-Muyassar, As-Sa'di and
+  Al-Jalalayn (via [spa5k/tafsir_api](https://github.com/spa5k/tafsir_api))
+* Hadith: [fawazahmed0/hadith-api](https://github.com/fawazahmed0/hadith-api)
+  (Unlicense), with missing Muslim narrations from Open-Hadith-Data (ODbL)
+* Recitation audio: [EveryAyah](https://everyayah.com), [mp3quran.net](https://mp3quran.net)
+  and [Way2Quran](https://way2quran.com)
+* Fonts: Inter, Readex Pro, Amiri, Bodoni Moda, Scheherazade New, AMoshref-Thulth
+  (SIL OFL, licences in `assets/licenses/`). Widget lettering is drawn from images of
+  words set in the thmanyah typeface; the font itself is not included.
 * Everyone on the in-app thank-you wall who tested Emran and sent feedback
 
 ---

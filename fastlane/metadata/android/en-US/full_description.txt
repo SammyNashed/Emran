@@ -1,4 +1,4 @@
-Emran is a free, open-source Islamic companion, Arabic first. Prayer times and adhan, the Madinah mushaf with recitation and on-device Hifz checking, Qibla, a masbaha, adhkar and twelve hadith books, all under a sky that follows the real sun where you are.
+Emran is a free, open-source Islamic companion in Arabic and English. Prayer times with iqama and an adhan that respects your phone, the Madinah mushaf with eleven reciters, a choice of tafsir and on-device Hifz checking, sahih hadith, adhkar, a Hijri calendar and twenty widgets, all under a sky that follows the real sun where you are.
 
 No account, no ads, no analytics, no crash reporter. Prayer times, the Qur'an, Hifz, adhkar and every hadith book work with no internet at all. The app only goes online when you download a reciter's audio.
 
@@ -7,7 +7,9 @@ Every screen sits on a sky computed from the sun's position at your location: na
 
 <b>Prayer times and adhan</b>
 • Offline calculation for any coordinate or one of 164 bundled cities
-• Twelve published conventions (Muslim World League, ISNA, Egyptian, Umm al-Qura, Karachi, Dubai, Qatar, Kuwait, Singapore, Diyanet, Tehran, Ja'fari) plus custom angles, Shafi'i or Hanafi Asr, high-latitude rules and per-prayer fine-tuning
+• Seventeen published conventions (Muslim World League, ISNA, Egyptian, Karachi, Umm al-Qura, Dubai, Jordan, Morocco, Tunisia, JAKIM, Kemenag, Qatar, Kuwait, Singapore, Diyanet, Tehran, Ja'fari) plus custom angles, Shafi'i or Hanafi Asr, high-latitude rules and per-prayer fine-tuning
+• Iqama times per prayer, a countdown to the adhan and then to the iqama, and a Hijri calendar with the days left to Ramadan, Eid and Arafah
+• The adhan respects silent, vibrate and Do Not Disturb, with vibrate-only prayers, quiet hours, a loudness cap, the opening or the whole adhan, and an optional Wake me for Fajr
 • Correct across daylight saving time: locations are stored as IANA time zones, not fixed offsets
 • Exact adhan alarms, re-armed after a reboot, an update or a time zone change
 • Jumu'ah on Fridays, a Surat Al-Kahf reminder, morning and evening adhkar reminders
@@ -15,8 +17,8 @@ Every screen sits on a sky computed from the sun's position at your location: na
 <b>Qur'an</b>
 • The Madinah mushaf page: 604 pages, 15 lines, in the King Fahd Complex's Uthmanic Hafs font and text
 • Search by words (diacritics ignored) or by reference like 2:255, juz and surah lists, a khatmah ring, one bookmark per surah
-• Tap any ayah for its meaning (Tafsir al-Mukhtasar, or Saheeh International in English)
-• Recitation by ten reciters: download a surah or the whole Qur'an, listen offline with the ayah highlighted and the page following along, repeat an ayah or a surah, a queue, lock-screen controls
+• Tap any ayah for its meaning in Al-Mukhtasar (Arabic or English), Al-Muyassar, As-Sa'di or Al-Jalalayn, or add a tafsir from a file
+• Recitation by eleven reciters: download a surah or the whole Qur'an, listen offline with the ayah highlighted and the page following along, repeat an ayah or a surah, a queue, lock-screen controls
 
 <b>Hifz mode</b>
 Recite from memory and the words reveal themselves as you say them. Speech is checked on the phone by the open-source RATL engine; the model ships inside the app and nothing you say ever leaves the device.
@@ -27,11 +29,11 @@ Compass with magnetic declination correction and calibration hints, plus an opti
 <b>Masbaha, adhkar and hadith</b>
 • A masbaha with a string of 33 beads, the classic tasbihat and your own
 • 55 core adhkar with Arabic, transliteration, translation and source, plus 223 items from Hisn al-Muslim in their own section
-• Twelve hadith books inside the app: Riyad as-Salihin, the Forty of an-Nawawi, the Forty Qudsi, Sahih al-Bukhari, Sahih Muslim, Abi Dawud, at-Tirmidhi, an-Nasa'i, Ibn Majah, Muwatta Malik, ad-Darimi and Bulugh al-Maram
+• Sahih hadith only: Sahih al-Bukhari and Sahih Muslim in full, and from Abu Dawud, at-Tirmidhi, an-Nasa'i and Ibn Majah only what al-Albani graded sahih and no scholar in the sources graded weak
 • Share any ayah, hadith or dhikr as a picture
 
 <b>Home-screen widgets</b>
-Ten glass widgets: next prayer with a live countdown, the day's prayer table, prayer progress, a clock, the day in Thuluth calligraphy or in English, the Hijri date and month, the ayah of the day and the next occasion.
+Twenty glass widgets: the next prayer with a live countdown, the day's prayers as a table, a row or a progress bar, clocks in Western or Arabic digits, the weekday and Hijri month in Arabic calligraphy, the Hijri and Gregorian dates, a month calendar, the year in dots, the ayah of the day and the next occasion. They redraw themselves at every prayer and at midnight.
 
 <b>Free, for the sake of Allah</b>
 No ads, no subscriptions, no in-app purchases. Emran is GPL-3.0, and the author's wish is that nobody profits from it commercially, including the author.
