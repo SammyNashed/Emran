@@ -60,6 +60,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 runCatching { am?.setStreamVolume(android.media.AudioManager.STREAM_ALARM, prev, 0) }
             }
             savedAlarmVolume = null
+            (context?.applicationContext ?: appContextForFocus)?.let { AdhanKeepAliveService.stop(it) }
             // Always unregister, even when the caller has no Context (the app opening, for instance): a receiver that is
             // only forgotten stays registered and kills the NEXT adhan the moment the volume changes.
             volumeReceiver?.let { receiver ->
@@ -91,6 +92,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
         if (action == ACTION_MUTE_ADHAN) {
+            AdhanKeepAliveService.removeNotificationOnStop()
             muteAdhan(context)
             val prayerName = intent.getStringExtra("PRAYER_NAME") ?: "Salah"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -120,9 +122,8 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             val workRequest = OneTimeWorkRequestBuilder<PrayerScheduleWorker>().build()
             WorkManager.getInstance(context.applicationContext).enqueue(workRequest)
             
-            // Also trigger an immediate widget update so the widget shows the next prayer
-            val widgetWorkRequest = OneTimeWorkRequestBuilder<io.github.sammynashed.emran.service.EmranWidgetUpdateWorker>().build()
-            WorkManager.getInstance(context.applicationContext).enqueue(widgetWorkRequest)
+            // The widgets redraw themselves at this moment (WidgetTicker); this job is only a second chance.
+            io.github.sammynashed.emran.glance.WidgetUpdater.requestRefresh(context.applicationContext)
             
             android.util.Log.d("PrayerAlarmReceiver", "Enqueued dynamic prayer reschedule work and widget update.")
         } catch (e: Exception) {
@@ -255,11 +256,11 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
         notificationManager.notify(prayerName.hashCode(), notification)
 
-        playAdhan(context, prayerName, play, soundKey)
+        playAdhan(context, prayerName, play, soundKey, notification)
     }
 
     /** Plays the adhan for [play] (nothing for VIBRATE/SILENT: the channel's vibration is all they get). */
-    private fun playAdhan(context: Context, prayerName: String, play: AdhanPolicy.Play, soundKey: String) {
+    private fun playAdhan(context: Context, prayerName: String, play: AdhanPolicy.Play, soundKey: String, notification: android.app.Notification) {
         if (play == AdhanPolicy.Play.VIBRATE || play == AdhanPolicy.Play.SILENT) {
             muteAdhan(context)
             return
@@ -271,10 +272,14 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
             else -> null
         }
         val systemTone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        val soundUri = when (play) {
-            // Wake: the full Fajr adhan (with "الصلاة خير من النوم") if this voice has it on the phone.
-            AdhanPolicy.Play.WAKE -> AdhanPolicy.fullFajrAdhan(context, soundKey) ?: voiceUri ?: systemTone
-            else -> voiceUri ?: systemTone
+        // "Fajr sound": the user may hear only "الصلاة خير من النوم" at Fajr (everyday and wake-up alike).
+        val fajrCall = if (prayerName == "Fajr") AdhanPolicy.fajrTathweebVoice(context)?.let { AdhanPolicy.tathweebUri(context, it) } else null
+        val soundUri = fajrCall ?: when (play) {
+            // Wake: the whole Fajr adhan in the voice the user picked (its Fajr recording, else its everyday one).
+            AdhanPolicy.Play.WAKE -> AdhanPolicy.fullAdhanUri(context, soundKey, "Fajr") ?: voiceUri ?: systemTone
+            // "The whole adhan" switch: the full recording when this voice has one for this prayer, else its opening.
+            else -> (if (AdhanPolicy.fullAdhan(context)) AdhanPolicy.fullAdhanUri(context, soundKey, prayerName) else null)
+                ?: voiceUri ?: systemTone
         }
         // Ears hear loudness on a log scale: squaring the slider makes 60% about 9 dB below full, not 4 dB.
         // Everyday: the cap scales the player. Wake-up: the cap IS the alarm-stream level (set below), so the player
@@ -340,6 +345,11 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 start()
             }
             mediaPlayer = player
+            // A whole adhan runs for minutes, long after this receiver returns. Without a foreground service the
+            // process is cached, and HyperOS/Android freeze or kill cached apps, which cuts the adhan off mid-way.
+            if (runCatching { player.duration }.getOrDefault(0) > 30_000) {
+                AdhanKeepAliveService.start(appContext, prayerName.hashCode(), notification)
+            }
 
             // Fade in, so the adhan can never be a jump-scare. Short clips (a system tone) fade over a quarter of
             // their length, otherwise they would end before ever reaching full volume.

@@ -334,12 +334,14 @@ object PaperShare {
         val onLight = sky == "dawn"
         val inkColor = if (onLight) Color.parseColor("#13223F") else Color.WHITE
         val ui = readex(context)
-        val area = RectF(84f, 212f, W - 84f, 745f)
+        // The words sit on a glass card; the title has its own room below the brand.
+        val card = RectF(56f, 300f, W - 56f, 840f)
+        val area = RectF(card.left + 48f, card.top + 40f, card.right - 48f, card.bottom - 40f)
         val pageH = area.height().toInt()
         val width = area.width().toInt()
         val p = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = inkColor; typeface = amiri(context)
-            if (!onLight) setShadowLayer(16f, 0f, 2f, Color.argb(120, 0, 0, 0))
+            
         }
         // The picture speaks the app's language. A dhikr with no translation can only be shown in Arabic.
         val translation = english?.takeIf { !ar && it.isNotBlank() }
@@ -366,7 +368,15 @@ object PaperShare {
             val c = Canvas(bmp)
             val head = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = inkColor; typeface = ui; textSize = 28f; textAlign = Paint.Align.CENTER }
             val label = if (flow.size > 1) "$title · ${digits("${i + 1}", ar)} / ${digits("${flow.size}", ar)}" else title
-            c.drawText(label, W / 2f, 194f, head)
+            c.drawText(android.text.TextUtils.ellipsize(label, head, W - 120f, android.text.TextUtils.TruncateAt.END).toString(), W / 2f, 252f, head)
+            val body = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = if (onLight) Color.argb(120, 255, 255, 255) else Color.argb(110, 8, 14, 32)
+            }
+            c.drawRoundRect(card, 56f, 56f, body)
+            c.drawRoundRect(card, 56f, 56f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE; strokeWidth = 2.5f
+                color = if (onLight) Color.argb(200, 255, 255, 255) else Color.argb(70, 255, 255, 255)
+            })
             c.drawSlice(page, area)
             c.drawBrand(ui, ar)
             source?.takeIf { it.isNotBlank() }?.let {

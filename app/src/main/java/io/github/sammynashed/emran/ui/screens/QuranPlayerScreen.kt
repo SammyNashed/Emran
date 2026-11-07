@@ -221,7 +221,8 @@ private fun QuranPlayerContent(onBack: () -> Unit, modifier: Modifier) {
             color = sky.ink, fontSize = 30.sp, fontFamily = if (ar) SurahNameFontFamily else null, maxLines = 1,
         )
         Text(
-            (if (n.ayah == 0) (if (ar) "البسملة" else "Bismillah") else (if (ar) "الآية ${n.ayah} من ${AudioStore.AYAH_COUNT[n.surah - 1]}" else "Ayah ${n.ayah} of ${AudioStore.AYAH_COUNT[n.surah - 1]}")) +
+            (if (n.ayah == QuranAudio.WHOLE) (if (ar) "السورة كاملة" else "The whole surah")
+            else if (n.ayah == 0) (if (ar) "البسملة" else "Bismillah") else (if (ar) "الآية ${n.ayah} من ${AudioStore.AYAH_COUNT[n.surah - 1]}" else "Ayah ${n.ayah} of ${AudioStore.AYAH_COUNT[n.surah - 1]}")) +
                 " · " + (if (ar) reciter.ar else reciter.en),
             color = sky.inkSoft, fontSize = 14.sp,
         )
@@ -236,7 +237,7 @@ private fun QuranPlayerContent(onBack: () -> Unit, modifier: Modifier) {
                     Spacer(Modifier.width(6.dp))
                     Text(
                         when {
-                            repeat == QuranAudio.Repeat.SURAH -> if (ar) "تُكرَّر السورة كلها" else "The whole surah repeats"
+                            repeat == QuranAudio.Repeat.SURAH || n.ayah == QuranAudio.WHOLE -> if (ar) "تُكرَّر السورة كلها" else "The whole surah repeats"
                             n.ayah == 0 -> if (ar) "تُكرَّر البسملة" else "The Bismillah repeats"
                             else -> if (ar) "تُكرَّر الآية ${n.ayah}" else "Ayah ${n.ayah} repeats"
                         },

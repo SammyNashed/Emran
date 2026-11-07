@@ -40,6 +40,8 @@ object AudioStore {
     fun ayahFile(context: Context, reciter: String, surah: Int, ayah: Int) =
         File(surahDir(context, reciter, surah), "%03d.mp3".format(ayah))
     fun bismillahFile(context: Context, reciter: String) = File(reciterDir(context, reciter), "bismillah.mp3")
+    /** A whole-surah reciter's one file for [surah] (see [Reciter.wholeSurah]). */
+    fun surahFile(context: Context, reciter: String, surah: Int) = File(surahDir(context, reciter, surah), "surah.mp3")
 
     fun isInstalled(context: Context, reciter: String, surah: Int) = surahDir(context, reciter, surah).isDirectory
 
@@ -69,6 +71,16 @@ object AudioStore {
      */
     suspend fun downloadSurah(context: Context, r: Reciter, surah: Int, onAyah: () -> Unit) = withContext(Dispatchers.IO) {
         if (isInstalled(context, r.id, surah)) return@withContext
+        if (r.wholeSurah) {
+            if (!r.has(surah)) return@withContext
+            // One file, up to ~100 MB (al-Baqarah): it resumes where a dropped connection left it.
+            val part = File(surahDir(context, r.id, surah).path + ".part").apply { mkdirs() }
+            fetchResumable(r.surahFileUrl(surah), File(part, "surah.mp3"))
+            repeat(AYAH_COUNT[surah - 1]) { onAyah() } // progress is counted in ayat for every voice
+            if (!part.renameTo(surahDir(context, r.id, surah))) throw IOException("could not finish surah $surah")
+            notifyChanged()
+            return@withContext
+        }
         val bism = bismillahFile(context, r.id)
         if (!bism.exists()) { bism.parentFile?.mkdirs(); fetch(url(r, 1, 1), bism) }
         val part = File(surahDir(context, r.id, surah).path + ".part").apply { mkdirs() }
@@ -87,6 +99,33 @@ object AudioStore {
         }
         if (!part.renameTo(surahDir(context, r.id, surah))) throw IOException("could not finish surah $surah")
         notifyChanged()
+    }
+
+    /**
+     * A big file that survives a cut connection: what arrived stays in `<name>.tmp` and the next try asks
+     * only for the rest (HTTP Range). A server that ignores Range sends it all again, which still works.
+     */
+    private fun fetchResumable(from: String, to: File) {
+        if (to.exists()) return
+        val tmp = File(to.path + ".tmp")
+        val have = if (tmp.exists()) tmp.length() else 0L
+        val c = URL(from).openConnection() as HttpURLConnection
+        c.connectTimeout = 20_000; c.readTimeout = 30_000
+        if (have > 0) c.setRequestProperty("Range", "bytes=$have-")
+        try {
+            val append = when (c.responseCode) {
+                206 -> true
+                200 -> false
+                416 -> { if (have > 1_000 && tmp.renameTo(to)) return; tmp.delete(); throw IOException("range refused for $from") }
+                else -> throw IOException("HTTP ${c.responseCode} for $from")
+            }
+            c.inputStream.use { input -> java.io.FileOutputStream(tmp, append).use { input.copyTo(it, 64 * 1024) } }
+            val expected = c.getHeaderField("Content-Length")?.toLongOrNull()?.let { if (append) it + have else it }
+            if (expected != null && tmp.length() != expected) throw IOException("short read for $from")
+            if (tmp.length() < 1_000 || !tmp.renameTo(to)) throw IOException("bad file $from")
+        } finally {
+            c.disconnect()
+        }
     }
 
     /** One file, written beside its final name and renamed, so a cut connection leaves nothing half-done. */

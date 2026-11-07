@@ -101,6 +101,8 @@ fun SplashScreen(
     val bars = remember { List(5) { Animatable(0f) } }
     val sheen = remember { Animatable(-0.5f) }
     val halo = remember { Animatable(0f) }
+    // Two rings travel outward from the tile, like a call to prayer carried across the city.
+    val rings = remember { List(2) { Animatable(0f) } }
     val word = remember { Animatable(0f) }
     val tagline = remember { Animatable(0f) }
     // Exit.
@@ -160,6 +162,9 @@ fun SplashScreen(
                     }
                 }
                 launch { delay(180L + 2 * 70L + 150L); haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                rings.forEachIndexed { i, ring ->
+                    launch { delay(500L + i * 190L); ring.animateTo(1f, tween(900, easing = CubicBezierEasing(0.15f, 0.6f, 0.3f, 1f))) }
+                }
                 launch { delay(520); word.animateTo(1f, tween(460, easing = Arrive)) }
                 launch { delay(660); tagline.animateTo(1f, tween(420, easing = Arrive)) }
                 launch {
@@ -207,6 +212,16 @@ fun SplashScreen(
                         ),
                         radius = size.minDimension / 2f, center = c,
                     )
+                }
+                rings.forEach { ring ->
+                    val t = ring.value
+                    if (t > 0f && t < 1f) {
+                        drawCircle(
+                            sky.glow.copy(alpha = 0.55f * (1f - t) * (1f - t)),
+                            radius = tilePx * (0.55f + 0.55f * t), center = c,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx() * (1f - 0.5f * t)),
+                        )
+                    }
                 }
                 // The launcher icon, with each pillar at its own height of the rise.
                 val tl = Offset(c.x - tilePx / 2f, c.y - tilePx / 2f)

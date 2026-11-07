@@ -165,7 +165,11 @@ fun QuranMiniPlayer(theme: QuranThemeMode, lang: String, modifier: Modifier = Mo
                 color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (n.ayah == 0) (if (ar) "البسملة" else "Bismillah") else (if (ar) "الآية ${n.ayah}" else "Ayah ${n.ayah}"),
+                when (n.ayah) {
+                    QuranAudio.WHOLE -> if (ar) "السورة كاملة" else "The whole surah"
+                    0 -> if (ar) "البسملة" else "Bismillah"
+                    else -> if (ar) "الآية ${n.ayah}" else "Ayah ${n.ayah}"
+                },
                 color = ink.copy(alpha = 0.65f), fontSize = 12.sp,
             )
         }

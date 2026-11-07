@@ -16,6 +16,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.roundToLong
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tan
 
 /**
@@ -89,6 +90,8 @@ object PrayerTimeCalculator {
          * of the method, so they come before the user's own fine-tuning.
          */
         val temkin: Adjustments = Adjustments.NONE,
+        /** How the authority turns the astronomy into its printed minute ([OfficialMinute]); null keeps the seconds. */
+        val official: OfficialMinute? = null,
     ) {
         MWL("Muslim World League", 18.0, 17.0),
         ISNA("Islamic Society of North America", 15.0, 15.0),
@@ -101,7 +104,19 @@ object PrayerTimeCalculator {
             ishaIntervalMinutes = 90,
             ramadanIshaIntervalMinutes = 120
         ),
-        DUBAI("Dubai (UAE)", 18.2, 18.2),
+        // The UAE's Awqaf adds 3 minutes to Dhuhr and Maghrib (checked against Aladhan's Dubai method, 2026-11).
+        DUBAI("Dubai (UAE)", 18.2, 18.2, temkin = Adjustments(dhuhr = 3, maghrib = 3)),
+        // Jordan's Ministry of Awqaf: Isha at 18 degrees and Maghrib 5 minutes after sunset.
+        JORDAN("Ministry of Awqaf, Jordan", 18.0, 18.0, temkin = Adjustments(maghrib = 5)),
+        // Morocco's Ministry of Habous: Fajr at 19 degrees, Dhuhr and Maghrib 5 minutes after the astronomical time.
+        MOROCCO("Ministry of Habous, Morocco", 19.0, 17.0, temkin = Adjustments(dhuhr = 5, maghrib = 5)),
+        TUNISIA("Tunisia", 18.0, 18.0),
+        // JAKIM's own timetable (e-solat.gov.my), fitted 2026-11-07: Fajr at 18 degrees, then each time
+        // plus its precaution, rounded up to the minute (sunrise rounded down).
+        JAKIM("JAKIM, Malaysia", 18.0, 18.0, official = OfficialMinute(fajr = 110, sunrise = -10, dhuhr = 136, asr = 80, maghrib = 40, isha = 56)),
+        // Kemenag's own timetable (Jakarta, November 2026), fitted the same way: about 2 minutes of
+        // precaution on Fajr, Asr and Isha and nearly 3 on Dhuhr and Maghrib; sunrise about 3 earlier.
+        KEMENAG("Kemenag, Indonesia", 20.0, 18.0, official = OfficialMinute(fajr = 129, sunrise = -185, dhuhr = 184, asr = 119, maghrib = 165, isha = 121)),
         QATAR("Qatar", 18.0, 0.0, ishaIntervalMinutes = 90),
         KUWAIT("Kuwait", 18.0, 17.5),
         SINGAPORE("Singapore (MUIS)", 20.0, 18.0),
@@ -173,6 +188,22 @@ object PrayerTimeCalculator {
 
         /** Applies [ANGLE_BASED] beyond 48 degrees of latitude, and [NONE] below it. */
         AUTOMATIC("Automatic");
+    }
+
+    /**
+     * An authority's printed minute: the exact time plus its precaution (seconds), rounded UP to the
+     * minute for prayers and DOWN for sunrise, so the app shows and calls what the mosques there do.
+     */
+    data class OfficialMinute(val fajr: Int, val sunrise: Int, val dhuhr: Int, val asr: Int, val maghrib: Int, val isha: Int) {
+        private fun up(t: LocalDateTime, s: Int): LocalDateTime {
+            val x = t.plusSeconds(s.toLong()); val m = x.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+            return if (m == x) m else m.plusMinutes(1)
+        }
+        private fun down(t: LocalDateTime, s: Int) = t.plusSeconds(s.toLong()).truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        fun apply(p: PrayerTimes) = p.copy(
+            fajr = up(p.fajr, fajr), sunrise = down(p.sunrise, sunrise), dhuhr = up(p.dhuhr, dhuhr),
+            asr = up(p.asr, asr), maghrib = up(p.maghrib, maghrib), isha = up(p.isha, isha),
+        )
     }
 
     /** Per-prayer manual corrections in minutes, as configured in Fine-Tune. */
@@ -389,13 +420,42 @@ object PrayerTimeCalculator {
             sunrise = toLocalDateTime(date, sunriseUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
             dhuhr = toLocalDateTime(date, noonUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
             asr = toLocalDateTime(date, asrUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
-            maghrib = toLocalDateTime(date, maghribUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+            maghrib = localMaghrib(
+                toLocalDateTime(date, maghribUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
+                latitude, longitude, maghribAngle,
+            ),
             isha = toLocalDateTime(date, ishaUt, zone).truncatedTo(java.time.temporal.ChronoUnit.SECONDS),
             date = date,
             zone = zone,
             hasTrueSunriseAndSunset = hasTrueSunriseAndSunset,
             twilightIsAstronomical = fajrAttainable && ishaAttainable
-        ).withAdjustments(method.temkin).withAdjustments(adjustments)
+        ).let { method.official?.apply(it) ?: it }.withAdjustments(method.temkin).withAdjustments(adjustments)
+    }
+
+    /**
+     * Local practice the sky can't tell us. Aleppo's mosques call Maghrib one minute after the
+     * sunset minute: checked against the real call on 2026-10-10 (18:04, sunset 18:02:53),
+     * 2026-11-05 (17:33, sunset 17:31:35) and 2026-11-06 (17:32, sunset 17:30:39). Applies within
+     * [ALEPPO_RADIUS_KM] of the city, only to methods where Maghrib is sunset. Elsewhere Maghrib is the
+     * exact sunset, to the second.
+     */
+    private fun localMaghrib(maghrib: LocalDateTime, latitude: Double, longitude: Double, maghribAngle: Double): LocalDateTime {
+        if (maghribAngle > 0.0 || distanceKm(latitude, longitude, ALEPPO_LAT, ALEPPO_LON) > ALEPPO_RADIUS_KM) return maghrib
+        val minute = maghrib.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val roundedUp = if (minute == maghrib) minute else minute.plusMinutes(1)
+        return roundedUp.plusMinutes(1)
+    }
+
+    private const val ALEPPO_LAT = 36.2021
+    private const val ALEPPO_LON = 37.1343
+    private const val ALEPPO_RADIUS_KM = 40.0
+
+    /** Great-circle distance, good to a few metres at city scale. */
+    private fun distanceKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val h = sin(dLat / 2).let { it * it } + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).let { it * it }
+        return 2 * 6371.0 * asin(sqrt(h.coerceIn(0.0, 1.0)))
     }
 
     /** Convenience overload for callers that hold an IANA id string. */

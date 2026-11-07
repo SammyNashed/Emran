@@ -89,7 +89,7 @@ fun BookmarksScreen(
     val sky = LocalSky.current
     val bookmarks by HadithBookmarks.all.collectAsState()
     LaunchedEffect(Unit) { HadithBookmarks.ensureLoaded(context) }
-    var tab by rememberSaveable { mutableStateOf(initialTab) }
+    val tab = initialTab // each entry point shows only its own saves
 
     val ayat by produceState<List<AyahRow>?>(null, bookmarks, lang) {
         value = withContext(Dispatchers.IO) {
@@ -161,20 +161,14 @@ fun BookmarksScreen(
     CompositionLocalProvider(LocalLayoutDirection provides if (ar) LayoutDirection.Rtl else LayoutDirection.Ltr) {
         Column(Modifier.fillMaxSize()) {
             ScreenHeader(
-                title = if (ar) "العلامات" else "Bookmarks",
+                title = when {
+                    tab == "quran" -> if (ar) "المحفوظات · القرآن" else "Saved · Qur'an"
+                    else -> if (ar) "المحفوظات · الأذكار والأحاديث" else "Saved · Adhkar & Hadith"
+                },
                 onBack = onBack,
                 modifier = Modifier.padding(horizontal = Space.screen),
             )
-            // The segmented control is laid out left to right; in Arabic the first tab sits on the right.
-            val quranOpt = "quran" to (if (ar) "القرآن" else "Qur'an")
-            val adhkarOpt = "adhkar" to (if (ar) "الأذكار" else "Adhkar")
-            GlassSegmented(
-                options = if (ar) listOf(adhkarOpt, quranOpt) else listOf(quranOpt, adhkarOpt),
-                selectedKey = tab,
-                onSelect = { tab = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Space.screen),
-            )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(6.dp))
 
             if (tab == "quran") {
                 val list = ayat

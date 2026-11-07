@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every Emran widget: one picture drawn by WidgetArt at the widget's exact size, plus (for some)
+  a live view on top that the system itself ticks: a Chronometer countdown or a TextClock.
+  The overlay's padding and gravity are set per widget from code (DirectWidgets.overlay).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_art"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:id="@+id/widget_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical" />
+</FrameLayout>

@@ -486,7 +486,7 @@ private class Door(val icon: ImageVector, val ar: String, val en: String, val do
 
 /**
  * The four things people open from Home besides the day's prayers, each with a real label (an icon alone is a
- * guess): Tasbeeh, Adhkar, Qibla and the Library. During the morning and evening adhkar times the Adhkar door
+ * guess): Tasbeeh, Adhkar, Qibla and Hadith. During the morning and evening adhkar times the Adhkar door
  * wears a dot and opens that very set; the rest of the time it opens the full list.
  */
 @Composable
@@ -498,7 +498,7 @@ fun DoorsCard(
     onAdhkar: () -> Unit,
     onAdhkarNow: (String) -> Unit,
     onQibla: () -> Unit,
-    onLibrary: () -> Unit,
+    onHadith: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val adhkarNow = when {
@@ -510,7 +510,7 @@ fun DoorsCard(
         Door(ImageVector.vectorResource(io.github.sammynashed.emran.R.drawable.ic_misbaha), "التسبيح", "Tasbeeh", false, onTasbeeh),
         Door(Icons.AutoMirrored.Outlined.MenuBook, "الأذكار", "Adhkar", adhkarNow != null) { if (adhkarNow != null) onAdhkarNow(adhkarNow) else onAdhkar() },
         Door(Icons.Outlined.Explore, "القبلة", "Qibla", false, onQibla),
-        Door(Icons.Outlined.LocalLibrary, "المكتبة", "Library", false, onLibrary),
+        Door(Icons.Outlined.AutoStories, "الأحاديث", "Hadith", false, onHadith),
     )
     GlassPanel(modifier.fillMaxWidth().glassEntrance(3), cornerRadius = Radius.row) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp)) {

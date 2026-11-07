@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Live Arabic digits: the system ticks 0-9, and this font draws them as Arabic-Indic numerals (built from Amiri Bold). -->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_clock"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="@font/emran_clock_digits"
+    android:format12Hour="h:mm"
+    android:format24Hour="HH:mm"
+    android:gravity="center"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="#FFFFFF"
+    android:textSize="56sp" />

@@ -85,9 +85,7 @@ class MainActivity : ComponentActivity() {
             
             // Trigger Widget Update to ensure home screen is perfectly synchronized
             try {
-                androidx.work.WorkManager.getInstance(applicationContext).enqueue(
-                    androidx.work.OneTimeWorkRequestBuilder<io.github.sammynashed.emran.service.EmranWidgetUpdateWorker>().build()
-                )
+                io.github.sammynashed.emran.glance.WidgetUpdater.requestRefresh(applicationContext)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -157,7 +155,7 @@ class MainActivity : ComponentActivity() {
                     }
                     LaunchedEffect(route) {
                         if (route == "more") {
-                            navController.navigate("library") { launchSingleTop = true }
+                            navController.navigate("hadith") { launchSingleTop = true }
                         } else if (route == "PRAYER_TAB" || route == "prayer_times") {
                             activeTabRoute = "home"
                             navController.navigate("prayer_times") {
@@ -193,7 +191,7 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "quran" &&
                                 quranState !is io.github.sammynashed.emran.ui.viewmodel.QuranUiState.SuccessVerses) ||
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
-                            currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "library" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
+                            currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
                             currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
                             currentRoute == "testers" || currentRoute == "adhan_behavior" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
                             currentRoute?.startsWith("adhkar_detail/") == true ||
@@ -311,7 +309,7 @@ class MainActivity : ComponentActivity() {
                                                     onNavigateToTasbeeh = { navController.navigate("dhikr") { launchSingleTop = true } },
                                                     onNavigateToLocation = { navController.navigate("calculation") { launchSingleTop = true } },
                                                     onOpenCalendar = { navController.navigate("calendar") { launchSingleTop = true } },
-                                                    onOpenLibrary = { navController.navigate("library") { launchSingleTop = true } },
+                                                    onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
                                                     onOpenAdhkarDetail = { navController.navigate("adhkar_detail/$it") { launchSingleTop = true } },
                                                     onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
                                                     onOpenAyah = { surah, ayah ->
@@ -324,6 +322,7 @@ class MainActivity : ComponentActivity() {
                                                 QuranScreen(
                                                     viewModel = quranViewModel,
                                                     onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
+                                                    onOpenSaved = { navController.navigate("bookmarks?tab=quran") { launchSingleTop = true } },
                                                     onOpenPlayer = {
                                                         // The player belongs to the Qur'an tab: Back from it must land there.
                                                         activeTabRoute = "quran"
@@ -379,7 +378,8 @@ class MainActivity : ComponentActivity() {
                                              onBack = { navController.popBackStack() },
                                              onOpenBook = { navController.navigate("hadith_book/$it") },
                                              onSearch = { navController.navigate("hadith_search") },
-                                             onBookmarks = { navController.navigate("bookmarks?tab=adhkar") }
+                                             onBookmarks = { navController.navigate("bookmarks?tab=adhkar") },
+                                             onContinue = { b, c, n -> navController.navigate("hadith_chapter/$b/$c?n=$n") }
                                          )
                                      }
                                      composable("hadith_book/{book}") { entry ->
@@ -433,15 +433,6 @@ class MainActivity : ComponentActivity() {
                                              onOpenDhikr = { navController.navigate("adhkar_detail/$it") }
                                          )
                                      }
-                                    composable("library") {
-                                        io.github.sammynashed.emran.ui.screens.LibraryScreen(
-                                            onBack = { navController.popBackStack() },
-                                            onOpenAdhkar = { navController.navigate("adhkar") { launchSingleTop = true } },
-                                            onOpenHadith = { navController.navigate("hadith") { launchSingleTop = true } },
-                                            onOpenSaved = { navController.navigate("bookmarks?tab=quran") { launchSingleTop = true } },
-                                            onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
-                                        )
-                                    }
                                     composable("calendar") {
                                         io.github.sammynashed.emran.ui.screens.CalendarScreen(
                                             viewModel = viewModel,

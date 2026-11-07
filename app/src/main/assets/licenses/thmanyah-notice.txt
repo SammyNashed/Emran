@@ -1,0 +1,5 @@
+Widget text is shown as images of words rendered from the thmanyah typeface.
+Typeface copyright (c) 2026 thmanyah Publishing and Distribution (https://font.thmanyah.com/).
+The font files are not included in this app or its source code. Emran is not affiliated with or endorsed by thmanyah.
+
+The tashkeel marks on the calligraphy images are rendered from AMoshref-Thulth by Ali Moshref (SIL OFL 1.1).

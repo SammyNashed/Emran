@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.GraphicEq
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -104,6 +106,8 @@ fun QuranHomePage(
     khatmah: QuranViewModel.Khatmah?,
     onOpen: (QuranChapter, Int?) -> Unit,
     onOpenPlayer: () -> Unit = {},
+    onOpenSaved: () -> Unit = {},
+    onOpenReciters: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val ar = lang == "ar"
@@ -244,6 +248,24 @@ fun QuranHomePage(
                         color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1,
                     )
                     if (n?.playing == true) Icon(Icons.Filled.PlayArrow, null, tint = sky.inkSoft, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+
+        // Saved ayat and the reciter's voice, one tap each.
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                listOf(
+                    Triple(Icons.Outlined.BookmarkBorder, if (ar) "المحفوظات" else "Saved", onOpenSaved),
+                    Triple(Icons.Outlined.GraphicEq, if (ar) "القرّاء" else "Reciters", onOpenReciters),
+                ).forEach { (icon, label, go) ->
+                    GlassPanel(Modifier.weight(1f).clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); go() }, cornerRadius = 24.dp, tint = 0.9f, lens = false) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(icon, null, tint = sky.ink, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(label, color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        }
+                    }
                 }
             }
         }

@@ -64,6 +64,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -188,10 +189,12 @@ fun HadithLibraryScreen(
     onBack: () -> Unit,
     onOpenBook: (String) -> Unit,
     onSearch: () -> Unit,
-    onBookmarks: () -> Unit
+    onBookmarks: () -> Unit,
+    onContinue: (book: String, chapter: Int, number: Int) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     val lang = LocalAppLanguage.current
+    val last = remember { LastRead.get(context)?.takeIf { HadithLibrary.book(context, it.first)?.let { b -> HadithLibrary.isInstalled(context, b) } == true } }
     val states by HadithPackStore.states.collectAsState()
     val bookmarks by HadithBookmarks.all.collectAsState()
     LaunchedEffect(Unit) { HadithBookmarks.ensureLoaded(context) }
@@ -218,13 +221,25 @@ fun HadithLibraryScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item(span = { full() }) {
+                    EntryChip(
+                        icon = Icons.Default.Search,
+                        label = if (lang == "ar") "ابحث، أو اكتب رقم الحديث" else "Search, or type a hadith number",
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onSearch
+                    )
+                }
+                if (last != null) item(span = { full() }) {
+                    val bookName = HadithLibrary.book(context, last.first)?.title(lang) ?: ""
+                    EntryChip(
+                        icon = Icons.Default.Bookmark,
+                        label = (if (lang == "ar") "تابع القراءة · " else "Continue · ") + bookName +
+                            if (last.third >= 0) " #${last.third}" else "",
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onContinue(last.first, last.second, last.third) }
+                    )
+                }
+                item(span = { full() }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        EntryChip(
-                            icon = Icons.Default.Search,
-                            label = if (lang == "ar") "بحث" else "Search",
-                            modifier = Modifier.weight(1f),
-                            onClick = onSearch
-                        )
                         EntryChip(
                             icon = Icons.Default.Bookmark,
                             label = (if (lang == "ar") "المحفوظات" else "Saved") +
@@ -412,6 +427,18 @@ private fun EntryChip(
     }
 }
 
+/** Where the reader stopped, so the Hadith page can offer one tap back to it. */
+private object LastRead {
+    private fun prefs(c: Context) = c.getSharedPreferences("emran_hadith_last", Context.MODE_PRIVATE)
+    fun save(c: Context, book: String, chapter: Int, number: Int) =
+        prefs(c).edit().putString("book", book).putInt("chapter", chapter).putInt("number", number).apply()
+    fun get(c: Context): Triple<String, Int, Int>? {
+        val p = prefs(c)
+        val b = p.getString("book", null) ?: return null
+        return Triple(b, p.getInt("chapter", 0), p.getInt("number", -1))
+    }
+}
+
 // -------------------------------------------------------------------------
 // Chapters of a book
 // -------------------------------------------------------------------------
@@ -516,6 +543,12 @@ fun HadithChapterScreen(bookId: String, chapterId: Int, focusNumber: Int?, onBac
         val list = hadiths ?: return@LaunchedEffect
         val idx = if (focusNumber == null) -1 else list.indexOfFirst { it.number == focusNumber }
         if (idx >= 0) listState.scrollToItem(idx)
+    }
+    LaunchedEffect(hadiths) {
+        val list = hadiths ?: return@LaunchedEffect
+        snapshotFlow { listState.firstVisibleItemIndex }.collect { i ->
+            list.getOrNull(i)?.let { LastRead.save(context, bookId, chapterId, it.number) }
+        }
     }
 
     HadithRoot(lang) {

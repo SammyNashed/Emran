@@ -47,6 +47,8 @@ import io.github.sammynashed.emran.service.PrayerAlarmReceiver
 import io.github.sammynashed.emran.service.PrayerCountdown
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.WbTwilight
 import io.github.sammynashed.emran.ui.design.GlassButton
 import io.github.sammynashed.emran.ui.design.GlassDialog
 import io.github.sammynashed.emran.ui.design.GlassDivider
@@ -96,7 +98,10 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
     var quiet by remember { mutableStateOf(AdhanPolicy.quietWindows(context).firstOrNull()) }
     var dndGranted by remember { mutableStateOf(AdhanPolicy.canBypassDnd(context)) }
     val voice by viewModel.defaultAdhanSound.collectAsState()
-    val hasFull = AdhanPolicy.fullFajrAdhan(context, voice) != null
+    var full by remember { mutableStateOf(AdhanPolicy.fullAdhan(context)) }
+    var showFull by remember { mutableStateOf(false) }
+    var fajrCall by remember { mutableStateOf(AdhanPolicy.fajrTathweebVoice(context)) }
+    var showFajrSound by remember { mutableStateOf(false) }
 
     var showVoice by remember { mutableStateOf(false) }
     var showVibrate by remember { mutableStateOf(false) }
@@ -149,6 +154,14 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
                         value = adhanDisplayName(voice, ar),
                         onClick = { showVoice = true },
                     )
+                    GlassDivider()
+                    SettingsRow(
+                        icon = Icons.Default.Timelapse,
+                        minHeight = 50.dp,
+                        title = if (ar) "طول الأذان" else "Adhan length",
+                        value = if (full) (if (ar) "كاملًا" else "Full") else (if (ar) "أوّله فقط" else "Opening only"),
+                        onClick = { showFull = true },
+                    )
                 }
 
                 Spacer(Modifier.height(Space.md))
@@ -195,6 +208,14 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
                 GlassSectionLabel(if (ar) "الفجر" else "FAJR")
                 GlassGroup {
                     SettingsRow(
+                        icon = Icons.Default.WbTwilight,
+                        minHeight = 50.dp,
+                        title = if (ar) "صوت الفجر" else "Fajr sound",
+                        value = if (fajrCall != null) "«الصلاة خير من النوم»" else (if (ar) "الأذان" else "The adhan"),
+                        onClick = { showFajrSound = true },
+                    )
+                    GlassDivider()
+                    SettingsRow(
                         icon = Icons.Default.Alarm,
                         minHeight = 50.dp,
                         title = if (ar) "أيقظني للفجر" else "Wake me for Fajr",
@@ -214,6 +235,63 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
             onSave = { viewModel.setDefaultAdhanSound(it); showVoice = false },
             onDismiss = { showVoice = false },
         )
+    }
+
+    if (showFull) {
+        val fullNote = if (AdhanPolicy.fullAdhanUri(context, voice, "Dhuhr") == null)
+            (if (ar) "نغمة النظام ليس لها أذان كامل، فاختر صوت مؤذّن أولًا" else "The system sound has no full adhan: pick a muezzin's voice first")
+        else (if (ar) "بصوت ${adhanDisplayName(voice, true)} لكل الصلوات، والفجر يتبع «صوت الفجر»" else "In ${adhanDisplayName(voice, false)}'s voice for every prayer; Fajr follows “Fajr sound”")
+        GlassDialog(
+            onDismiss = { showFull = false },
+            title = if (ar) "طول الأذان" else "Adhan length",
+            subtitle = if (ar) "الأذان كاملًا يستمر من دقيقتين إلى أربع ونصف. يوقفه زرّ «إيقاف الأذان» في الإشعار أو أزرار الصوت، ويبقى يحترم الصامت والاهتزاز."
+            else "The whole adhan lasts 2 to 4½ minutes. Stop it any time from the notification or with the volume keys; silent and vibrate still win.",
+            confirmLabel = if (ar) "تم" else "Done",
+            onConfirm = { showFull = false },
+        ) {
+            ChoiceRow(
+                label = if (ar) "أوّله فقط" else "Opening only", selected = !full,
+                sublabel = if (ar) "بضع ثوانٍ، كما كان" else "A few seconds, as before",
+                onClick = { full = false; AdhanPolicy.setFullAdhan(context, false) },
+            )
+            ChoiceRow(
+                label = if (ar) "الأذان كاملًا" else "The whole adhan", selected = full,
+                sublabel = fullNote,
+                onClick = { full = true; AdhanPolicy.setFullAdhan(context, true) },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassButton(if (ar) "جرّب" else "Test", { fire("Maghrib") }, filled = true, modifier = Modifier.weight(1f))
+                GlassButton(if (ar) "إيقاف" else "Stop", { PrayerAlarmReceiver.muteAdhan(context) }, filled = false, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+
+    if (showFajrSound) {
+        GlassDialog(
+            onDismiss = { showFajrSound = false },
+            title = if (ar) "صوت الفجر" else "Fajr sound",
+            subtitle = if (ar) "ما يُسمَع عند الفجر، وفي «أيقظني للفجر» أيضًا. لا يظهر هنا إلا الصوت المتوفّر له تسجيل."
+            else "What plays at Fajr, including “Wake me for Fajr”. Only voices that have a recording of it are listed.",
+            confirmLabel = if (ar) "تم" else "Done",
+            onConfirm = { showFajrSound = false },
+        ) {
+            ChoiceRow(
+                label = if (ar) "الأذان" else "The adhan", selected = fajrCall == null,
+                sublabel = if (ar) "بصوت ${adhanDisplayName(voice, true)}، مثل باقي الصلوات" else "In ${adhanDisplayName(voice, false)}'s voice, like the other prayers",
+                onClick = { fajrCall = null; AdhanPolicy.setFajrTathweebVoice(context, null) },
+            )
+            AdhanPolicy.TATHWEEB_VOICES.filter { AdhanPolicy.tathweebUri(context, it) != null }.forEach { v ->
+                ChoiceRow(
+                    label = "«الصلاة خير من النوم»", selected = fajrCall == v,
+                    sublabel = adhanDisplayName(v, ar),
+                    onClick = { fajrCall = v; AdhanPolicy.setFajrTathweebVoice(context, v) },
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassButton(if (ar) "جرّب" else "Test", { fire("Fajr") }, filled = true, modifier = Modifier.weight(1f))
+                GlassButton(if (ar) "إيقاف" else "Stop", { PrayerAlarmReceiver.muteAdhan(context) }, filled = false, modifier = Modifier.weight(1f))
+            }
+        }
     }
 
     if (showCountdown) {
@@ -284,8 +362,8 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
         GlassDialog(
             onDismiss = { showWake = false },
             title = if (ar) "أيقظني للفجر" else "Wake me for Fajr",
-            subtitle = if (ar) "يرنّ أذان الفجر كاملًا بمستوى صوت المنبّه الذي تختاره ثم يعود صوتك كما كان، حتى لو كان الهاتف صامتًا أو على «عدم الإزعاج». وعند التفعيل يُشغَّل أذان الفجر تلقائيًا."
-            else "Fajr plays in full at the wake-up volume you pick (your alarm volume is put back afterwards), even on silent or Do Not Disturb. Turning this on also switches Fajr's adhan on.",
+            subtitle = if (ar) "يرنّ صوت الفجر بمستوى صوت المنبّه الذي تختاره ثم يعود صوتك كما كان، حتى لو كان الهاتف صامتًا أو على «عدم الإزعاج». وعند التفعيل يُشغَّل أذان الفجر تلقائيًا."
+            else "Your Fajr sound plays at the wake-up volume you pick (your alarm volume is put back afterwards), even on silent or Do Not Disturb. Turning this on also switches Fajr's adhan on.",
             confirmLabel = if (ar) "تم" else "Done",
             onConfirm = { showWake = false },
         ) {
@@ -295,8 +373,7 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
             )
             ChoiceRow(
                 label = if (ar) "مفعّل" else "On", selected = wake,
-                sublabel = if (hasFull) (if (ar) "الأذان كاملًا مع «الصلاة خير من النوم»" else "The full adhan with “الصلاة خير من النوم”")
-                else (if (ar) "الأذان الكامل لهذا الصوت غير متوفر بعد، فسيُشغَّل الأذان القصير" else "The full Fajr adhan for this voice isn't available yet; the short adhan plays"),
+                sublabel = if (ar) "يرنّ ما اخترته في «صوت الفجر»" else "Plays what you picked in “Fajr sound”",
                 onClick = {
                     wake = true
                     AdhanPolicy.setWakeForFajr(context, true)

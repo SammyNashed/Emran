@@ -5,5 +5,7 @@
     <style name="Theme.Emran" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">@drawable/window_night_sky</item>
         <item name="android:windowSplashScreenBackground">#FF071626</item>
+        <!-- No icon in the system splash: Emran's own tile springs in right after it, so a still icon would pop twice. -->
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
     </style>
 </resources>

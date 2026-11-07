@@ -89,6 +89,11 @@ fun QuranListenRow(
 
         val playingHere = now?.let { it.surah == surah && it.reciter == reciter.id } == true
         when {
+            !reciter.has(surah) -> Text(
+                if (ar) "هذه السورة غير مسجّلة بصوت ${reciter.ar}. اختر قارئًا آخر لها."
+                else "${reciter.en} has no recording of this surah. Pick another voice for it.",
+                color = ink.copy(alpha = 0.8f), fontSize = 13.sp, lineHeight = 19.sp,
+            )
             playingHere -> {
                 // Media controls read left-to-right in every language, like on any player.
                 androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -128,7 +133,8 @@ fun QuranListenRow(
                 Icon(Icons.Filled.PlayArrow, null)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    if (startAyah > 1) (if (ar) "استمع من الآية $startAyah" else "Listen from ayah $startAyah")
+                    // A whole-surah recording has no ayah timings: it can only start at the top.
+                    if (startAyah > 1 && !reciter.wholeSurah) (if (ar) "استمع من الآية $startAyah" else "Listen from ayah $startAyah")
                     else (if (ar) "استمع إلى السورة" else "Listen to the surah"),
                     fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                 )

@@ -27,6 +27,8 @@ object AdhanPolicy {
     private const val KEY_LOUDNESS = "adhan_loudness"
     private const val KEY_WAKE = "adhan_wake_fajr"
     private const val KEY_WAKE_LOUDNESS = "adhan_wake_loudness"
+    private const val KEY_FULL = "adhan_full"
+    private const val KEY_FAJR_SOUND = "fajr_sound"
     private const val KEY_QUIET = "adhan_quiet_windows"
 
     const val DEFAULT_LOUDNESS = 45
@@ -114,6 +116,46 @@ object AdhanPolicy {
         return Play.ADHAN
     }
 
+    /** "The whole adhan" instead of its opening seconds, for every prayer (a friend asked for it, 2026-11). Off by default. */
+    fun fullAdhan(context: Context): Boolean = prefs(context).getBoolean(KEY_FULL, false)
+
+    fun setFullAdhan(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(KEY_FULL, on).commit()
+    }
+
+    private fun raw(context: Context, name: String): Uri? {
+        val res = context.resources.getIdentifier(name, "raw", context.packageName)
+        return if (res != 0) Uri.parse("android.resource://${context.packageName}/$res") else null
+    }
+
+    /**
+     * The whole adhan of [voiceKey] for [prayer], or null when this voice has no full recording.
+     * Fajr is ALWAYS the voice the user picked (his rule, 2026-11-07: never a stranger's recording):
+     * its own Fajr recording with "الصلاة خير من النوم" when one exists from the same muezzin,
+     * otherwise that same muezzin's everyday adhan.
+     */
+    fun fullAdhanUri(context: Context, voiceKey: String, prayer: String): Uri? = when (prayer) {
+        "Fajr" -> fullFajrAdhan(context, voiceKey) ?: raw(context, "${voiceKey}_full")
+        "Dhuhr", "Asr", "Maghrib", "Isha" -> raw(context, "${voiceKey}_full")
+        else -> null // Sunrise is a reminder that Fajr's time is over, never an adhan
+    }
+
+    /**
+     * Voices with a "الصلاة خير من النوم" clip (`res/raw/<voice>_tathweeb`), cut from that muezzin's own
+     * Fajr adhan. Only these are offered for "Fajr sound" (his rule: show only what exists).
+     */
+    val TATHWEEB_VOICES = listOf("mishary_alafasy")
+
+    /** The voice whose "الصلاة خير من النوم" plays at Fajr instead of the adhan, or null for the adhan. */
+    fun fajrTathweebVoice(context: Context): String? =
+        prefs(context).getString(KEY_FAJR_SOUND, null)?.takeIf { it in TATHWEEB_VOICES && raw(context, "${it}_tathweeb") != null }
+
+    fun setFajrTathweebVoice(context: Context, voice: String?) {
+        prefs(context).edit().putString(KEY_FAJR_SOUND, voice.orEmpty()).commit()
+    }
+
+    fun tathweebUri(context: Context, voice: String): Uri? = raw(context, "${voice}_tathweeb")
+
     /**
      * The full Fajr adhan (ending with "الصلاة خير من النوم") for a voice, if it is on the phone:
      * either bundled as `res/raw/<voice>_fajr_full` or downloaded to `files/adhan_full/<voice>.ogg`.
@@ -121,7 +163,6 @@ object AdhanPolicy {
     fun fullFajrAdhan(context: Context, voiceKey: String): Uri? {
         val file = File(context.filesDir, "adhan_full/$voiceKey.ogg")
         if (file.isFile && file.length() > 0) return Uri.fromFile(file)
-        val res = context.resources.getIdentifier("${voiceKey}_fajr_full", "raw", context.packageName)
-        return if (res != 0) Uri.parse("android.resource://${context.packageName}/$res") else null
+        return raw(context, "${voiceKey}_fajr_full")
     }
 }

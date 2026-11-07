@@ -102,7 +102,10 @@ object LocationFollower {
             .minByOrNull { it.second }
             ?.takeIf { it.second <= 500.0 } ?: return null
         return when (near.first.name.substringAfterLast(',').trim()) {
-            "Egypt", "Sudan", "Libya", "Tunisia" -> "EGYPTIAN"
+            "Egypt", "Sudan", "Libya" -> "EGYPTIAN"
+            "Tunisia" -> "TUNISIA"
+            "Jordan" -> "JORDAN"
+            "Morocco" -> "MOROCCO"
             "Saudi Arabia", "Yemen" -> "UMM_AL_QURA"
             "UAE", "Oman" -> "DUBAI"
             "Qatar" -> "QATAR"
@@ -110,7 +113,9 @@ object LocationFollower {
             "Pakistan", "India", "Bangladesh", "Sri Lanka" -> "KARACHI"
             "United States", "Canada", "Mexico" -> "ISNA"
             "Turkey" -> "TURKEY"
-            "Singapore", "Malaysia", "Indonesia" -> "SINGAPORE"
+            "Singapore", "Brunei" -> "SINGAPORE"
+            "Malaysia" -> "JAKIM"
+            "Indonesia" -> "KEMENAG"
             "Iran" -> "TEHRAN"
             else -> "MWL"
         }

@@ -66,25 +66,7 @@ object WidgetStyles {
     /** Saves the tint and redraws that one widget on the home screen right away. */
     suspend fun apply(c: Context, id: Int, t: WidgetArt.Tint) {
         set(c, id, t)
-        runCatching {
-            val gm = androidx.glance.appwidget.GlanceAppWidgetManager(c)
-            val glanceId = gm.getGlanceIdBy(id)
-            androidx.glance.appwidget.state.updateAppWidgetState(c, EmranWidgetStateDefinition, glanceId) { it.copy(tint = t.name) }
-            widgetFor(kindOf(c, id)).update(c, glanceId)
-        }
-    }
-
-    private fun widgetFor(kind: WidgetArt.Kind): androidx.glance.appwidget.GlanceAppWidget = when (kind) {
-        WidgetArt.Kind.DAY_ARABIC -> DayArabicWidget()
-        WidgetArt.Kind.DAY_ENGLISH -> DayEnglishWidget()
-        WidgetArt.Kind.PRAYER_PROGRESS -> PrayerProgressWidget()
-        WidgetArt.Kind.PRAYER_TABLE -> PrayerTableWidget()
-        WidgetArt.Kind.NEXT_PRAYER -> NextPrayerWidget()
-        WidgetArt.Kind.HIJRI_DATE -> HijriDateWidget()
-        WidgetArt.Kind.HIJRI_MONTH -> HijriMonthWidget()
-        WidgetArt.Kind.AYAH -> AyahWidget()
-        WidgetArt.Kind.CLOCK -> ClockWidget()
-        WidgetArt.Kind.OCCASION -> OccasionWidget()
+        runCatching { WidgetUpdater.updateAllWidgets(c, intArrayOf(id)) }
     }
 
     /** Which widget an id belongs to, from its receiver. */
@@ -100,6 +82,16 @@ object WidgetStyles {
             cls.endsWith("AyahWidgetReceiver") -> WidgetArt.Kind.AYAH
             cls.endsWith("ClockWidgetReceiver") -> WidgetArt.Kind.CLOCK
             cls.endsWith("OccasionWidgetReceiver") -> WidgetArt.Kind.OCCASION
+            cls.endsWith("PrayerRowWidgetReceiver") -> WidgetArt.Kind.PRAYER_ROW
+            cls.endsWith("MonthCalligraphyWidgetReceiver") -> WidgetArt.Kind.MONTH_CALLIGRAPHY
+            cls.endsWith("MonthElegantWidgetReceiver") -> WidgetArt.Kind.MONTH_ELEGANT
+            cls.endsWith("DateCompactWidgetReceiver") -> WidgetArt.Kind.DATE_COMPACT
+            cls.endsWith("DateBannerWidgetReceiver") -> WidgetArt.Kind.DATE_BANNER
+            cls.endsWith("DualBannerWidgetReceiver") -> WidgetArt.Kind.DUAL_BANNER
+            cls.endsWith("DateClockWidgetReceiver") -> WidgetArt.Kind.DATE_CLOCK
+            cls.endsWith("CalendarWidgetReceiver") -> WidgetArt.Kind.CALENDAR
+            cls.endsWith("YearDotsWidgetReceiver") -> WidgetArt.Kind.YEAR_DOTS
+            cls.endsWith("ClockArabicWidgetReceiver") -> WidgetArt.Kind.CLOCK_ARABIC
             else -> WidgetArt.Kind.NEXT_PRAYER
         }
     }
@@ -130,9 +122,9 @@ class WidgetStyleActivity : ComponentActivity() {
                     }.getOrNull()
                 }
             }
-            val wide = kind in setOf(WidgetArt.Kind.DAY_ARABIC, WidgetArt.Kind.DAY_ENGLISH, WidgetArt.Kind.PRAYER_PROGRESS, WidgetArt.Kind.AYAH)
+            val wide = kind in setOf(WidgetArt.Kind.DAY_ARABIC, WidgetArt.Kind.DAY_ENGLISH, WidgetArt.Kind.PRAYER_PROGRESS, WidgetArt.Kind.AYAH, WidgetArt.Kind.MONTH_CALLIGRAPHY, WidgetArt.Kind.MONTH_ELEGANT, WidgetArt.Kind.YEAR_DOTS, WidgetArt.Kind.CLOCK_ARABIC, WidgetArt.Kind.CALENDAR)
             val (wDp, hDp) = when (kind) {
-                WidgetArt.Kind.DAY_ENGLISH -> 340f to 90f
+                WidgetArt.Kind.DAY_ENGLISH, WidgetArt.Kind.PRAYER_ROW, WidgetArt.Kind.DATE_BANNER, WidgetArt.Kind.DUAL_BANNER, WidgetArt.Kind.DATE_CLOCK -> 340f to 90f
                 else -> if (wide) 340f to 170f else 180f to 180f
             }
             val preview by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, state, tint) {
@@ -171,7 +163,6 @@ class WidgetStyleActivity : ComponentActivity() {
                         .clickable {
                             lifecycleScope.launch {
                                 WidgetStyles.apply(this@WidgetStyleActivity, id, tint)
-                                WorkManager.getInstance(this@WidgetStyleActivity).enqueue(OneTimeWorkRequestBuilder<EmranWidgetUpdateWorker>().build())
                                 finish()
                             }
                         },

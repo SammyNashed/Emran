@@ -414,6 +414,7 @@ fun QuranScreen(
     viewModel: QuranViewModel = viewModel(),
     onOpenReciters: () -> Unit = {},
     onOpenPlayer: () -> Unit = {},
+    onOpenSaved: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isPaginatedMode by viewModel.isPaginatedMode.collectAsState()
@@ -585,6 +586,8 @@ fun QuranScreen(
                     resumeChapter = state.chapters.find { it.id == bookmarkedChapterId },
                     khatmah = khatmah,
                     onOpenPlayer = onOpenPlayer,
+                    onOpenSaved = onOpenSaved,
+                    onOpenReciters = onOpenReciters,
                     onOpen = { chapter, ayah ->
                         hifzMode = false
                         viewModel.loadSurah(chapter, ayah)

@@ -1,5 +1,15 @@
 <resources>
     <string name="app_name">Emran</string>
+    <string name="widget_desc_prayer_row">All five prayers in one slim row</string>
+    <string name="widget_desc_month_calligraphy">The month in Arabic script over the day</string>
+    <string name="widget_desc_month_elegant">The month in elegant type over the day</string>
+    <string name="widget_desc_date_compact">The weekday, the day and the month</string>
+    <string name="widget_desc_date_banner">The full date on one line</string>
+    <string name="widget_desc_dual_banner">Both calendars side by side</string>
+    <string name="widget_desc_date_clock">The date, a live clock and the next prayer</string>
+    <string name="widget_desc_calendar">This month with today marked</string>
+    <string name="widget_desc_year_dots">The year as dots, one for every day</string>
+    <string name="widget_desc_clock_arabic">A live clock in Arabic numerals</string>
     <string name="widget_desc_day_arabic">The day in Arabic calligraphy</string>
     <string name="widget_desc_day_english">The day in elegant type</string>
     <string name="widget_desc_prayer_progress">Today\'s prayers and how far through the day you are</string>

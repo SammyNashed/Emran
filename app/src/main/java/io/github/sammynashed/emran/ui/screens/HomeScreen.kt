@@ -54,7 +54,7 @@ fun HomeScreen(
     onNavigateToTasbeeh: () -> Unit,
     onNavigateToLocation: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onOpenLibrary: () -> Unit,
+    onOpenHadith: () -> Unit,
     onOpenAdhkar: () -> Unit,
     onOpenAdhkarDetail: (String) -> Unit,
     onOpenAyah: (surah: Int, ayah: Int) -> Unit,
@@ -143,7 +143,7 @@ fun HomeScreen(
                 DoorsCard(
                     pTimes, now, ar,
                     onTasbeeh = onNavigateToTasbeeh, onAdhkar = onOpenAdhkar, onAdhkarNow = onOpenAdhkarDetail,
-                    onQibla = onNavigateToQibla, onLibrary = onOpenLibrary,
+                    onQibla = onNavigateToQibla, onHadith = onOpenHadith,
                 )
             }
         }

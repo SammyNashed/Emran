@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // A new day, a changed clock or zone, or an update: the widgets redraw now and re-arm their next change.
+        io.github.sammynashed.emran.glance.DirectWidgets.redrawAsync(this, context)
         when (intent.action) {
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 reschedule(context)

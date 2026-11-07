@@ -31,6 +31,9 @@ object QuranAudio {
     /** Off, the ayah again and again, or the surah again and again (for memorising). */
     enum class Repeat { OFF, AYAH, SURAH }
 
+    /** [Now.ayah] of a whole-surah recording, which has no ayah timings: nothing is marked on the page. */
+    const val WHOLE = -1
+
     /** The ayah sounding now (or paused on); null when nothing is loaded. */
     val state = MutableStateFlow<Now?>(null)
     val repeat = MutableStateFlow(Repeat.OFF)
@@ -65,6 +68,10 @@ object QuranAudio {
 
     /** The playlist items for one surah, from [fromAyah] to its end (Bismillah first when starting at the top). */
     private fun itemsFor(context: Context, r: Reciter, surah: Int, surahName: String, fromAyah: Int = 1) = buildList {
+        if (r.wholeSurah) { // one file, played from its start whatever ayah was asked for
+            add(item(r, surah, WHOLE, AudioStore.surahFile(context, r.id, surah), surahName))
+            return@buildList
+        }
         if (fromAyah <= 1 && surah != 1 && surah != 9) {
             val b = AudioStore.bismillahFile(context, r.id)
             if (b.exists()) add(item(r, surah, 0, b, surahName))
@@ -137,7 +144,7 @@ object QuranAudio {
         .setUri(Uri.fromFile(file))
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(if (ayah == 0) "سورة $surahName" else "سورة $surahName · $ayah")
+                .setTitle(if (ayah <= 0) "سورة $surahName" else "سورة $surahName · $ayah")
                 .setArtist(r.ar)
                 .build(),
         )
@@ -166,7 +173,11 @@ object QuranAudio {
         // From the item's id, not its uri: a controller may not be handed the uri back.
         val files = range.map { i ->
             parse(c.getMediaItemAt(i).mediaId)?.let { n ->
-                if (n.ayah == 0) AudioStore.bismillahFile(context, n.reciter) else AudioStore.ayahFile(context, n.reciter, n.surah, n.ayah)
+                when (n.ayah) {
+                    WHOLE -> AudioStore.surahFile(context, n.reciter, n.surah)
+                    0 -> AudioStore.bismillahFile(context, n.reciter)
+                    else -> AudioStore.ayahFile(context, n.reciter, n.surah, n.ayah)
+                }
             }
         }
         return withContext(Dispatchers.IO) { files.map { f -> f?.let(::lengthOf) ?: 0L } }

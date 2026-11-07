@@ -504,9 +504,7 @@ class PrayerViewModel(application: Application) : AndroidViewModel(application) 
         
         // Trigger widget update
         try {
-            androidx.work.WorkManager.getInstance(getApplication()).enqueue(
-                androidx.work.OneTimeWorkRequestBuilder<io.github.sammynashed.emran.service.EmranWidgetUpdateWorker>().build()
-            )
+            io.github.sammynashed.emran.glance.WidgetUpdater.requestRefresh(getApplication())
         } catch (e: Exception) {
             e.printStackTrace()
         }

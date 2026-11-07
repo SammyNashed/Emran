@@ -140,6 +140,18 @@ fun RecitersScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                                 if (isChosen) {
                                     Text(if (ar) "قارئك" else "Your reciter", color = sky.inkSoft, fontSize = 13.sp)
                                 }
+                                if (r.wholeSurah) {
+                                    // Say it up front: no ayah marking, and which surahs exist.
+                                    Text(
+                                        if (r.surahCount < 114) {
+                                            if (ar) "${r.surahCount} سورة · تُتلى السورة كاملة بلا تظليل للآيات"
+                                            else "${r.surahCount} surahs · plays whole surahs, no ayah marking"
+                                        } else {
+                                            if (ar) "تُتلى السورة كاملة بلا تظليل للآيات" else "Plays whole surahs, no ayah marking"
+                                        },
+                                        color = sky.inkSoft, fontSize = 12.5.sp, lineHeight = 17.sp,
+                                    )
+                                }
                             }
                             if (isChosen) {
                                 Icon(Icons.Filled.Check, contentDescription = null, tint = sky.ink)

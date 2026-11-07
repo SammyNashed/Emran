@@ -85,6 +85,11 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Holds the app in the foreground while a whole adhan (minutes long) plays, so it isn't cut off. -->
+        <service
+            android:name=".service.AdhanKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
         <service
             android:name=".service.QuranAudioService"
             android:exported="true"
@@ -143,6 +148,126 @@
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".glance.PrayerRowWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Prayer Row">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prayer_row_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.MonthCalligraphyWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Month · Arabic">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_month_calligraphy_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.MonthElegantWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Month · Elegant">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_month_elegant_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.DateCompactWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Date">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_date_compact_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.DateBannerWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Date Banner">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_date_banner_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.DualBannerWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Hijri + Gregorian">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_dual_banner_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.DateClockWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Date + Clock">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_date_clock_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.CalendarWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Calendar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_calendar_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.YearDotsWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Year Dots">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_year_dots_info" />
+        </receiver>
+
+        <receiver
+            android:name=".glance.ClockArabicWidgetReceiver"
+            android:exported="true"
+            android:label="Emran · Clock · Arabic">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_clock_arabic_info" />
+        </receiver>
 
         <receiver
             android:name=".glance.DayArabicWidgetReceiver"

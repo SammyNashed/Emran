@@ -30,7 +30,7 @@ class AudioDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
     override suspend fun doWork(): Result {
         val r = Reciters.ALL.firstOrNull { it.id == inputData.getString(KEY_RECITER) } ?: return Result.failure()
         val surahs = (inputData.getIntArray(KEY_SURAHS) ?: return Result.failure())
-            .filter { it in 1..114 && !AudioStore.isInstalled(applicationContext, r.id, it) }
+            .filter { r.has(it) && !AudioStore.isInstalled(applicationContext, r.id, it) }
         if (surahs.isEmpty()) return Result.success()
         val total = surahs.sumOf { AudioStore.AYAH_COUNT[it - 1] }
         val done = AtomicInteger(0)
