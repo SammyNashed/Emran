@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Schedule
@@ -42,6 +43,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 
 import androidx.compose.ui.graphics.Color
@@ -65,6 +68,7 @@ import io.github.sammynashed.emran.ui.design.RichRow
 import io.github.sammynashed.emran.ui.design.GlassSectionLabel
 import io.github.sammynashed.emran.ui.design.GlassSegmented
 import io.github.sammynashed.emran.ui.design.GlassTile
+import androidx.compose.animation.core.tween
 import io.github.sammynashed.emran.ui.design.LocalSky
 import io.github.sammynashed.emran.ui.design.SettingsRow
 import io.github.sammynashed.emran.ui.design.Space
@@ -83,6 +87,7 @@ fun FineTuneScreen(
     onOpenAdhanBehavior: () -> Unit = {},
     onOpenCalculation: () -> Unit = {},
     onOpenReliableAlerts: () -> Unit = {},
+    onOpenFloatingDhikr: () -> Unit = {},
 ) {
     val lang = LocalAppLanguage.current
     val context = LocalContext.current
@@ -125,6 +130,8 @@ fun FineTuneScreen(
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     var reminderDialogFor by remember { mutableStateOf<io.github.sammynashed.emran.service.AdhkarReminders.Kind?>(null) }
     var reminderVersion by remember { mutableStateOf(0) }
+    // Which card's page is open inside Settings (null = the hub).
+    var settingsPage by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = true) {
         if (reminderDialogFor != null) {
@@ -147,6 +154,8 @@ fun FineTuneScreen(
             showVersionDialog = false
         } else if (showAboutMenu) {
             showAboutMenu = false
+        } else if (settingsPage != null) {
+            settingsPage = null
         } else {
             showExitConfirmDialog = true
         }
@@ -200,217 +209,288 @@ fun FineTuneScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Space.screen)
-                // Just clear of the dock: with this, the whole page fits a normal phone with no scroll
-                // (very small screens still scroll).
-                .padding(bottom = 104.dp),
-        ) {
-            Text(
-                text = if (ar) "الإعدادات" else "Settings",
-                color = sky.ink,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 4.dp, bottom = Space.sm, start = 4.dp),
-            )
-
-            // --- Prayer ---
-            val adhanLabel = when (currentAdhanFromFlow) {
-                "AL_AQSA" -> if (ar) "المسجد الأقصى" else "Al-Aqsa"
-                "MAKKAH" -> if (ar) "مكة المكرمة" else "Makkah"
-                "MADINAH" -> if (ar) "المدينة المنورة" else "Madinah"
-                "default" -> if (ar) "صوت النظام" else "System sound"
-                "ahmad_alnafees" -> if (ar) "أحمد النفيس" else "Ahmad Alnafys"
-                "mishary_alafasy" -> if (ar) "مشاري العفاسي" else "Mishary Alafasy"
-                "saad_alghamdi" -> if (ar) "سعد الغامدي" else "Saad Alghamdy"
-                else -> adhanDisplayName(currentAdhanFromFlow, ar)
+        // Settings is a hub that never scrolls: a fixed grid of cards, each showing where it stands.
+        // New features go INSIDE a card's page, never as new rows here, so this screen always fits.
+        // (Room for 8 cards; the grid shrinks its cards rather than ever scrolling.)
+        val adhanLabel = when (currentAdhanFromFlow) {
+            "AL_AQSA" -> if (ar) "المسجد الأقصى" else "Al-Aqsa"
+            "MAKKAH" -> if (ar) "مكة المكرمة" else "Makkah"
+            "MADINAH" -> if (ar) "المدينة المنورة" else "Madinah"
+            "default" -> if (ar) "صوت النظام" else "System sound"
+            "ahmad_alnafees" -> if (ar) "أحمد النفيس" else "Ahmad Alnafys"
+            "mishary_alafasy" -> if (ar) "مشاري العفاسي" else "Mishary Alafasy"
+            "saad_alghamdi" -> if (ar) "سعد الغامدي" else "Saad Alghamdy"
+            else -> adhanDisplayName(currentAdhanFromFlow, ar)
+        }
+        val rKinds = io.github.sammynashed.emran.service.AdhkarReminders.Kind.values()
+        val fd = io.github.sammynashed.emran.service.FloatingDhikr
+        val remindersOn = reminderVersion.let { rKinds.count { io.github.sammynashed.emran.service.AdhkarReminders.isOn(context, it) } } +
+            (if (fd.isOn(context)) 1 else 0)
+        val updateValue = when {
+            updateResult is UpdateChecker.Result.Available -> if (ar) "جديد!" else "New!"
+            updateResult is UpdateChecker.Result.UpToDate -> if (ar) "محدّث" else "Up to date"
+            updateResult is UpdateChecker.Result.Offline -> if (ar) "لا اتصال" else "Offline"
+            updateResult is UpdateChecker.Result.Failed -> if (ar) "تعذّر" else "Failed"
+            else -> null
+        }
+        val waMessage = { text: String ->
+            try {
+                val url = io.github.sammynashed.emran.data.SupportContact.whatsappUrl(text)
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            } catch (e: Exception) {
+                Toast.makeText(context, if (ar) "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
             }
-            GlassSectionLabel(if (ar) "الصلاة" else "PRAYER")
-            GlassGroup(Modifier.glassEntrance(0)) {
-                SettingsRow(
-                    icon = Icons.Default.Notifications,
-                    minHeight = 50.dp,
-                    title = if (ar) "الأذان" else "Adhan",
-                    value = adhanLabel,
-                    onClick = onOpenAdhanBehavior,
-                )
-                GlassDivider()
-                SettingsRow(
-                    icon = Icons.Default.Explore,
-                    minHeight = 50.dp,
-                    title = if (ar) "طريقة الحساب" else "Calculation",
-                    value = LocationPresets.getLocalizedName(activeLocationName, lang),
-                    onClick = onOpenCalculation,
-                )
-                GlassDivider()
-                SettingsRow(
-                    icon = Icons.Default.Alarm,
-                    minHeight = 50.dp,
-                    title = if (ar) "وصول التنبيه" else "Reliable alerts",
-                    onClick = onOpenReliableAlerts,
-                    trailing = {
-                        val ok = health.allGood
-                        val dot = if (ok) Color(0xFF5BD58A) else Color(0xFFFFB74D)
-                        Box(Modifier.size(9.dp).background(dot, CircleShape))
+        }
+
+        AnimatedContent(
+            targetState = settingsPage,
+            transitionSpec = {
+                val inward = targetState != null
+                val dir = (if (inward) 1 else -1) * (if (ar) -1 else 1)
+                (slideInHorizontally(tween(320)) { w -> dir * w / 5 } + fadeIn(tween(260))) togetherWith
+                    (slideOutHorizontally(tween(320)) { w -> -dir * w / 8 } + fadeOut(tween(180)))
+            },
+            label = "settingsPage",
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            when (page) {
+                null -> Column(
+                    Modifier.fillMaxSize().padding(horizontal = Space.screen).padding(bottom = 104.dp),
+                ) {
+                    Text(
+                        text = if (ar) "الإعدادات" else "Settings",
+                        color = sky.ink,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 4.dp, bottom = Space.sm, start = 4.dp),
+                    )
+                    // The hub: two quiet groups of rows, one row per area, each saying where it stands.
+                    // Rule: at most 3 groups / 9 rows here. A new feature goes INSIDE an area's page.
+                    GlassSectionLabel(if (ar) "الصلاة" else "PRAYER")
+                    GlassGroup(Modifier.glassEntrance(0)) {
+                        SettingsRow(
+                            icon = Icons.Default.Notifications,
+                            title = if (ar) "الأذان" else "Adhan",
+                            value = adhanLabel,
+                            onClick = onOpenAdhanBehavior,
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Default.Explore,
+                            title = if (ar) "المواقيت" else "Prayer times",
+                            value = LocationPresets.getLocalizedName(activeLocationName, lang),
+                            onClick = onOpenCalculation,
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Default.Alarm,
+                            title = if (ar) "وصول التنبيه" else "Reliable alerts",
+                            onClick = onOpenReliableAlerts,
+                            trailing = {
+                                val ok = health.allGood
+                                Box(Modifier.size(8.dp).background(if (ok) Color(0xFF5BD58A) else Color(0xFFFFB74D), CircleShape))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = if (ok) (if (ar) "جاهز" else "All set") else (if (ar) "يحتاج انتباهك" else "Needs attention"),
+                                    color = sky.inkSoft, fontSize = 14.sp,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = sky.inkSoft, modifier = Modifier.size(22.dp))
+                            },
+                        )
+                    }
+
+                    Spacer(Modifier.height(Space.md))
+                    GlassSectionLabel(if (ar) "عِمران" else "EMRAN")
+                    GlassGroup(Modifier.glassEntrance(1)) {
+                        SettingsRow(
+                            icon = Icons.Outlined.NightsStay,
+                            title = if (ar) "التذكيرات" else "Reminders",
+                            value = if (remindersOn == 0) (if (ar) "متوقفة" else "Off") else (if (ar) "$remindersOn مفعّلة" else "$remindersOn on"),
+                            onClick = { settingsPage = "reminders" },
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Outlined.WbTwilight,
+                            title = if (ar) "التطبيق" else "App",
+                            value = (if (ar) "العربية" else "English") + " · " +
+                                (if (io.github.sammynashed.emran.data.TimeFormat.use24) (if (ar) "٢٤ ساعة" else "24h") else (if (ar) "١٢ ساعة" else "12h")),
+                            onClick = { settingsPage = "app" },
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Outlined.Info,
+                            title = if (ar) "المساعدة وحول" else "Help & about",
+                            onClick = { settingsPage = "help" },
+                            trailing = if (updateResult is UpdateChecker.Result.Available) ({
+                                Box(Modifier.size(8.dp).background(Color(0xFFFFB74D), CircleShape))
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (ar) "تحديث جديد" else "Update", color = sky.inkSoft, fontSize = 14.sp)
+                                Spacer(Modifier.width(6.dp))
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = sky.inkSoft, modifier = Modifier.size(22.dp))
+                            }) else null,
+                        )
+                    }
+
+                    // The quiet signature at the foot: the mark and the version, a tap opens About.
+                    Spacer(Modifier.weight(1f))
+                    Row(
+                        Modifier.fillMaxWidth().padding(bottom = Space.md)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable { showAboutMenu = true }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        io.github.sammynashed.emran.ui.design.EmranMark(22.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (ok) (if (ar) "جاهز" else "All set")
-                            else (if (ar) "يحتاج انتباهك" else "Needs attention"),
-                            color = sky.ink,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
+                            (if (ar) "عِمران " else "Emran ") + BuildConfig.VERSION_NAME,
+                            color = sky.inkSoft, fontSize = 12.sp, fontWeight = FontWeight.Medium,
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null, tint = sky.inkSoft, modifier = Modifier.size(22.dp),
-                        )
-                    },
-                )
-            }
+                    }
+                }
 
-            // --- Reminders: three tiles side by side (name and time), so Settings fits on one screen ---
-            Spacer(Modifier.height(Space.sm))
-            GlassSectionLabel(if (ar) "التذكيرات" else "REMINDERS")
-            Row(Modifier.fillMaxWidth().glassEntrance(1), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                io.github.sammynashed.emran.service.AdhkarReminders.Kind.values().forEach { kind ->
-                    val on = reminderVersion.let { io.github.sammynashed.emran.service.AdhkarReminders.isOn(context, kind) }
-                    val minute = reminderVersion.let { io.github.sammynashed.emran.service.AdhkarReminders.minute(context, kind) }
-                    GlassTile(
-                        icon = when (kind) {
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.MORNING -> Icons.Outlined.WbSunny
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.EVENING -> Icons.Outlined.NightsStay
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.KAHF -> Icons.AutoMirrored.Outlined.MenuBook
-                        },
-                        // Short in English so each fits one line; the section already says these are reminders.
-                        label = when (kind) {
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.MORNING -> if (ar) "أذكار الصباح" else "Morning"
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.EVENING -> if (ar) "أذكار المساء" else "Evening"
-                            io.github.sammynashed.emran.service.AdhkarReminders.Kind.KAHF -> if (ar) "سورة الكهف" else "Al-Kahf"
-                        },
-                        value = if (on) {
+                "reminders" -> SettingsSubPage(
+                    title = if (ar) "التذكيرات" else "Reminders",
+                    subtitle = if (ar) "تنبيهات هادئة تذكّرك بالأذكار وسورة الكهف" else "Quiet nudges for your adhkar and al-Kahf",
+                    onBack = { settingsPage = null },
+                ) {
+                    GlassGroup {
+                        rKinds.forEachIndexed { i, kind ->
+                            if (i > 0) GlassDivider()
+                            val on = reminderVersion.let { io.github.sammynashed.emran.service.AdhkarReminders.isOn(context, kind) }
+                            val minute = reminderVersion.let { io.github.sammynashed.emran.service.AdhkarReminders.minute(context, kind) }
                             val t = io.github.sammynashed.emran.data.TimeFormat.full(java.time.LocalTime.of(minute / 60, minute % 60), ar)
-                            if (kind.fridayOnly) (if (ar) "الجمعة $t" else "Fri $t") else t
-                        } else (if (ar) "متوقف" else "Off"),
-                        onClick = { reminderDialogFor = kind },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            // --- App ---
-            Spacer(Modifier.height(Space.sm))
-            GlassSectionLabel(if (ar) "التطبيق" else "APP")
-            GlassGroup(Modifier.glassEntrance(1)) {
-                SettingsRow(
-                    icon = Icons.Default.Language,
-                    minHeight = 50.dp,
-                    title = if (ar) "اللغة" else "Language",
-                    onClick = null,
-                    trailing = {
-                        GlassSegmented(
-                            options = listOf("en" to "English", "ar" to "العربية"),
-                            selectedKey = lang,
-                            onSelect = { viewModel.setCurrentLanguage(it) },
-                            modifier = Modifier.width(segW(172)),
-                        )
-                    },
-                )
-                GlassDivider()
-                SettingsRow(
-                    icon = Icons.Outlined.Schedule,
-                    minHeight = 50.dp,
-                    title = if (ar) "صيغة الوقت" else "Clock",
-                    onClick = null,
-                    trailing = {
-                        GlassSegmented(
-                            options = listOf("12" to "12", "24" to "24"),
-                            selectedKey = if (io.github.sammynashed.emran.data.TimeFormat.use24) "24" else "12",
-                            onSelect = {
-                                io.github.sammynashed.emran.data.TimeFormat.set(context, it == "24")
-                                updateScope.launch { runCatching { io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(context.applicationContext) } }
+                            SettingsRow(
+                                icon = when (kind) {
+                                    io.github.sammynashed.emran.service.AdhkarReminders.Kind.MORNING -> Icons.Outlined.WbSunny
+                                    io.github.sammynashed.emran.service.AdhkarReminders.Kind.EVENING -> Icons.Outlined.NightsStay
+                                    io.github.sammynashed.emran.service.AdhkarReminders.Kind.KAHF -> Icons.AutoMirrored.Outlined.MenuBook
+                                },
+                                minHeight = 50.dp,
+                                title = kind.title(ar),
+                                value = if (!on) (if (ar) "متوقف" else "Off") else if (kind.fridayOnly) (if (ar) "الجمعة $t" else "Fri $t") else t,
+                                onClick = { reminderDialogFor = kind },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(Space.md))
+                    GlassGroup {
+                        SettingsRow(
+                            icon = Icons.Default.Layers,
+                            minHeight = 50.dp,
+                            title = if (ar) "الذكر العائم" else "Floating dhikr",
+                            value = if (!fd.isOn(context)) (if (ar) "متوقف" else "Off") else when (fd.everyMinutes(context)) {
+                                15 -> if (ar) "كل ربع ساعة" else "Every 15 min"
+                                30 -> if (ar) "كل نصف ساعة" else "Every 30 min"
+                                60 -> if (ar) "كل ساعة" else "Every hour"
+                                120 -> if (ar) "كل ساعتين" else "Every 2 hours"
+                                else -> if (ar) "كل ٣ ساعات" else "Every 3 hours"
                             },
-                            modifier = Modifier.width(segW(132)),
+                            onClick = onOpenFloatingDhikr,
                         )
-                    },
-                )
-                GlassDivider()
-                SettingsRow(
-                    icon = Icons.Outlined.WbTwilight,
-                    minHeight = 50.dp,
-                    title = if (ar) "الخلفية" else "Background",
-                    onClick = null,
-                    trailing = {
-                        GlassSegmented(
-                            // The control lays out left to right; in Arabic the first choice belongs on the right.
-                            options = listOf("live" to (if (ar) "حيّة" else "Live"), "calm" to (if (ar) "هادئة" else "Calm"))
-                                .let { if (ar) it.reversed() else it },
-                            selectedKey = if (io.github.sammynashed.emran.ui.design.SkySettings.calm) "calm" else "live",
-                            onSelect = { io.github.sammynashed.emran.ui.design.SkySettings.set(context, it == "calm") },
-                            modifier = Modifier.width(segW(if (ar) 172 else 150)),
-                        )
-                    },
-                )
-            }
+                    }
+                }
 
-            // --- Help and About: one quiet group, the same rows as everything above ---
-            Spacer(Modifier.height(Space.sm))
-            GlassSectionLabel(if (ar) "المساعدة وحول التطبيق" else "HELP & ABOUT")
-            val waMessage = { text: String ->
-                try {
-                    val url = io.github.sammynashed.emran.data.SupportContact.whatsappUrl(text)
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                } catch (e: Exception) {
-                    Toast.makeText(context, if (ar) "فشل فتح واتساب" else "Failed to open WhatsApp", Toast.LENGTH_SHORT).show()
+                "app" -> SettingsSubPage(
+                    title = if (ar) "التطبيق" else "App",
+                    subtitle = if (ar) "اللغة وصيغة الوقت والخلفية" else "Language, clock and background",
+                    onBack = { settingsPage = null },
+                ) {
+                    GlassGroup {
+                        SettingsRow(
+                            icon = Icons.Default.Language,
+                            minHeight = 50.dp,
+                            title = if (ar) "اللغة" else "Language",
+                            onClick = null,
+                            trailing = {
+                                GlassSegmented(
+                                    options = listOf("en" to "English", "ar" to "العربية"),
+                                    selectedKey = lang,
+                                    onSelect = { viewModel.setCurrentLanguage(it) },
+                                    modifier = Modifier.width(segW(172)),
+                                )
+                            },
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Outlined.Schedule,
+                            minHeight = 50.dp,
+                            title = if (ar) "صيغة الوقت" else "Clock",
+                            onClick = null,
+                            trailing = {
+                                GlassSegmented(
+                                    options = listOf("12" to "12", "24" to "24"),
+                                    selectedKey = if (io.github.sammynashed.emran.data.TimeFormat.use24) "24" else "12",
+                                    onSelect = {
+                                        io.github.sammynashed.emran.data.TimeFormat.set(context, it == "24")
+                                        updateScope.launch { runCatching { io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(context.applicationContext) } }
+                                    },
+                                    modifier = Modifier.width(segW(132)),
+                                )
+                            },
+                        )
+                        GlassDivider()
+                        SettingsRow(
+                            icon = Icons.Outlined.WbTwilight,
+                            minHeight = 50.dp,
+                            title = if (ar) "الخلفية" else "Background",
+                            onClick = null,
+                            trailing = {
+                                GlassSegmented(
+                                    // The control lays out left to right; in Arabic the first choice belongs on the right.
+                                    options = listOf("live" to (if (ar) "حيّة" else "Live"), "calm" to (if (ar) "هادئة" else "Calm"))
+                                        .let { if (ar) it.reversed() else it },
+                                    selectedKey = if (io.github.sammynashed.emran.ui.design.SkySettings.calm) "calm" else "live",
+                                    onSelect = { io.github.sammynashed.emran.ui.design.SkySettings.set(context, it == "calm") },
+                                    modifier = Modifier.width(segW(if (ar) 172 else 150)),
+                                )
+                            },
+                        )
+                    }
                 }
-            }
-            // Short, and only once there is an answer: the version itself lives on About.
-            val updateValue = when {
-                updateResult is UpdateChecker.Result.Available -> if (ar) "جديد!" else "New!"
-                updateResult is UpdateChecker.Result.UpToDate -> if (ar) "محدّث" else "Up to date"
-                updateResult is UpdateChecker.Result.Offline -> if (ar) "لا اتصال" else "Offline"
-                updateResult is UpdateChecker.Result.Failed -> if (ar) "تعذّر" else "Failed"
-                else -> null
-            }
-            // Four small tiles in one row: everything here is a single tap, and the page stays one screen.
-            Row(Modifier.fillMaxWidth().glassEntrance(2), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Only builds that carry a contact number can send these.
-                if (io.github.sammynashed.emran.data.SupportContact.available) {
-                GlassTile(
-                    icon = Icons.Outlined.BugReport,
-                    label = if (ar) "إبلاغ" else "Report",
-                    onClick = { waMessage(if (ar) "السلام عليكم، واجهتني مشكلة في تطبيق عمران: " else "Assalamu Alaikum Sammy, I found an issue in Emran app: ") },
-                    modifier = Modifier.weight(1f),
-                )
-                GlassTile(
-                    icon = Icons.Outlined.Lightbulb,
-                    label = if (ar) "اقتراح" else "Suggest",
-                    onClick = { waMessage(if (ar) "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: ") },
-                    modifier = Modifier.weight(1f),
-                )
+
+                else -> SettingsSubPage(
+                    title = if (ar) "المساعدة وحول" else "Help & about",
+                    subtitle = if (ar) "راسلنا، حدّث التطبيق، وتعرّف على عِمران" else "Reach us, update the app, and meet Emran",
+                    onBack = { settingsPage = null },
+                ) {
+                    GlassGroup {
+                        // Only builds that carry a contact number can send these.
+                        if (io.github.sammynashed.emran.data.SupportContact.available) {
+                            SettingsRow(
+                                icon = Icons.Outlined.BugReport, minHeight = 50.dp,
+                                title = if (ar) "أبلغ عن مشكلة" else "Report a problem",
+                                onClick = { waMessage(if (ar) "السلام عليكم، واجهتني مشكلة في تطبيق عمران: " else "Assalamu Alaikum Sammy, I found an issue in Emran app: ") },
+                            )
+                            GlassDivider()
+                            SettingsRow(
+                                icon = Icons.Outlined.Lightbulb, minHeight = 50.dp,
+                                title = if (ar) "اقترح ميزة" else "Suggest a feature",
+                                onClick = { waMessage(if (ar) "السلام عليكم، أود اقتراح ميزة لتطبيق عمران: " else "Assalamu Alaikum Sammy, I would like to suggest a feature for Emran: ") },
+                            )
+                            GlassDivider()
+                        }
+                        // F-Droid builds are updated by F-Droid, so they have no update row at all.
+                        if (BuildConfig.SELF_UPDATE) {
+                            SettingsRow(
+                                icon = Icons.Outlined.SystemUpdate, minHeight = 50.dp,
+                                title = if (ar) "التحديثات" else "Updates",
+                                value = if (updateChecking) (if (ar) "تحقق…" else "Checking…") else updateValue,
+                                // Two ways to update: a small file from the channel (works on any network),
+                                // or asking online whether there is a newer version.
+                                onClick = { showUpdateChoice = true },
+                            )
+                            GlassDivider()
+                        }
+                        SettingsRow(
+                            icon = Icons.Outlined.Info, minHeight = 50.dp,
+                            title = if (ar) "حول عِمران" else "About Emran",
+                            onClick = { showAboutMenu = true },
+                        )
+                    }
                 }
-                // F-Droid builds are updated by F-Droid, so they have no update tile at all.
-                if (BuildConfig.SELF_UPDATE) GlassTile(
-                    icon = Icons.Outlined.SystemUpdate,
-                    label = when {
-                        updateChecking -> if (ar) "تحقق…" else "Checking…"
-                        updateValue != null -> updateValue
-                        else -> if (ar) "تحديث" else "Updates"
-                    },
-                    // Two ways to update: a small file from the channel (works on any network),
-                    // or asking online whether there is a newer version.
-                    onClick = { showUpdateChoice = true },
-                    modifier = Modifier.weight(1f),
-                )
-                GlassTile(
-                    icon = Icons.Outlined.Info,
-                    label = if (ar) "حول" else "About",
-                    onClick = { showAboutMenu = true },
-                    modifier = Modifier.weight(1f),
-                )
             }
         }
 
@@ -569,3 +649,21 @@ fun FineTuneScreen(
 @androidx.compose.runtime.Composable
 private fun segW(base: Int): androidx.compose.ui.unit.Dp =
     (base * (androidx.compose.ui.platform.LocalDensity.current.fontScale / 1.15f).coerceIn(1f, 1.3f)).dp
+
+
+/** A card's page inside Settings: a header with Back, then its rows (these pages may grow and scroll; the hub never does). */
+@androidx.compose.runtime.Composable
+private fun SettingsSubPage(title: String, subtitle: String?, onBack: () -> Unit, content: @androidx.compose.runtime.Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        io.github.sammynashed.emran.ui.design.ScreenHeader(
+            title = title, subtitle = subtitle, onBack = onBack,
+            modifier = Modifier.padding(horizontal = Space.screen),
+        )
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = Space.screen).padding(bottom = 120.dp),
+            content = content,
+        )
+    }
+}
+

@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
         io.github.sammynashed.emran.data.TimeFormat.ensureLoaded(this)
         runCatching { io.github.sammynashed.emran.service.BootReceiver.ensureDaily(applicationContext) }
         runCatching { io.github.sammynashed.emran.service.AdhkarReminders.scheduleAll(applicationContext) }
+        runCatching { io.github.sammynashed.emran.service.FloatingDhikr.schedule(applicationContext) }
         // Transparent bars with no contrast scrim, so the sky runs right under them.
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -193,7 +194,7 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
                             currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
                             currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
-                            currentRoute == "testers" || currentRoute == "adhan_behavior" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
+                            currentRoute == "testers" || currentRoute == "adhan_behavior" || currentRoute == "floating_dhikr" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
                             currentRoute?.startsWith("adhkar_detail/") == true ||
                             currentRoute == "hadith" || currentRoute?.startsWith("hadith_") == true || currentRoute?.startsWith("bookmarks") == true
                         SkyHost(
@@ -336,7 +337,8 @@ class MainActivity : ComponentActivity() {
                                                     onOpenAcknowledgements = { navController.navigate("testers") },
                                                     onOpenAdhanBehavior = { navController.navigate("adhan_behavior") { launchSingleTop = true } },
                                                     onOpenCalculation = { navController.navigate("calculation") { launchSingleTop = true } },
-                                                    onOpenReliableAlerts = { navController.navigate("reliable_alerts") { launchSingleTop = true } }
+                                                    onOpenReliableAlerts = { navController.navigate("reliable_alerts") { launchSingleTop = true } },
+                                                    onOpenFloatingDhikr = { navController.navigate("floating_dhikr") { launchSingleTop = true } }
                                                 )
                                             }
                                         }
@@ -491,6 +493,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable("reliable_alerts") {
                                         io.github.sammynashed.emran.ui.screens.ReliableAlertsScreen(
+                                            lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                    composable("floating_dhikr") {
+                                        io.github.sammynashed.emran.ui.screens.FloatingDhikrScreen(
                                             lang = currentLanguage,
                                             onBack = { navController.popBackStack() },
                                         )

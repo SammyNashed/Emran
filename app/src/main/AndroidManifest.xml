@@ -20,6 +20,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Haptic feedback for the tasbeeh counter and Qada incrementors. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Optional, opt-in from Settings: the floating dhikr card drawn over other apps. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Optional Recitation Check. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -122,6 +124,11 @@
 
         <receiver
             android:name=".service.AdhkarReminderReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".service.FloatingDhikrReceiver"
             android:enabled="true"
             android:exported="false" />
 

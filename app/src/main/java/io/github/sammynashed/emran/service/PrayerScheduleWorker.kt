@@ -51,6 +51,7 @@ class PrayerScheduleWorker(
 
             // The morning/evening adhkar reminders ride along with every re-arm of the adhan alarms.
             runCatching { AdhkarReminders.scheduleAll(applicationContext) }
+            runCatching { FloatingDhikr.schedule(applicationContext) }
 
             // Trigger Widget Update pipeline
             io.github.sammynashed.emran.glance.WidgetUpdater.updateAllWidgets(applicationContext)

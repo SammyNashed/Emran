@@ -21,5 +21,15 @@
                 <action android:name="io.github.sammynashed.emran.RUN_PIPELINE_CHECK" />
             </intent-filter>
         </receiver>
+
+        <!-- DEBUG ONLY. Pops one floating dhikr card over adb (see FloatingDhikrDebugReceiver). -->
+        <receiver
+            android:name=".service.FloatingDhikrDebugReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="io.github.sammynashed.emran.DEBUG_FLOAT_DHIKR" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
