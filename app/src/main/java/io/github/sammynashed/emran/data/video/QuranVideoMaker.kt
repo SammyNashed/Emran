@@ -88,7 +88,7 @@ object QuranVideoMaker {
         Explain("muyassar", "التفسير الميسر", "Muyassar (Arabic)", labelEn = "Tafsir Al-Muyassar"),
         Explain(TafsirLibrary.MUKHTASAR_AR, "المختصر في التفسير", "Mukhtasar (Arabic)", labelEn = "Tafsir Al-Mukhtasar"),
         Explain("jalalayn-ar", "تفسير الجلالين", "Jalalayn (Arabic)", labelEn = "Tafsir Al-Jalalayn"),
-        Explain(EXPLAIN_SAHEEH, "الترجمة الإنجليزية (صحيح إنترناشونال)", "Saheeh International", "Saheeh International", "Saheeh International"),
+        Explain(EXPLAIN_SAHEEH, "الترجمة الإنجليزية", "Saheeh International", "Saheeh International", "Saheeh International"),
     )
 
     class Spec(

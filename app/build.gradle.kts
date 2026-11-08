@@ -18,8 +18,8 @@ android {
     applicationId = "io.github.sammynashed.emran"
     minSdk = 24
     targetSdk = 36
-    versionCode = 13
-    versionName = "2.3.3"
+    versionCode = 14
+    versionName = "2.3.4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

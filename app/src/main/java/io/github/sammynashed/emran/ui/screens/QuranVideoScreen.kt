@@ -319,16 +319,17 @@ fun QuranVideoScreen(lang: String, startSurah: Int?, startAyah: Int?, onBack: ()
                 WorkCard(work, ar, onCancel = { job?.cancel() }, onRetry = { work = Work.Idle })
                 (work as? Work.Done)?.let { d ->
                     Row(Modifier.fillMaxWidth().padding(bottom = Space.md), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GlassButton(if (ar) "احفظ في المعرض" else "Save to gallery", {
+                        GlassButton(if (ar) "حفظ" else "Save", {
                             scope.launch {
                                 val ok = QuranVideoMaker.saveToGallery(context, d.file)
                                 Toast.makeText(context, if (ok) (if (ar) "حُفظ في المعرض (Movies/Emran)" else "Saved to the gallery (Movies/Emran)")
                                 else (if (ar) "استخدم «مشاركة» لحفظه على هذا الهاتف" else "Use Share to keep it on this phone"), Toast.LENGTH_LONG).show()
                             }
                         }, filled = true, modifier = Modifier.weight(1f))
+                        // Outlined, so it reads as a button and not a caption (elder-friendly rule: no chrome-less buttons).
                         GlassButton(if (ar) "مشاركة" else "Share", {
                             context.startActivity(QuranVideoMaker.shareIntent(context, d.file, lang))
-                        }, filled = false, modifier = Modifier.weight(1f))
+                        }, filled = false, modifier = Modifier.weight(1f).border(1.2.dp, sky.ink.copy(alpha = 0.45f), RoundedCornerShape(22.dp)))
                     }
                 }
 

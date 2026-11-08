@@ -179,7 +179,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
                     SettingsRow(
                         icon = Icons.Default.Bedtime, minHeight = 50.dp,
                         title = if (ar) "ساعات الهدوء" else "Quiet hours",
-                        value = if (quietOn) "${clock(quietStart)}–${clock(quietEnd)}" else (if (ar) "متوقف" else "Off"),
+                        value = if (quietOn) "\u2066${clock(quietStart)}–${clock(quietEnd)}\u2069" else (if (ar) "متوقف" else "Off"),
                         onClick = { showQuiet = true },
                     )
                 }
@@ -245,7 +245,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
             confirmLabel = if (ar) "تم" else "Done", onConfirm = { showQuiet = false }) {
             ChoiceRow(label = if (ar) "متوقف" else "Off", selected = !quietOn, onClick = { quietOn = false; FloatingDhikr.setQuiet(context, false, quietStart, quietEnd) })
             ChoiceRow(
-                label = "${clock(quietStart)}–${clock(quietEnd)}", selected = quietOn,
+                label = "\u2066${clock(quietStart)}–${clock(quietEnd)}\u2069", selected = quietOn,
                 sublabel = if (ar) "من وقت النوم إلى الصباح" else "From bedtime to morning",
                 onClick = { quietOn = true; FloatingDhikr.setQuiet(context, true, quietStart, quietEnd) },
             )
