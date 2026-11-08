@@ -1,0 +1,17 @@
+{
+ "versionCode": 14,
+ "versionName": "2.3.4",
+ "notes_ar": "جديد: عِمران يحدّث نفسه من الإعدادات ← المساعدة وحول ← التحديثات. جديد: اصنع فيديو قرآني من تبويب القرآن. جديد: الذكر العائم فوق التطبيقات، تختار أذكاره من صفحة الأذكار نفسها مع أذكارك الخاصة (الإعدادات ← التذكيرات). الإعدادات صارت بصفحة واحدة، وتحسينات بالواجهة الإنجليزية.",
+ "notes_en": "New: Emran updates itself (Settings → Help & about → Updates). New: make a Qur'an video from the Quran tab. New: floating dhikr over other apps, picked from the Adhkar page itself, your own adhkar included (Settings → Reminders). Settings fit on one page, plus English layout fixes.",
+ "apk": {
+  "parts": [
+   "https://emran-app.pages.dev/download/Emran-2.3.4.apk.0",
+   "https://emran-app.pages.dev/download/Emran-2.3.4.apk.1",
+   "https://emran-app.pages.dev/download/Emran-2.3.4.apk.2",
+   "https://emran-app.pages.dev/download/Emran-2.3.4.apk.3"
+  ],
+  "size": 94489464,
+  "sha256": "d8bc1248349180574d3ed720fa666d6130b8d700fd7e626c9489173ffd240ac3"
+ },
+ "patches": []
+}
