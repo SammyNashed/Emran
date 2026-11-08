@@ -110,6 +110,15 @@ h2 { font-size: 32px; line-height: 1.3; margin: 0 0 20px; font-weight: 600; text
 
 /* features */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.ic {
+  width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px;
+  color: var(--amber); background: rgba(255, 183, 77, .13); border: 1px solid rgba(255, 183, 77, .22);
+}
+.ic svg { width: 26px; height: 26px; }
+.ic-c { margin: 0 auto 12px; }
+.btn2 svg { width: 22px; height: 22px; flex: none; color: #8ecbff; }
+.card:hover .ic { transform: scale(1.06) rotate(-3deg); }
+.ic { transition: transform .3s ease; }
 .grid h3 { margin: 0 0 6px; font-size: 21px; font-weight: 600; }
 .grid p { margin: 0; color: var(--soft); font-size: 17px; line-height: 1.75; }
 
@@ -216,7 +225,7 @@ body::after {
         <span data-ar="الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث" data-en="Version {{VERSION}} · {{SIZE}} MB · Android 7 or newer">الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث</span>
       </div>
       <div class="alt">
-        <a class="btn2" href="https://t.me/emran_app" data-ar="قناة عِمران على تيليجرام" data-en="Emran on Telegram">قناة عِمران على تيليجرام</a>
+        <a class="btn2" href="https://t.me/emran_app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span data-ar="قناة عِمران على تيليجرام" data-en="Emran on Telegram">قناة عِمران على تيليجرام</span></a>
       </div>
 
       <div class="inapp" id="inapp" role="note">
@@ -245,6 +254,7 @@ body::after {
 
     <section id="updates">
       <div class="upd card">
+        <div class="ic ic-c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></div>
         <h2 data-ar="التحديثات من داخل التطبيق" data-en="Updates come from inside the app">التحديثات من داخل التطبيق</h2>
         <p data-ar="لا حاجة للرجوع إلى هنا. عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط."
            data-en="No need to come back here. When a new version is out, Emran downloads and installs it over the old one in one tap, usually just a few MB.">لا حاجة للرجوع إلى هنا. عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط.</p>
@@ -267,22 +277,22 @@ body::after {
     <section id="features">
       <h2 data-ar="ما فيه" data-en="What's inside">ما فيه</h2>
       <div class="grid">
-        <div class="card"><h3 data-ar="مواقيت الصلاة والأذان" data-en="Prayer times and adhan">مواقيت الصلاة والأذان</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><h3 data-ar="مواقيت الصلاة والأذان" data-en="Prayer times and adhan">مواقيت الصلاة والأذان</h3>
           <p data-ar="حساب المواقيت دون إنترنت لأي مكان، بسبع عشرة طريقة حساب معتمدة، وعصر شافعي أو حنفي، وضبط كل صلاة بالدقائق."
              data-en="Offline times for anywhere, seventeen published conventions, Shafi'i or Hanafi Asr, and per-prayer fine-tuning.">حساب المواقيت دون إنترنت لأي مكان، بسبع عشرة طريقة حساب معتمدة، وعصر شافعي أو حنفي، وضبط كل صلاة بالدقائق.</p></div>
-        <div class="card"><h3 data-ar="القرآن الكريم" data-en="Qur'an">القرآن الكريم</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></div><h3 data-ar="القرآن الكريم" data-en="Qur'an">القرآن الكريم</h3>
           <p data-ar="صفحة مصحف المدينة بخط مجمع الملك فهد، والبحث بالكلمات أو برقم الآية، واضغط على أي آية لترى تفسيرها."
              data-en="The Madinah mushaf page in the King Fahd Complex's font, search by words or reference, and tap any ayah for its meaning.">صفحة مصحف المدينة بخط مجمع الملك فهد، والبحث بالكلمات أو برقم الآية، واضغط على أي آية لترى تفسيرها.</p></div>
-        <div class="card"><h3 data-ar="وضع الحفظ" data-en="Hifz mode">وضع الحفظ</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></div><h3 data-ar="وضع الحفظ" data-en="Hifz mode">وضع الحفظ</h3>
           <p data-ar="اقرأ من حفظك وتظهر الكلمات كلما قرأتها. يُفحص الصوت على الهاتف نفسه، ولا يخرج صوتك من جهازك أبدًا."
              data-en="Recite from memory and the words reveal themselves as you say them. Checked on the phone; your voice never leaves it.">اقرأ من حفظك وتظهر الكلمات كلما قرأتها. يُفحص الصوت على الهاتف نفسه، ولا يخرج صوتك من جهازك أبدًا.</p></div>
-        <div class="card"><h3 data-ar="القبلة" data-en="Qibla">القبلة</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg></div><h3 data-ar="القبلة" data-en="Qibla">القبلة</h3>
           <p data-ar="بوصلة مع تصحيح الانحراف المغناطيسي، وعرض اختياري بالكاميرا تظهر فيه الكعبة باتجاه القبلة."
              data-en="A compass with magnetic declination correction, plus an optional camera view with the Kaaba in the Qibla direction.">بوصلة مع تصحيح الانحراف المغناطيسي، وعرض اختياري بالكاميرا تظهر فيه الكعبة باتجاه القبلة.</p></div>
-        <div class="card"><h3 data-ar="المسبحة والأذكار والحديث" data-en="Masbaha, adhkar and hadith">المسبحة والأذكار والحديث</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="3.6" r="1.9"/><circle cx="17.6" cy="6.4" r="1.9"/><circle cx="18.6" cy="12.4" r="1.9"/><circle cx="5.4" cy="12.4" r="1.9"/><circle cx="6.4" cy="6.4" r="1.9"/><path d="M8 16.5c1 1.4 2.4 2 4 2s3-.6 4-2"/><path d="M12 18.5V22"/></svg></div><h3 data-ar="المسبحة والأذكار والحديث" data-en="Masbaha, adhkar and hadith">المسبحة والأذكار والحديث</h3>
           <p data-ar="مسبحة بخيط من ٣٣ حبة، وأذكار الصباح والمساء وحصن المسلم، والأحاديث الصحيحة فقط."
              data-en="A masbaha with a string of 33 beads, morning and evening adhkar and Hisn al-Muslim, and sahih hadith only.">مسبحة بخيط من ٣٣ حبة، وأذكار الصباح والمساء وحصن المسلم، والأحاديث الصحيحة فقط.</p></div>
-        <div class="card"><h3 data-ar="بلا مقابل، ابتغاء وجه الله" data-en="Free, for the sake of Allah">بلا مقابل، ابتغاء وجه الله</h3>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><h3 data-ar="بلا مقابل، ابتغاء وجه الله" data-en="Free, for the sake of Allah">بلا مقابل، ابتغاء وجه الله</h3>
           <p data-ar="لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. كل شيء يعمل دون إنترنت."
              data-en="No account, no ads, no analytics, no subscriptions. Everything works with no internet.">لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. كل شيء يعمل دون إنترنت.</p></div>
       </div>
@@ -369,14 +379,26 @@ body::after {
       el.classList.add('reveal'); el.style.setProperty('--d', Math.min(i, 6) * 0.08 + 's'); items.push(el);
     });
   });
-  if ('IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
-    items.forEach(function (el) { io.observe(el); });
-  } else {
-    items.forEach(function (el) { el.classList.add('in'); });
+  // Plain scroll check (works in every browser, ~20 elements): reveal what is on screen.
+  var ticking = false;
+  function check() {
+    ticking = false;
+    var h = window.innerHeight || document.documentElement.clientHeight;
+    items = items.filter(function (el) {
+      if (el.getBoundingClientRect().top < h * 0.92) {
+        el.classList.add('in');
+        // Done fading: drop the reveal styles so hover effects work again.
+        setTimeout(function () { el.classList.remove('reveal', 'in'); }, 1700);
+        return false;
+      }
+      return true;
+    });
+    if (!items.length) { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); }
   }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(check); } }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  check();
   // Instagram, Facebook, TikTok, Snapchat and similar in-app browsers can't download files.
   if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|Snapchat|Twitter/i.test(navigator.userAgent)) {
     document.getElementById('inapp').classList.add('show');
