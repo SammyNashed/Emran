@@ -18,15 +18,15 @@
 :root { --ink: #f6f3ea; --soft: rgba(246, 243, 234, .8); --amber: #ffb74d; --on: #1a1206; --panel: rgba(255, 255, 255, .065); --deep: #060a1c; --bar: #141a3d; --W: 320px; --tg: 76px; --T: 300px; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body { margin: 0; font-family: "Readex Pro", system-ui, sans-serif; font-size: 20px; line-height: 1.6; color: var(--ink); background: #0a1230; overflow-x: clip; }
+body { margin: 0; font-family: "Readex Pro", system-ui, sans-serif; font-size: 20px; line-height: 1.6; color: var(--ink); overflow-x: clip; }
 a { color: inherit; }
 h1, h2, p, ul, ol { margin: 0; padding: 0; }
 ul, ol { list-style: none; }
 img { display: block; max-width: 100%; height: auto; }
 :focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
 
-#sky { position: fixed; inset: 0; z-index: -2; background: #0a1230; }
-#sky i { position: absolute; inset: 0; opacity: 0; }
+html { background: #0a1230; }
+body { background: linear-gradient(180deg, #0a1230 0%, #0d1a3e 22%, #142c55 42%, #23305e 60%, #3d2c5a 78%, #6a3542 92%, #7d3b2c 100%); min-height: 100vh; }
 #stars { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .7; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520' fill='white'%3E%3Ccircle cx='62' cy='94' r='1.1'/%3E%3Ccircle cx='198' cy='332' r='.8'/%3E%3Ccircle cx='369' cy='140' r='1.3'/%3E%3Ccircle cx='447' cy='406' r='.8'/%3E%3Ccircle cx='286' cy='47' r='1'/%3E%3Ccircle cx='125' cy='458' r='.9'/%3E%3C/svg%3E"); animation: twinkle 7s ease-in-out infinite; }
 @keyframes twinkle { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
 
@@ -95,7 +95,10 @@ section { padding: 130px 22px; }
 h2.t { font-size: clamp(36px, 5.2vw, 76px); line-height: 1.16; font-weight: 600; letter-spacing: -.01em; }
 #widgets { padding-bottom: 60px; }
 #widgets p { font-size: 24px; margin: 12px 0 34px; }
-#widgets img { width: 100%; border-radius: 34px; }
+#widgets img.wfull { width: 100%; border-radius: 34px; }
+.wgrid { display: none; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wgrid img { width: 100%; }
+.wgrid .w2 { grid-column: span 2; }
 #install .wrap { display: grid; grid-template-columns: 5fr 7fr; gap: 60px; align-items: start; }
 #install .get { margin-top: 28px; }
 #install ol { counter-reset: s; display: grid; gap: 34px; }
@@ -106,7 +109,6 @@ h2.t { font-size: clamp(36px, 5.2vw, 76px); line-height: 1.16; font-weight: 600;
 #install li.plain { display: block; counter-increment: none; }
 #install li.plain::before { content: none; }
 .note { font-size: 20px; color: var(--soft); }
-#updates { background: rgba(6, 10, 28, .34); }
 #updates .wrap { display: grid; grid-template-columns: 7fr 5fr; gap: 60px; align-items: end; }
 #updates p { font-size: 24px; line-height: 1.55; }
 .path { display: flex; align-items: center; gap: 12px; margin-top: 18px; font-size: 20px; font-weight: 500; }
@@ -118,8 +120,13 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 .links a { display: inline-flex; align-items: center; min-height: 44px; text-underline-offset: 4px; }
 
 @media (max-width: 899px) {
-  .steps article { grid-template-columns: 1fr; gap: 24px; }
-  .sp { width: min(300px, 74vw); margin: auto; }
+  .steps article { grid-template-columns: 1fr; gap: 26px; padding: 64px 20px; }
+  .l h2 { font-size: 36px; }
+  .sp { width: min(330px, 80vw); margin: 4px auto; border-radius: 38px; padding: 10px; }
+  .sp img { border-radius: 29px; }
+  .r { gap: 20px; }
+  .wfull { display: none; }
+  .wgrid { display: grid; }
   section { padding: 84px 20px; }
   #install .wrap, #updates .wrap { grid-template-columns: 1fr; gap: 32px; }
   .bar .lang { padding: 0 9px; }
@@ -135,7 +142,6 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 </style>
 </head>
 <body>
-<div id="sky" aria-hidden="true"><i style="background:#0f2a4c"></i><i style="background:#14505f"></i><i style="background:#3a2b5c"></i><i style="background:#7a3b2c"></i></div>
 <div id="stars" aria-hidden="true"></div>
 
 <header class="bar">
@@ -197,7 +203,8 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 <section id="widgets"><div class="wrap">
   <h2 class="t" data-ar="عشرون أداة لشاشتك" data-en="Twenty widgets for your home screen">عشرون أداة لشاشتك</h2>
   <span data-ar="الصلاة القادمة، وصلوات اليوم، والتاريخ الهجري، وآية اليوم." data-en="The next prayer, the day&#x27;s prayers, the Hijri date and the ayah of the day.">الصلاة القادمة، وصلوات اليوم، والتاريخ الهجري، وآية اليوم.</span>
-  <img src="img/widgets.webp" alt="أدوات عمران على الشاشة الرئيسية" width="1200" height="592" decoding="async">
+  <img class="wfull" src="img/widgets.webp" alt="أدوات عمران على الشاشة الرئيسية" width="1200" height="592" decoding="async">
+  <div class="wgrid"><img src="img/w-ring.webp" alt="" decoding="async" loading="lazy"><img src="img/w-list.webp" alt="" decoding="async" loading="lazy"><img src="img/w-ayah.webp" alt="" class="w2" decoding="async" loading="lazy"><img src="img/w-cal.webp" alt="" decoding="async" loading="lazy"><img src="img/w-ramadan.webp" alt="" decoding="async" loading="lazy"><img src="img/w-fajr.webp" alt="" class="w2" decoding="async" loading="lazy"><img src="img/w-day.webp" alt="" class="w2" decoding="async" loading="lazy"><img src="img/w-nov.webp" alt="" class="w2" decoding="async" loading="lazy"><img src="img/w-banner.webp" alt="" class="w2" decoding="async" loading="lazy"><img src="img/w-row.webp" alt="" class="w2" decoding="async" loading="lazy"></div>
 </div></section>
 
 <section id="install"><div class="wrap">
@@ -268,8 +275,8 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 
   // Later sections rise in as they arrive, the parts of each one slightly staggered.
   var items = [];
-  document.querySelectorAll('section .wrap').forEach(function (w) {
-    w.querySelectorAll('h2, p, li, .get, .path, img').forEach(function (el, i) {
+  document.querySelectorAll('section .wrap, #steps article').forEach(function (w) {
+    w.querySelectorAll('h2, p, li, .get, .path, img, .sp').forEach(function (el, i) {
       el.classList.add('rv'); el.style.setProperty('--d', Math.min(i, 6) * 0.08 + 's'); items.push(el);
     });
   });
@@ -287,7 +294,10 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 
   // The pinned story: one sticky stage carries the hero, the fan of phones and the panels.
   // With reduced motion the page stays a plain stack of sections, which is also the no-script page.
-  var pin = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Pinned only where the screen is big enough for the panels AND a whole phone; phones get the stack.
+  var pin = !window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.innerWidth >= 900 && window.innerHeight >= 600;
+  var wasWide = window.innerWidth >= 900;
+  addEventListener('resize', function () { if ((window.innerWidth >= 900) !== wasWide) location.reload(); });
   if (!pin) {
     addEventListener('scroll', reveal, { passive: true }); reveal();
     return;
