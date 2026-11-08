@@ -147,7 +147,7 @@ private fun shareText(book: HadithBook?, lang: String, h: Hadith): String = buil
 
 /** "Sunan Ibn Majah · 1234 · Sahih · Al-Albani". The number and grade appear only when they are known. */
 private fun sourceLine(book: HadithBook?, lang: String, h: Hadith): String =
-    listOfNotNull(book?.title(lang), h.ref.ifBlank { null }, h.gradeLabel(lang)).joinToString(" · ")
+    listOfNotNull(book?.shortTitle(lang), h.ref.ifBlank { null }, h.gradeLabel(lang)).joinToString(" · ")
 
 private fun copyToClipboard(context: Context, text: String) {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -229,7 +229,7 @@ fun HadithLibraryScreen(
                     )
                 }
                 if (last != null) item(span = { full() }) {
-                    val bookName = HadithLibrary.book(context, last.first)?.title(lang) ?: ""
+                    val bookName = HadithLibrary.book(context, last.first)?.shortTitle(lang) ?: ""
                     EntryChip(
                         icon = Icons.Default.Bookmark,
                         label = (if (lang == "ar") "تابع القراءة · " else "Continue · ") + bookName +
@@ -345,7 +345,9 @@ private fun HadithBookCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 150.dp)
+            // English: tall enough for a two-line name plus "Sahih selection" and the count, so every
+            // card matches ("Sunan Abi Dawud" wraps, "Jami' at-Tirmidhi" doesn't). Arabic always fits 150.
+            .heightIn(min = if (lang == "ar") 150.dp else 186.dp)
             .glassSurface(24.dp)
             .clickable(enabled = installed || state !is PackState.Downloading) {
                 if (installed) onClick() else onDownload()
@@ -358,8 +360,11 @@ private fun HadithBookCard(
         ) {
             Icon(Icons.Default.MenuBook, contentDescription = null, tint = accent, modifier = Modifier.size(40.dp))
             Spacer(Modifier.height(12.dp))
+            // In English "Sahih selection from Jami' at-Tirmidhi" can't fit a half-width card, so the
+            // card shows the book's own name and moves "Sahih selection" to the small line under it.
+            val selection = lang != "ar" && book.isSelection
             Text(
-                text = book.title(lang),
+                text = book.shortTitle(lang),
                 color = if (installed) LocalSky.current.ink else LocalSky.current.inkSoft,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -371,7 +376,7 @@ private fun HadithBookCard(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = subtitle,
+                text = if (selection) "Sahih selection\n$subtitle" else subtitle,
                 color = LocalSky.current.inkSoft,
                 fontSize = 11.sp,
                 maxLines = 2,
@@ -455,8 +460,8 @@ fun HadithBookScreen(bookId: String, onBack: () -> Unit, onOpenChapter: (Int) ->
     HadithRoot(lang) {
         Column(Modifier.fillMaxSize()) {
             HadithTopBar(
-                title = book?.title(lang) ?: "",
-                subtitle = book?.let { countLabel(it.hadiths, lang) },
+                title = book?.shortTitle(lang) ?: "",
+                subtitle = book?.let { (if (lang != "ar" && it.isSelection) "Sahih selection · " else "") + countLabel(it.hadiths, lang) },
                 onBack = onBack
             )
             val chapters = pack?.chapters
@@ -556,7 +561,7 @@ fun HadithChapterScreen(bookId: String, chapterId: Int, focusNumber: Int?, onBac
             val chapterTitle = chapterInfo?.title(lang) ?: ""
             HadithTopBar(
                 title = chapterTitle,
-                subtitle = book?.title(lang)?.takeIf { it != chapterTitle },
+                subtitle = book?.shortTitle(lang)?.takeIf { it != chapterTitle },
                 onBack = onBack
             )
             val list = hadiths
@@ -836,7 +841,7 @@ fun HadithSearchScreen(
                         val book = HadithLibrary.book(context, hit.bookId)
                         val showArabic = lang == "ar" || arabicQuery || hit.hadith.english.isBlank()
                         ResultCard(
-                            title = listOfNotNull(book?.title(lang) ?: hit.bookId, hit.hadith.ref.ifBlank { null }).joinToString(" · "),
+                            title = listOfNotNull(book?.shortTitle(lang) ?: hit.bookId, hit.hadith.ref.ifBlank { null }).joinToString(" · "),
                             body = if (showArabic) AnnotatedString(hit.hadith.arabic)
                             else highlight(hit.hadith.english, words, LocalSky.current.ink),
                             arabic = showArabic,

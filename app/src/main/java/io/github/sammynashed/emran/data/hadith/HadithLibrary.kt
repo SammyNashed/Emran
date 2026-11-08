@@ -22,6 +22,19 @@ data class HadithBook(
     val sha256: String
 ) {
     fun title(lang: String) = if (lang == "ar") titleAr else titleEn
+
+    /** One of the Sunan, kept only where its hadith are sahih ("Sahih selection from Sunan Abi Dawud"). */
+    val isSelection: Boolean get() = titleEn.startsWith(SELECTION_PREFIX_EN)
+
+    /**
+     * The name for tight places (headers, chips, citations). In English the selections drop
+     * "Sahih selection from ", which no header or half-width card can fit; Arabic is unchanged.
+     */
+    fun shortTitle(lang: String) = if (lang == "ar") titleAr else titleEn.removePrefix(SELECTION_PREFIX_EN)
+
+    companion object {
+        const val SELECTION_PREFIX_EN = "Sahih selection from "
+    }
 }
 
 class HadithHit(val bookId: String, val chapter: HadithChapter, val hadith: Hadith)

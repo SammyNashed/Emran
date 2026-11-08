@@ -211,7 +211,8 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
                         icon = Icons.Default.WbTwilight,
                         minHeight = 50.dp,
                         title = if (ar) "صوت الفجر" else "Fajr sound",
-                        value = if (fajrCall != null) "«الصلاة خير من النوم»" else (if (ar) "الأذان" else "The adhan"),
+                        // The whole English phrase wraps and pushes the arrow out; the dialog spells it out in full.
+                        value = if (fajrCall != null) (if (ar) "«الصلاة خير من النوم»" else "“Better than sleep”") else (if (ar) "الأذان" else "The adhan"),
                         onClick = { showFajrSound = true },
                     )
                     GlassDivider()
@@ -282,7 +283,7 @@ fun AdhanBehaviorScreen(viewModel: PrayerViewModel, lang: String, onBack: () -> 
             )
             AdhanPolicy.TATHWEEB_VOICES.filter { AdhanPolicy.tathweebUri(context, it) != null }.forEach { v ->
                 ChoiceRow(
-                    label = "«الصلاة خير من النوم»", selected = fajrCall == v,
+                    label = if (ar) "«الصلاة خير من النوم»" else "“Prayer is better than sleep”", selected = fajrCall == v,
                     sublabel = adhanDisplayName(v, ar),
                     onClick = { fajrCall = v; AdhanPolicy.setFajrTathweebVoice(context, v) },
                 )

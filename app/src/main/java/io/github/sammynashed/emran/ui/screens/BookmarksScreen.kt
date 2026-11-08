@@ -131,7 +131,7 @@ fun BookmarksScreen(
                 is Bookmark.HadithRef -> {
                     val h = HadithLibrary.hadith(context, b.bookId, b.chapterId, b.number)
                     val book = HadithLibrary.book(context, b.bookId)
-                    val title = listOfNotNull(book?.title(lang) ?: b.bookId, h?.ref?.ifBlank { null }).joinToString(" · ")
+                    val title = listOfNotNull(book?.shortTitle(lang) ?: b.bookId, h?.ref?.ifBlank { null }).joinToString(" · ")
                     hadith += if (h == null) {
                         // It left the library: only sahih hadith stay, and some books wait for review. Say so, rather than dropping it silently.
                         SavedItem(
