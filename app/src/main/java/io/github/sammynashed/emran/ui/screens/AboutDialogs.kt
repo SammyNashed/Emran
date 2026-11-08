@@ -353,10 +353,6 @@ fun UpdateDialog(
             dismissLabel = if (ar) "لاحقًا" else "Later",
         ) {
             if (found.notes.isNotBlank()) Body(found.notes)
-            Fine(
-                if (ar) "يُنزَّل التحديث ويُثبَّت فوق النسخة الحالية، وبياناتك تبقى كما هي."
-                else "The update downloads and installs over this version. Your data stays as it is.",
-            )
         }
     }
 }

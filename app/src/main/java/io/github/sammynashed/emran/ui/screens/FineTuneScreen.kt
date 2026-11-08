@@ -123,9 +123,6 @@ fun FineTuneScreen(
     val updateScope = rememberCoroutineScope()
     var showExitConfirmDialog by remember { mutableStateOf(false) }
     var showUpdateChoice by remember { mutableStateOf(false) }
-    val pickUpdateFile = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
-    ) { uri -> if (uri != null) io.github.sammynashed.emran.data.update.PatchUpdate.incoming.value = uri }
 
     val formatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
     var reminderDialogFor by remember { mutableStateOf<io.github.sammynashed.emran.service.AdhkarReminders.Kind?>(null) }
@@ -478,8 +475,7 @@ fun FineTuneScreen(
                                 icon = Icons.Outlined.SystemUpdate, minHeight = 50.dp,
                                 title = if (ar) "التحديثات" else "Updates",
                                 value = if (updateChecking) (if (ar) "تحقق…" else "Checking…") else updateValue,
-                                // Two ways to update: a small file from the channel (works on any network),
-                                // or asking online whether there is a newer version.
+                                // Asks Emran's site for a newer version; an .emran file opened from Telegram still works on its own.
                                 onClick = { showUpdateChoice = true },
                             )
                             GlassDivider()
@@ -564,12 +560,6 @@ fun FineTuneScreen(
             subtitle = (if (ar) "الإصدار الحالي " else "You have ") + "v${BuildConfig.VERSION_NAME}",
             dismissLabel = if (ar) "إغلاق" else "Close",
         ) {
-            Text(
-                if (ar) "عِمران يحدّث نفسه: اضغط «تحقّق من التحديثات»، وإن وُجد إصدار أحدث يُنزَّل ويُثبَّت فوق هذا. وإن كان معك ملف تحديث (‎.emran‎) من القناة يمكنك تثبيته من هنا."
-                else "Emran updates itself: tap \"Check for updates\", and if there is a newer version it downloads and installs over this one. If you have an update file (.emran) from the channel, you can install it here.",
-                color = sky.inkSoft, fontSize = 14.sp, lineHeight = 21.sp,
-            )
-            Spacer(Modifier.height(14.dp))
             io.github.sammynashed.emran.ui.design.GlassButton(
                 label = if (updateChecking) (if (ar) "جارٍ التحقق…" else "Checking…") else (if (ar) "تحقّق من التحديثات" else "Check for updates"),
                 onClick = {
@@ -592,13 +582,6 @@ fun FineTuneScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
-            io.github.sammynashed.emran.ui.design.GlassButton(
-                label = if (ar) "تثبيت ملف تحديث" else "Install an update file",
-                onClick = { showUpdateChoice = false; pickUpdateFile.launch(arrayOf("*/*")) },
-                filled = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(4.dp))
             io.github.sammynashed.emran.ui.design.GlassButton(
                 label = if (ar) "افتح القناة" else "Open the channel",
                 onClick = { showUpdateChoice = false; io.github.sammynashed.emran.data.update.UpdateChecker.openChannel(context) },
