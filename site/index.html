@@ -141,7 +141,7 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 <header class="bar">
   <a class="brand" href="./"><img src="img/icon.svg" alt="" width="32" height="32"><span data-ar="عِمران" data-en="Emran">عِمران</span></a>
   <button class="lang" id="lang" type="button" aria-label="Switch language">English</button>
-  <a class="get" href="{{FALLBACK}}" download="Emran.apk"><span data-ar="حمّل" data-en="Download">حمّل</span></a>
+  <a class="get" href="Emran.apk" download="Emran.apk"><span data-ar="حمّل" data-en="Download">حمّل</span></a>
 </header>
 
 <div class="inapp" id="inapp" role="note">
@@ -155,7 +155,7 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
     <div class="hero" id="hero">
       <h1 data-ar="رفيقك في الصلاة والقرآن" data-en="Your companion for prayer and Qur&#x27;an">رفيقك في الصلاة والقرآن</h1>
       <p class="sub" data-ar="مواقيت الصلاة والمصحف والأذكار والحديث، مجانًا وبلا إعلانات." data-en="Prayer times, the mushaf, adhkar and hadith. Free, with no ads.">مواقيت الصلاة والمصحف والأذكار والحديث، مجانًا وبلا إعلانات.</p>
-      <a class="get big" href="{{FALLBACK}}" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
+      <a class="get big" href="Emran.apk" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
       <div class="meta"><span data-ar="الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث" data-en="Version {{VERSION}} · {{SIZE}} MB · Android 7 or newer">الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث</span><a href="https://t.me/emran_app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span data-ar="قناة تيليجرام" data-en="Telegram channel">قناة تيليجرام</span></a></div>
     </div>
     <div class="pan a" id="pa"></div>
@@ -203,7 +203,7 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
 <section id="install"><div class="wrap">
   <div>
     <h2 class="t" data-ar="التثبيت بثلاث خطوات" data-en="Install in three steps">التثبيت بثلاث خطوات</h2>
-    <a class="get big" href="{{FALLBACK}}" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
+    <a class="get big" href="Emran.apk" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
   </div>
   <ol>
     <li><div><b data-ar="اضغط «حمّل عِمران»" data-en="Tap “Download Emran”">اضغط «حمّل عِمران»</b><span data-ar="وانتظر حتى ينتهي التنزيل. إن سألك الهاتف عن الاحتفاظ بالملف، اختر «تنزيل» أو «احتفاظ»." data-en="Wait for the download to finish. If your phone asks whether to keep the file, choose “Download” or “Keep”.">وانتظر حتى ينتهي التنزيل. إن سألك الهاتف عن الاحتفاظ بالملف، اختر «تنزيل» أو «احتفاظ».</span></div></li>
@@ -259,52 +259,6 @@ footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; f
     lang = root.lang === 'ar' ? 'en' : 'ar';
     apply(lang);
     try { localStorage.setItem('lang', lang); } catch (e) {}
-  });
-
-  // The APK sits on Cloudflare in pieces (each file there must be under 25 MB). Fetch them in
-  // order, join them into one Emran.apk and hand it to the browser to save. Anything missing
-  // (an old browser, a failed piece) falls back to the single file on GitHub, the link's href.
-  var parts = {{PARTS}}, busy = false, labels = document.querySelectorAll('.lbl'), fallback = '{{FALLBACK}}';
-  function say(ar, en) { labels.forEach(function (l) { l.textContent = root.lang === 'ar' ? ar : en; }); }
-  function reset() { labels.forEach(function (l) { l.textContent = l.getAttribute('data-' + root.lang); }); }
-  document.querySelectorAll('a.get').forEach(function (dl) {
-    dl.addEventListener('click', function (e) {
-      if (!window.fetch || !window.Blob || !window.URL || !parts.length || !window.ReadableStream) return;
-      e.preventDefault();
-      if (busy) return;
-      busy = true;
-      var total = {{BYTES}}, got = 0, chunks = [];
-      function pct() { var p = Math.min(99, Math.floor(got * 100 / total)); say('جارٍ التنزيل… ' + p + '٪', 'Downloading… ' + p + '%'); }
-      pct();
-      parts.reduce(function (chain, url) {
-        return chain.then(function () {
-          return fetch(url).then(function (r) {
-            if (!r.ok) throw new Error(r.status);
-            var reader = r.body.getReader();
-            function pump() {
-              return reader.read().then(function (x) {
-                if (x.done) return;
-                chunks.push(x.value); got += x.value.length; pct();
-                return pump();
-              });
-            }
-            return pump();
-          });
-        });
-      }, Promise.resolve()).then(function () {
-        if (got !== total) throw new Error('size');
-        var blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
-        chunks = [];
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'Emran.apk';
-        document.body.appendChild(a); a.click(); a.remove();
-        say('تم التنزيل، افتح الملف', 'Downloaded. Open the file');
-        busy = false;
-      }).catch(function () {
-        busy = false; chunks = []; reset();
-        location.href = fallback;
-      });
-    });
   });
 
   // Instagram, Facebook, TikTok, Snapchat and similar in-app browsers can't download files.
