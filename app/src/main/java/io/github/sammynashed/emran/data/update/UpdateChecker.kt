@@ -19,7 +19,7 @@ import java.security.MessageDigest
  * Everything lives on Emran's site (GitHub Pages), which loads in Syria without a VPN, unlike
  * GitHub's release downloads. One small file says what is newest and how to get there:
  *   { "versionCode": 15, "versionName": "2.3.5", "notes_ar": "...", "notes_en": "...",
- *     "apks": { "arm64-v8a": { "url": "../download/Emran.apk", "size": 81000000, "sha256": "..." },
+ *     "apks": { "arm64-v8a": { "parts": ["https://.../Emran.apk.0", "..."], "size": 81000000, "sha256": "..." },
  *               "armeabi-v7a": { ... } },
  *     "patches": [ { "url": "Emran-2.3.4-to-2.3.5.emran", "size": 9000000,
  *                    "fromSha256": "...", "toSha256": "...", "toVersionCode": 15 } ] }
@@ -53,8 +53,12 @@ object UpdateChecker {
         return false
     }
 
-    /** One file to fetch: where it is and how big. [sha256] is checked for full APKs (patches carry their own). */
-    data class Remote(val url: String, val size: Long, val sha256: String? = null)
+    /**
+     * One file to fetch: where it is and how big. [sha256] is checked for full APKs (patches carry
+     * their own). A big file can come in [parts] (hosts cap each file at ~25 MB): they are joined
+     * in order into one file, and [size]/[sha256] are for the joined whole.
+     */
+    data class Remote(val url: String, val size: Long, val sha256: String? = null, val parts: List<String> = listOf(url))
 
     /** How to get to the newest version: a chain of small patches, or the whole app. */
     sealed interface Plan {
@@ -123,7 +127,9 @@ object UpdateChecker {
         val apks = json.optJSONObject("apks")
         val apk = android.os.Build.SUPPORTED_ABIS.firstNotNullOfOrNull { apks?.optJSONObject(it) }
             ?: json.optJSONObject("apk") ?: return null
-        return Plan.FullApk(Remote(resolve(apk.getString("url")), apk.optLong("size"), apk.optString("sha256").ifBlank { null }))
+        val parts = apk.optJSONArray("parts")?.let { a -> (0 until a.length()).map { resolve(a.getString(it)) } }
+        val url = parts?.firstOrNull() ?: resolve(apk.getString("url"))
+        return Plan.FullApk(Remote(url, apk.optLong("size"), apk.optString("sha256").ifBlank { null }, parts ?: listOf(url)))
     }
 
     /**
@@ -139,29 +145,31 @@ object UpdateChecker {
         try {
             remotes.forEachIndexed { i, r ->
                 val f = File(dir, if (plan is Plan.FullApk) "download.apk" else "step-$i.emran")
-                val conn = (URL(r.url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 15_000
-                    readTimeout = 30_000
-                    instanceFollowRedirects = true
-                }
-                try {
-                    if (conn.responseCode != HttpURLConnection.HTTP_OK) error("HTTP ${conn.responseCode}")
-                    val digest = MessageDigest.getInstance("SHA-256")
-                    conn.inputStream.use { input ->
-                        f.outputStream().buffered(1 shl 16).use { o ->
-                            val buf = ByteArray(1 shl 16)
-                            while (true) {
-                                val n = input.read(buf); if (n < 0) break
-                                o.write(buf, 0, n); digest.update(buf, 0, n); done += n
-                                progress((done.toFloat() / total).coerceIn(0f, 1f))
+                val digest = MessageDigest.getInstance("SHA-256")
+                f.outputStream().buffered(1 shl 16).use { o ->
+                    for (part in r.parts) {
+                        val conn = (URL(part).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 15_000
+                            readTimeout = 30_000
+                            instanceFollowRedirects = true
+                        }
+                        try {
+                            if (conn.responseCode != HttpURLConnection.HTTP_OK) error("HTTP ${conn.responseCode}")
+                            conn.inputStream.use { input ->
+                                val buf = ByteArray(1 shl 16)
+                                while (true) {
+                                    val n = input.read(buf); if (n < 0) break
+                                    o.write(buf, 0, n); digest.update(buf, 0, n); done += n
+                                    progress((done.toFloat() / total).coerceIn(0f, 1f))
+                                }
                             }
+                        } finally {
+                            conn.disconnect()
                         }
                     }
-                    if (r.size > 0 && f.length() != r.size) error("size")
-                    if (r.sha256 != null && digest.digest().toHex() != r.sha256) error("sha")
-                } finally {
-                    conn.disconnect()
                 }
+                if (r.size > 0 && f.length() != r.size) error("size")
+                if (r.sha256 != null && digest.digest().toHex() != r.sha256) error("sha")
                 out += f
             }
             out

@@ -197,8 +197,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit, onPick: () -> Unit = {
                         title = if (ar) "الأذكار التي تظهر" else "Adhkar it shows",
                         value = when {
                             n == 0 -> if (ar) "اختر الأذكار" else "Choose"
-                            ar -> "$n ${if (n in 3..10) "أذكار" else "ذكرًا"}"
-                            else -> "$n selected"
+                            else -> adhkarCountLabel(n, lang)
                         },
                         onClick = onPick,
                     )

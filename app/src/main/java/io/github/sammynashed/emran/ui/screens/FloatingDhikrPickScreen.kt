@@ -94,6 +94,7 @@ fun FloatingDhikrPickScreen(onBack: () -> Unit, viewModel: AdhkarViewModel = vie
                 else -> if (ar) "الأذكار التي تظهر" else "Adhkar it shows"
             },
             subtitle = when {
+                folder != null && folder.items.isEmpty() -> null
                 folder != null -> if (ar) "اضغط على الذكر لتختاره أو تلغيه" else "Tap a dhikr to pick or unpick it"
                 else -> if (ar) "اختر من أي قسم، ثم احفظ. تظهر المختارة بالتناوب." else "Pick from any section, then save. They take turns."
             },

@@ -121,7 +121,7 @@ private fun shareDhikr(context: Context, folderId: String, title: String, item: 
 fun AdhkarDetailScreen(
     folderId: String,
     onNavigateBack: () -> Unit,
-    /** Set when the floating card was tapped: scroll to this dhikr and open it in full. */
+    /** Set when the floating card was tapped: start counting at this dhikr, as a tap on it here would. */
     focusItemId: String? = null,
     viewModel: AdhkarViewModel = viewModel(),
 ) {
@@ -141,6 +141,14 @@ fun AdhkarDetailScreen(
     var masbahaStartIndex by remember(folderId) { mutableStateOf<Int?>(null) }
     // The phone's back button does what the on-screen one does: leave counting for the list, not the whole folder.
     androidx.activity.compose.BackHandler(enabled = masbahaStartIndex != null) { masbahaStartIndex = null }
+    // A tap on the floating card opens that dhikr's counting card, once: leaving it shows the list.
+    var focusHandled by androidx.compose.runtime.saveable.rememberSaveable(folderId, focusItemId) { mutableStateOf(false) }
+    LaunchedEffect(folder?.items, focusItemId) {
+        if (focusHandled || focusItemId == null || folder == null) return@LaunchedEffect
+        val i = folder.items.indexOfFirst { it.id == focusItemId }
+        if (i >= 0) masbahaStartIndex = i
+        focusHandled = true
+    }
 
     // The user's own folder can be written in: add, and (from the long-press view) edit or delete.
     val mine = folderId == MyAdhkar.FOLDER_ID
@@ -179,10 +187,6 @@ fun AdhkarDetailScreen(
             }
         } else if (folder != null) {
             val listState = rememberLazyListState()
-            if (focusItemId != null) LaunchedEffect(folder.id, focusItemId) {
-                val i = folder.items.indexOfFirst { it.id == focusItemId }
-                if (i >= 0) { listState.scrollToItem(i); selectedItem = folder.items[i] }
-            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().drawScrollbar(listState, color = sky.ink.copy(alpha = 0.5f)),

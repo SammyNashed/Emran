@@ -73,6 +73,11 @@ object MyAdhkar {
         write(context, load(context).filterNot { it.id == id })
         // A deleted dhikr's bookmark would point at nothing.
         io.github.sammynashed.emran.data.hadith.HadithBookmarks.removeDhikr(context, FOLDER_ID, id)
+        // ...and the floating card would keep counting it as picked.
+        io.github.sammynashed.emran.service.FloatingDhikr.let { f ->
+            val picked = f.selectedIds(context)
+            if (id in picked) f.setSelected(context, picked - id)
+        }
     }
 
     private fun write(context: Context, list: List<AdhkarItem>) {
