@@ -2,4 +2,6 @@
 <!-- Only the share pictures Emran renders are ever exposed to other apps. -->
 <paths>
     <cache-path name="share" path="share/" />
+    <!-- Qur'an videos made by the video maker, handed to WhatsApp and friends. -->
+    <cache-path name="video" path="video/" />
 </paths>

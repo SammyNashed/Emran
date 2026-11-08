@@ -415,6 +415,8 @@ fun QuranScreen(
     onOpenReciters: () -> Unit = {},
     onOpenPlayer: () -> Unit = {},
     onOpenSaved: () -> Unit = {},
+    /** Opens the video maker, on a given ayah (from its meaning sheet) or on the last choice (nulls). */
+    onMakeVideo: (Int?, Int?) -> Unit = { _, _ -> },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isPaginatedMode by viewModel.isPaginatedMode.collectAsState()
@@ -588,6 +590,7 @@ fun QuranScreen(
                     onOpenPlayer = onOpenPlayer,
                     onOpenSaved = onOpenSaved,
                     onOpenReciters = onOpenReciters,
+                    onMakeVideo = { onMakeVideo(null, null) },
                     onOpen = { chapter, ayah ->
                         hifzMode = false
                         viewModel.loadSurah(chapter, ayah)
@@ -1678,6 +1681,7 @@ fun QuranScreen(
                             bookmarked = ayahBookmarks.any { it.surah == s && it.ayah == a },
                             onToggleBookmark = { io.github.sammynashed.emran.data.hadith.HadithBookmarks.toggleAyah(recitationContext, s, a) },
                             onDismiss = { selectedAyah = null },
+                            onMakeVideo = { selectedAyah = null; onMakeVideo(s, a) },
                         )
                     }
                 }

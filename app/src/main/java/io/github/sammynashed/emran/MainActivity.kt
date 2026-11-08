@@ -194,7 +194,7 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
                             currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
                             currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
-                            currentRoute == "testers" || currentRoute == "adhan_behavior" || currentRoute == "floating_dhikr" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
+                            currentRoute == "testers" || currentRoute?.startsWith("quran_video") == true || currentRoute == "adhan_behavior" || currentRoute == "floating_dhikr" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
                             currentRoute?.startsWith("adhkar_detail/") == true ||
                             currentRoute == "hadith" || currentRoute?.startsWith("hadith_") == true || currentRoute?.startsWith("bookmarks") == true
                         SkyHost(
@@ -324,6 +324,10 @@ class MainActivity : ComponentActivity() {
                                                     viewModel = quranViewModel,
                                                     onOpenReciters = { navController.navigate("reciters") { launchSingleTop = true } },
                                                     onOpenSaved = { navController.navigate("bookmarks?tab=quran") { launchSingleTop = true } },
+                                                    onMakeVideo = { s, a ->
+                                                        activeTabRoute = "quran"
+                                                        navController.navigate(if (s != null) "quran_video?surah=$s&ayah=${a ?: 1}" else "quran_video") { launchSingleTop = true }
+                                                    },
                                                     onOpenPlayer = {
                                                         // The player belongs to the Qur'an tab: Back from it must land there.
                                                         activeTabRoute = "quran"
@@ -494,6 +498,20 @@ class MainActivity : ComponentActivity() {
                                     composable("reliable_alerts") {
                                         io.github.sammynashed.emran.ui.screens.ReliableAlertsScreen(
                                             lang = currentLanguage,
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                    composable(
+                                        "quran_video?surah={surah}&ayah={ayah}",
+                                        arguments = listOf(
+                                            androidx.navigation.navArgument("surah") { type = androidx.navigation.NavType.IntType; defaultValue = 0 },
+                                            androidx.navigation.navArgument("ayah") { type = androidx.navigation.NavType.IntType; defaultValue = 0 },
+                                        ),
+                                    ) { entry ->
+                                        io.github.sammynashed.emran.ui.screens.QuranVideoScreen(
+                                            lang = currentLanguage,
+                                            startSurah = entry.arguments?.getInt("surah")?.takeIf { it > 0 },
+                                            startAyah = entry.arguments?.getInt("ayah")?.takeIf { it > 0 },
                                             onBack = { navController.popBackStack() },
                                         )
                                     }

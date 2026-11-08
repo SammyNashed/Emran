@@ -151,6 +151,9 @@ dependencies {
   // Quran audio: gapless per-ayah playlist + media session (lock screen, background on HyperOS).
   implementation("androidx.media3:media3-exoplayer:1.8.0")
   implementation("androidx.media3:media3-session:1.8.0")
+  // Qur'an video maker: stitches the recitation, a looping nature clip and the ayah text into an MP4 on the phone.
+  implementation("androidx.media3:media3-transformer:1.8.0")
+  implementation("androidx.media3:media3-effect:1.8.0")
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)

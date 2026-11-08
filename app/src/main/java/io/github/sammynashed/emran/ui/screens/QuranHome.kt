@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,6 +109,7 @@ fun QuranHomePage(
     onOpenPlayer: () -> Unit = {},
     onOpenSaved: () -> Unit = {},
     onOpenReciters: () -> Unit = {},
+    onMakeVideo: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val ar = lang == "ar"
@@ -265,6 +267,20 @@ fun QuranHomePage(
                             Spacer(Modifier.width(12.dp))
                             Text(label, color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                         }
+                    }
+                }
+            }
+        }
+
+        // The video maker: a recitation over a nature clip, made on the phone.
+        item {
+            GlassPanel(Modifier.fillMaxWidth().clickable { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onMakeVideo() }, cornerRadius = 24.dp, tint = 0.9f, lens = false) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(androidx.compose.material.icons.Icons.Outlined.Movie, null, tint = sky.ink, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (ar) "اصنع فيديو قرآني" else "Make a Qur'an video", color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text(if (ar) "آيات بصوت قارئك على خلفية من الطبيعة" else "Ayat in your reciter's voice, over nature", color = sky.inkSoft, fontSize = 13.sp, maxLines = 1)
                     }
                 }
             }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -69,6 +70,7 @@ fun AyahMeaningSheet(
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
     onDismiss: () -> Unit,
+    onMakeVideo: (() -> Unit)? = null,
 ) {
     val ar = lang == "ar"
     val context = LocalContext.current
@@ -183,6 +185,22 @@ fun AyahMeaningSheet(
                             },
                             color = ink.copy(alpha = 0.45f), fontSize = 11.sp, lineHeight = 15.sp,
                         )
+                    }
+                }
+
+                if (onMakeVideo != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(16.dp))
+                            .background(ink.copy(alpha = 0.07f)).border(1.dp, ink.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
+                            .clickable { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove); onMakeVideo() }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(androidx.compose.material.icons.Icons.Outlined.Movie, null, tint = ink.copy(alpha = 0.85f), modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (ar) "اصنع فيديو من هذه الآية" else "Make a video from this ayah", color = ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     }
                 }
 
