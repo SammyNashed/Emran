@@ -554,10 +554,7 @@ fun FineTuneScreen(
     if (showPrivacyFirstDialog) PrivacyDialog(ar = ar, onDismiss = { showPrivacyFirstDialog = false })
     (updateResult as? UpdateChecker.Result.Available)?.let { found ->
         if (showUpdateDialog) {
-            UpdateDialog(
-                ar = ar, versionName = found.versionName, notes = found.notes,
-                channelUrl = UpdateChecker.CHANNEL_URL, onDismiss = { showUpdateDialog = false },
-            )
+            UpdateDialog(ar = ar, found = found, onDismiss = { showUpdateDialog = false })
         }
     }
     if (showUpdateChoice) {
@@ -568,27 +565,13 @@ fun FineTuneScreen(
             dismissLabel = if (ar) "إغلاق" else "Close",
         ) {
             Text(
-                if (ar) "التحديثات تُنشر في قناة عِمران على تيليجرام. نزّل ملف التحديث الصغير (‎.emran‎) ثم افتحه بعِمران، أو اختره من هنا."
-                else "Updates are posted on the Emran Telegram channel. Download the small update file (.emran) and open it with Emran, or pick it here.",
+                if (ar) "عِمران يحدّث نفسه: اضغط «تحقّق من التحديثات»، وإن وُجد إصدار أحدث يُنزَّل ويُثبَّت فوق هذا. وإن كان معك ملف تحديث (‎.emran‎) من القناة يمكنك تثبيته من هنا."
+                else "Emran updates itself: tap \"Check for updates\", and if there is a newer version it downloads and installs over this one. If you have an update file (.emran) from the channel, you can install it here.",
                 color = sky.inkSoft, fontSize = 14.sp, lineHeight = 21.sp,
             )
             Spacer(Modifier.height(14.dp))
             io.github.sammynashed.emran.ui.design.GlassButton(
-                label = if (ar) "تثبيت ملف تحديث" else "Install an update file",
-                onClick = { showUpdateChoice = false; pickUpdateFile.launch(arrayOf("*/*")) },
-                filled = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            io.github.sammynashed.emran.ui.design.GlassButton(
-                label = if (ar) "افتح القناة" else "Open the channel",
-                onClick = { showUpdateChoice = false; io.github.sammynashed.emran.data.update.UpdateChecker.openChannel(context) },
-                filled = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(4.dp))
-            io.github.sammynashed.emran.ui.design.GlassButton(
-                label = if (updateChecking) (if (ar) "جارٍ التحقق…" else "Checking…") else (if (ar) "هل يوجد إصدار أحدث؟" else "Is there a newer version?"),
+                label = if (updateChecking) (if (ar) "جارٍ التحقق…" else "Checking…") else (if (ar) "تحقّق من التحديثات" else "Check for updates"),
                 onClick = {
                     if (updateResult is UpdateChecker.Result.Available) {
                         showUpdateChoice = false; showUpdateDialog = true
@@ -605,6 +588,20 @@ fun FineTuneScreen(
                         }
                     }
                 },
+                filled = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            io.github.sammynashed.emran.ui.design.GlassButton(
+                label = if (ar) "تثبيت ملف تحديث" else "Install an update file",
+                onClick = { showUpdateChoice = false; pickUpdateFile.launch(arrayOf("*/*")) },
+                filled = false,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(4.dp))
+            io.github.sammynashed.emran.ui.design.GlassButton(
+                label = if (ar) "افتح القناة" else "Open the channel",
+                onClick = { showUpdateChoice = false; io.github.sammynashed.emran.data.update.UpdateChecker.openChannel(context) },
                 filled = false,
                 modifier = Modifier.fillMaxWidth(),
             )

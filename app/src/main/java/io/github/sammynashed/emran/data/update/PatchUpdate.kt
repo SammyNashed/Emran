@@ -24,8 +24,9 @@ import java.util.zip.InflaterInputStream
  * changed (a few MB) and Emran rebuilds the new APK from its own installed copy. The hifz model,
  * the speech engine and the hadith books (~61 MB) are never sent again.
  *
- * Emran itself still never downloads anything: the patch arrives as a file (opened from Telegram,
- * or picked in Settings), and the result is installed by Android's own "Update this app?" screen.
+ * The patch arrives as a file (opened from Telegram, or picked in Settings), or Emran downloads it
+ * from its site when the user taps "Update now" (see [UpdateChecker]); either way the result is
+ * installed by Android's own "Update this app?" screen.
  * A rebuilt APK must hash to the patch's own fingerprint, or it is thrown away untouched.
  *
  * Format and generator: ~/emran-release/tools/emran_patch.py (see there).
@@ -99,13 +100,18 @@ object PatchUpdate {
     }
 
     /** Rebuilds the new APK from the installed one. Returns null if anything doesn't match. */
-    suspend fun build(context: Context, patch: File, progress: (Float) -> Unit): File? = withContext(Dispatchers.IO) {
-        val (header, bodyAt) = readHeader(patch)
+    suspend fun build(
+        context: Context,
+        patch: File,
+        base: File = File(context.applicationInfo.sourceDir),
+        progress: (Float) -> Unit,
+    ): File? = withContext(Dispatchers.IO) {
+        val (header, bodyAt) = runCatching { readHeader(patch) }.getOrNull() ?: return@withContext null
         val out = File(patch.parentFile, "emran-${header.toVersionName}.apk")
         val digest = MessageDigest.getInstance("SHA-256")
         var written = 0L
         try {
-            RandomAccessFile(context.applicationInfo.sourceDir, "r").use { old ->
+            RandomAccessFile(base, "r").use { old ->
                 FileInputStream(patch).use { raw ->
                     raw.channel.position(bodyAt)
                     DataInputStream(InflaterInputStream(raw.buffered(1 shl 16), java.util.zip.Inflater(), 1 shl 16)).use { ops ->
@@ -150,6 +156,22 @@ object PatchUpdate {
             return@withContext null
         }
         out
+    }
+
+    /**
+     * Patches downloaded in a row (someone a few versions behind): each one is rebuilt on top of
+     * the APK the previous one made, starting from the installed app. Returns the newest APK, or
+     * null if any step doesn't match. Steps in between are removed as soon as they are used.
+     */
+    suspend fun buildChain(context: Context, patches: List<File>, progress: (Float) -> Unit): File? {
+        var base = File(context.applicationInfo.sourceDir)
+        patches.forEachIndexed { i, p ->
+            val next = build(context, p, base) { progress((i + it) / patches.size) }
+            if (i > 0) base.delete()
+            p.delete()
+            base = next ?: return null
+        }
+        return base
     }
 
     /** May Emran ask Android to install? (Android 8+ asks the user once, per app.) */

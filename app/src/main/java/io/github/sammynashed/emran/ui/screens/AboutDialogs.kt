@@ -229,34 +229,141 @@ fun PrivacyDialog(ar: Boolean, onDismiss: () -> Unit) {
     }
 }
 
-/** A newer version is out: send the user to the channel, where the APK is a normal download. */
+/**
+ * A newer version is out. "Update now" downloads exactly what this phone needs from Emran's site
+ * (a few MB of patches, or the whole app when no patch fits), rebuilds the new APK and hands it
+ * to Android's own install screen. Nobody has to find or open an update file. The channel stays
+ * as the way out when the site can't be reached.
+ */
 @Composable
-fun UpdateDialog(ar: Boolean, versionName: String, notes: String, channelUrl: String, onDismiss: () -> Unit) {
+fun UpdateDialog(
+    ar: Boolean,
+    found: io.github.sammynashed.emran.data.update.UpdateChecker.Result.Available,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
-    GlassDialog(
-        onDismiss = onDismiss,
-        title = if (ar) "إصدار جديد" else "A new version",
-        subtitle = "v$versionName",
-        confirmLabel = if (ar) "افتح القناة" else "Open the channel",
-        onConfirm = {
-            onDismiss()
-            if (!io.github.sammynashed.emran.data.update.UpdateChecker.openChannel(context)) {
-                Toast.makeText(context, if (ar) "تعذّر فتح تيليجرام" else "Couldn't open Telegram", Toast.LENGTH_SHORT).show()
+    val sky = LocalSky.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val UC = io.github.sammynashed.emran.data.update.UpdateChecker
+    val PU = io.github.sammynashed.emran.data.update.PatchUpdate
+    val plan = found.plan
+    val to = found.versionName
+
+    // idle → downloading → preparing → waiting for Android; or failed / need the install permission.
+    var stage by remember { androidx.compose.runtime.mutableStateOf("idle") }
+    var progress by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val installError = PU.installError.value
+    androidx.compose.runtime.LaunchedEffect(installError) { if (installError != null && stage == "waiting") stage = "idle" }
+
+    fun mb(bytes: Long): String {
+        val v = bytes / 1048576.0
+        val t = if (v < 10) "%.1f".format(java.util.Locale.US, v) else "%.0f".format(java.util.Locale.US, v)
+        return if (ar) "$t ميغا" else "$t MB"
+    }
+
+    fun start() {
+        if (plan == null) return
+        if (!PU.canInstall(context)) { stage = "permission"; return }
+        PU.installError.value = null
+        stage = "downloading"; progress = 0f
+        scope.launch {
+            val files = UC.download(context, plan) { progress = it }
+            if (files == null) { stage = "failed"; return@launch }
+            val apk = when (plan) {
+                is io.github.sammynashed.emran.data.update.UpdateChecker.Plan.FullApk -> files.single()
+                is io.github.sammynashed.emran.data.update.UpdateChecker.Plan.Patches -> {
+                    stage = "preparing"; progress = 0f
+                    PU.buildChain(context, files) { progress = it }
+                }
             }
-        },
-        dismissLabel = if (ar) "لاحقًا" else "Later",
-    ) {
-        if (notes.isNotBlank()) Body(notes)
-        Fine(
-            if (ar) "افتح القناة واضغط على أحدث ملف للتطبيق لتثبيته فوق القديم. بياناتك تبقى كما هي."
-            else "Open the channel and tap the newest app file to install it over the old one. Your data stays as it is.",
-        )
+            if (apk == null) { PU.cleanUp(context); stage = "failed"; return@launch }
+            stage = "waiting"
+            runCatching { PU.install(context, apk) }.onFailure { stage = "failed" }
+        }
+    }
+
+    // Back from Android's "Install unknown apps" page: carry on by itself if it was allowed.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle, stage) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME && stage == "permission" && PU.canInstall(context)) start()
+        }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs) }
+    }
+
+    fun openChannel() {
+        onDismiss()
+        if (!UC.openChannel(context)) Toast.makeText(context, if (ar) "تعذّر فتح تيليجرام" else "Couldn't open Telegram", Toast.LENGTH_SHORT).show()
+    }
+
+    @Composable
+    fun Bar() = androidx.compose.material3.LinearProgressIndicator(
+        progress = { progress },
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
+        color = sky.ink, trackColor = sky.ink.copy(alpha = 0.15f),
+    )
+
+    when (stage) {
+        "downloading" -> GlassDialog(onDismiss = {}, title = if (ar) "تحديث إلى $to" else "Updating to $to") {
+            Body(if (ar) "جارٍ التنزيل… ${(progress * 100).toInt()}%" else "Downloading… ${(progress * 100).toInt()}%")
+            Bar()
+        }
+        "preparing" -> GlassDialog(onDismiss = {}, title = if (ar) "تحديث إلى $to" else "Updating to $to") {
+            Body(if (ar) "جارٍ تجهيز التحديث… ${(progress * 100).toInt()}%" else "Preparing the update… ${(progress * 100).toInt()}%")
+            Bar()
+        }
+        "waiting" -> GlassDialog(onDismiss = onDismiss, title = if (ar) "تحديث إلى $to" else "Updating to $to", dismissLabel = if (ar) "إغلاق" else "Close") {
+            Body(if (ar) "اضغط «تحديث» في نافذة أندرويد. سيُغلق عِمران لحظة ثم يعود بالإصدار الجديد، وبياناتك كما هي."
+            else "Tap \"Update\" on Android's screen. Emran closes for a moment and comes back as the new version, with your data as it was.")
+        }
+        "permission" -> GlassDialog(
+            onDismiss = onDismiss, title = if (ar) "خطوة واحدة أولًا" else "One step first",
+            confirmLabel = if (ar) "افتح الإعدادات" else "Open settings",
+            onConfirm = { PU.openInstallPermission(context) },
+            dismissLabel = if (ar) "إلغاء" else "Cancel",
+        ) {
+            Body(if (ar) "اسمح لعِمران بتثبيت التحديثات (مرة واحدة فقط): فعّل «السماح من هذا المصدر» ثم ارجع، وسيكمل التحديث وحده."
+            else "Let Emran install updates (only once): turn on \"Allow from this source\", then come back and the update carries on by itself.")
+        }
+        "failed" -> GlassDialog(
+            onDismiss = onDismiss, title = if (ar) "تعذّر التحديث" else "Couldn't update",
+            confirmLabel = if (ar) "حاول مرة أخرى" else "Try again",
+            onConfirm = { start() },
+            dismissLabel = if (ar) "إغلاق" else "Close",
+        ) {
+            Body(if (ar) "انقطع التنزيل أو وصل ناقصًا، فلم يتغيّر شيء في التطبيق. حاول مرة أخرى، أو نزّل التحديث من القناة."
+            else "The download stopped or arrived incomplete, so nothing in the app changed. Try again, or get the update from the channel.")
+            Spacer(Modifier.height(10.dp))
+            io.github.sammynashed.emran.ui.design.GlassButton(
+                label = if (ar) "افتح القناة" else "Open the channel", onClick = ::openChannel,
+                filled = false, modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        else -> GlassDialog(
+            onDismiss = onDismiss,
+            title = if (ar) "إصدار جديد" else "A new version",
+            subtitle = "v$to",
+            confirmLabel = when {
+                plan == null -> if (ar) "افتح القناة" else "Open the channel"
+                ar -> "حدّث الآن (${mb(plan.size)})"
+                else -> "Update now (${mb(plan.size)})"
+            },
+            onConfirm = { if (plan == null) openChannel() else start() },
+            dismissLabel = if (ar) "لاحقًا" else "Later",
+        ) {
+            if (found.notes.isNotBlank()) Body(found.notes)
+            Fine(
+                if (ar) "يُنزَّل التحديث ويُثبَّت فوق النسخة الحالية، وبياناتك تبقى كما هي."
+                else "The update downloads and installs over this version. Your data stays as it is.",
+            )
+        }
     }
 }
 
 /**
- * Shown when the update check could not reach GitHub (it is blocked or slow on some Syrian
- * networks without a VPN). The channel always works through the Telegram app, so offer it.
+ * Shown when the update check could not reach Emran's site (no internet, or a network that blocks
+ * it). The channel always works through the Telegram app, so offer it.
  */
 @Composable
 fun UpdateUnreachableDialog(ar: Boolean, onDismiss: () -> Unit) {
