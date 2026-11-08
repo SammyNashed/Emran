@@ -177,7 +177,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit, onPick: () -> Unit = {
                     SettingsRow(
                         icon = Icons.Default.Timer, minHeight = 50.dp,
                         title = if (ar) "مدة بقائه" else "Stays for",
-                        value = if (ar) "$show ثوانٍ" else "$show seconds", onClick = { showDuration = true },
+                        value = secondsLabel(show, ar), onClick = { showDuration = true },
                     )
                     GlassDivider()
                     SettingsRow(
@@ -241,7 +241,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit, onPick: () -> Unit = {
             subtitle = if (ar) "يتوقف العدّ وأنت تمسك البطاقة" else "The countdown pauses while you hold the card",
             confirmLabel = if (ar) "تم" else "Done", onConfirm = { showDuration = false }) {
             FloatingDhikr.SHOW_CHOICES.forEach { s ->
-                ChoiceRow(label = if (ar) "$s ثوانٍ" else "$s seconds", selected = show == s, onClick = { show = s; FloatingDhikr.setShow(context, s) })
+                ChoiceRow(label = secondsLabel(s, ar), selected = show == s, onClick = { show = s; FloatingDhikr.setShow(context, s) })
             }
         }
     }
@@ -301,4 +301,11 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit, onPick: () -> Unit = {
             )
         }
     }
+}
+
+/** "٥ ثوانٍ" up to ten, "١٢ ثانية" from eleven on, as Arabic counts them. */
+private fun secondsLabel(n: Int, ar: Boolean): String = when {
+    !ar -> "$n seconds"
+    n in 3..10 -> "$n ثوانٍ"
+    else -> "$n ثانية"
 }
