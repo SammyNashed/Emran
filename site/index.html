@@ -5,318 +5,250 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>عِمران · Emran</title>
 <meta name="description" content="عِمران: مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث. مجاني، بلا إعلانات ولا حسابات.">
-<meta name="theme-color" content="#14123a">
+<meta name="theme-color" content="#0a1230">
 <meta property="og:title" content="عِمران · Emran">
 <meta property="og:description" content="مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث">
-<meta property="og:image" content="https://sammynashed.github.io/Emran/img/icon-192.png">
-<meta property="og:url" content="https://sammynashed.github.io/Emran/">
+<meta property="og:image" content="https://emran-app.pages.dev/img/icon-192.png">
+<meta property="og:url" content="https://emran-app.pages.dev/">
 <script>document.documentElement.classList.add("js")</script>
 <link rel="icon" href="img/favicon.png">
 <link rel="apple-touch-icon" href="img/icon-192.png">
 <style>
 @font-face { font-family: "Readex Pro"; src: url("fonts/readex_pro.ttf") format("truetype"); font-weight: 160 700; font-display: swap; }
-:root {
-  --night: #14123a;
-  --dusk: #2a2463;
-  --ink: #f5f3ff;
-  --soft: rgba(245, 243, 255, .72);
-  --faint: rgba(245, 243, 255, .14);
-  --glass: rgba(255, 255, 255, .07);
-  --indigo: #6366f1;
-  --orange: #f97316;
-  --amber: #ffb74d;
-}
+:root { --ink: #f6f3ea; --soft: rgba(246, 243, 234, .8); --amber: #ffb74d; --on: #1a1206; --panel: rgba(255, 255, 255, .065); --deep: #060a1c; --bar: #141a3d; --W: 320px; --tg: 76px; --T: 300px; }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  font-family: "Readex Pro", system-ui, sans-serif;
-  font-size: 19px;
-  line-height: 1.7;
-  color: var(--ink);
-  background: var(--night);
-  background-image:
-    radial-gradient(120% 60% at 50% 0%, #3b2f7a 0%, rgba(59, 47, 122, 0) 70%),
-    linear-gradient(180deg, var(--night) 0%, var(--dusk) 55%, #5a2e4f 88%, #8a4433 100%);
-  background-attachment: fixed;
-  min-height: 100vh;
-}
+body { margin: 0; font-family: "Readex Pro", system-ui, sans-serif; font-size: 20px; line-height: 1.6; color: var(--ink); background: #0a1230; overflow-x: clip; }
 a { color: inherit; }
-.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+h1, h2, p, ul, ol { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+img { display: block; max-width: 100%; height: auto; }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
 
-/* top bar */
-.bar { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 20px; text-decoration: none; }
-.brand img { width: 34px; height: 34px; }
-.lang {
-  font: inherit; font-size: 16px; color: var(--ink); background: var(--glass);
-  border: 1px solid var(--faint); border-radius: 999px; padding: 8px 18px; cursor: pointer; min-height: 44px;
-}
+#sky { position: fixed; inset: 0; z-index: -2; background: #0a1230; }
+#sky i { position: absolute; inset: 0; opacity: 0; }
+#stars { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .7; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520' fill='white'%3E%3Ccircle cx='62' cy='94' r='1.1'/%3E%3Ccircle cx='198' cy='332' r='.8'/%3E%3Ccircle cx='369' cy='140' r='1.3'/%3E%3Ccircle cx='447' cy='406' r='.8'/%3E%3Ccircle cx='286' cy='47' r='1'/%3E%3Ccircle cx='125' cy='458' r='.9'/%3E%3C/svg%3E"); animation: twinkle 7s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
 
-/* hero */
-.hero { text-align: center; padding: 28px 0 8px; }
-.hero .icon { width: 112px; height: 112px; filter: drop-shadow(0 10px 30px rgba(99, 102, 241, .45)); }
-.hero h1 { font-size: 52px; line-height: 1.2; margin: 14px 0 6px; font-weight: 600; }
-.hero .tag { font-size: 21px; color: var(--soft); margin: 0 auto 28px; max-width: 30ch; }
-.dl {
-  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
-  min-height: 68px; min-width: min(340px, 100%); padding: 14px 34px;
-  font-size: 24px; font-weight: 600; text-decoration: none; color: #1b1440;
-  background: linear-gradient(180deg, #ffd08a, var(--amber) 55%, #ff9d4d);
-  border-radius: 20px; box-shadow: 0 12px 34px rgba(255, 157, 77, .35);
-}
-.dl svg { width: 28px; height: 28px; flex: none; }
-.dl:active { transform: translateY(1px); }
-.meta { margin-top: 12px; color: var(--soft); font-size: 16px; }
-.meta a { color: var(--soft); }
-.alt { margin-top: 18px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.btn2 {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 10px 22px;
-  font-size: 18px; text-decoration: none; background: var(--glass); border: 1px solid var(--faint); border-radius: 16px;
-}
+.bar { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; width: min(640px, calc(100% - 24px)); display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--bar); border-radius: 999px; }
+.brand { display: flex; align-items: center; gap: 9px; margin-inline-end: auto; padding-inline: 8px; font-weight: 600; font-size: 20px; text-decoration: none; }
+.brand img { width: 32px; height: 32px; }
+.lang { font: inherit; font-size: 17px; color: var(--ink); background: none; border: 0; border-radius: 999px; padding: 0 14px; min-height: 44px; cursor: pointer; transition: background-color .2s; }
+.lang:hover { background: rgba(255, 255, 255, .1); }
+.get { display: inline-flex; align-items: center; justify-content: center; gap: 11px; background: var(--amber); color: var(--on); text-decoration: none; font-weight: 600; border-radius: 999px; transition: transform .18s ease, background-color .18s ease; }
+.get:hover { background: #ffc873; transform: translateY(-2px); }
+.get:active { transform: scale(.97); }
+.get svg { width: 26px; height: 26px; flex: none; }
+.bar .get { font-size: 17px; min-height: 44px; padding: 0 20px; }
+.big { font-size: 24px; min-height: 68px; padding: 12px 40px; min-width: min(330px, 100%); }
 
-/* in-app browser warning (Instagram, Facebook, TikTok...) */
-.inapp {
-  display: none; margin: 22px auto 0; max-width: 520px; text-align: start;
-  background: rgba(255, 183, 77, .14); border: 1px solid rgba(255, 183, 77, .5); border-radius: 18px; padding: 14px 18px; font-size: 18px;
-}
+.inapp { display: none; position: fixed; top: 76px; inset-inline: 12px; z-index: 49; margin: auto; max-width: 620px; background: #ffb74d; color: var(--on); border-radius: 22px; padding: 14px 20px; font-size: 20px; line-height: 1.45; }
 .inapp.show { display: block; }
+.inapp b { display: block; font-weight: 700; }
 
-/* sections */
-section { padding: 52px 0 8px; }
-h2 { font-size: 32px; line-height: 1.3; margin: 0 0 20px; font-weight: 600; text-align: center; }
-.card { background: var(--glass); border: 1px solid var(--faint); border-radius: 24px; padding: 22px; }
+.stage { padding-top: 110px; }
+.hero { text-align: center; max-width: 1340px; margin: 0 auto; padding: 0 20px; }
+.hero h1 { font-size: clamp(42px, min(6.6vw, 11.5vh), 96px); line-height: 1.16; font-weight: 600; letter-spacing: -.01em; }
+.hero p.sub { font-size: clamp(19px, 1.7vw, 24px); margin: 10px auto 22px; max-width: 34em; }
+.meta { margin-top: 11px; font-size: 17px; color: var(--soft); }
+.meta a { margin-inline-start: 14px; display: inline-flex; align-items: center; gap: 6px; text-underline-offset: 4px; min-height: 32px; }
+.meta svg { width: 18px; height: 18px; }
+.fan, .pan { display: none; }
 
-/* install steps */
-.steps { list-style: none; margin: 0 auto; padding: 0; max-width: 640px; display: grid; gap: 14px; counter-reset: s; }
-.steps li { display: flex; gap: 16px; align-items: flex-start; }
-.steps li::before {
-  counter-increment: s; content: counter(s); flex: none;
-  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
-  font-size: 22px; font-weight: 600; color: #1b1440; background: var(--amber);
+.steps article { display: grid; grid-template-columns: 1fr minmax(240px, 320px) 1fr; gap: 40px; align-items: center; max-width: 1200px; margin: 0 auto; padding: 70px 22px; }
+.l h2 { font-size: clamp(32px, 3.5vw, 56px); line-height: 1.2; font-weight: 600; }
+.l p { margin-top: 12px; font-size: 20px; line-height: 1.55; }
+.r { display: grid; gap: 24px; }
+.r li { display: flex; gap: 14px; }
+.r svg { width: 28px; height: 28px; flex: none; color: var(--amber); margin-top: 2px; }
+.r b { display: block; font-weight: 600; font-size: 24px; line-height: 1.35; }
+.r span { font-size: 20px; line-height: 1.5; color: var(--soft); }
+.sp { background: #04060f; border-radius: 34px; padding: 9px; }
+.sp img { border-radius: 26px; }
+
+html.pin #show { position: relative; }
+html.pin .stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; padding: 0; }
+html.pin #steps { display: none; }
+html.pin .hero { position: absolute; top: var(--tg); inset-inline: 0; margin: auto; z-index: 3; }
+html.pin .fan { display: block; position: absolute; inset: 0; top: var(--tg); z-index: 2; pointer-events: none; }
+html.pin .pan { display: block; position: absolute; top: var(--tg); bottom: 22px; z-index: 1; background: var(--panel); border-radius: 34px; overflow: hidden; opacity: 0; }
+html.pin .pan.a { inset-inline-start: 22px; inset-inline-end: calc(50% + var(--W) / 2 + 22px); }
+html.pin .pan.b { inset-inline-end: 22px; inset-inline-start: calc(50% + var(--W) / 2 + 22px); }
+.blk { position: absolute; inset-inline: 36px; bottom: 38px; will-change: transform, opacity; }
+.ph { position: absolute; top: 0; left: 50%; width: var(--W); margin-left: calc(var(--W) / -2); transform-origin: 50% 0; will-change: transform, opacity; background: #04060f; border-radius: calc(var(--W) * .145); padding: calc(var(--W) * .028); outline: 1.5px solid rgba(255, 255, 255, .17); }
+.scr { position: relative; aspect-ratio: 760 / 1618; overflow: hidden; border-radius: calc(var(--W) * .118); background: #0a1230; }
+.scr img { position: absolute; inset: 0; width: 100%; height: 100%; will-change: transform; }
+
+html.m.pin .pan.a { inset-inline: 12px; bottom: auto; height: var(--T); }
+html.m.pin .pan.b { display: none; }
+html.m .blk { inset-inline: 22px; bottom: 20px; }
+html.m .blk h2 { font-size: 29px; }
+html.m .blk p { font-size: 17px; margin-top: 6px; line-height: 1.5; }
+html.m .blk .r { gap: 7px; margin-top: 11px; }
+html.m .blk .r svg { width: 22px; height: 22px; }
+html.m .blk .r b { font-size: 17px; }
+html.m .blk .r span { display: none; }
+html.short .blk .r { display: none; }
+
+section { padding: 130px 22px; }
+.wrap { max-width: 1240px; margin: 0 auto; }
+h2.t { font-size: clamp(36px, 5.2vw, 76px); line-height: 1.16; font-weight: 600; letter-spacing: -.01em; }
+#widgets { padding-bottom: 60px; }
+#widgets p { font-size: 24px; margin: 12px 0 34px; }
+#widgets img { width: 100%; border-radius: 34px; }
+#install .wrap { display: grid; grid-template-columns: 5fr 7fr; gap: 60px; align-items: start; }
+#install .get { margin-top: 28px; }
+#install ol { counter-reset: s; display: grid; gap: 34px; }
+#install li { counter-increment: s; display: grid; grid-template-columns: 60px 1fr; gap: 16px; }
+#install li::before { content: counter(s); font-size: 56px; line-height: 1; font-weight: 600; color: var(--amber); }
+#install b { display: block; font-size: 24px; line-height: 1.3; font-weight: 600; }
+#install span { display: block; margin-top: 6px; font-size: 20px; }
+#install li.plain { display: block; counter-increment: none; }
+#install li.plain::before { content: none; }
+.note { font-size: 20px; color: var(--soft); }
+#updates { background: rgba(6, 10, 28, .34); }
+#updates .wrap { display: grid; grid-template-columns: 7fr 5fr; gap: 60px; align-items: end; }
+#updates p { font-size: 24px; line-height: 1.55; }
+.path { display: flex; align-items: center; gap: 12px; margin-top: 18px; font-size: 20px; font-weight: 500; }
+.path svg { width: 26px; height: 26px; color: var(--amber); flex: none; }
+#free p { font-size: clamp(25px, 2.5vw, 36px); line-height: 1.45; margin-top: 18px; max-width: 26em; }
+footer { background: var(--deep); padding: 70px 22px 34px; overflow: hidden; }
+footer .name { display: block; font-size: min(27vw, 360px); line-height: 1.15; font-weight: 600; text-align: center; }
+.links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 28px; font-size: 20px; }
+.links a { display: inline-flex; align-items: center; min-height: 44px; text-underline-offset: 4px; }
+
+@media (max-width: 899px) {
+  .steps article { grid-template-columns: 1fr; gap: 24px; }
+  .sp { width: min(300px, 74vw); margin: auto; }
+  section { padding: 84px 20px; }
+  #install .wrap, #updates .wrap { grid-template-columns: 1fr; gap: 32px; }
+  .bar .lang { padding: 0 9px; }
+  .hero p.sub { margin-bottom: 18px; }
+  .meta a { margin-inline-start: 0; display: flex; justify-content: center; }
 }
-.steps b { display: block; font-size: 20px; font-weight: 600; }
-.steps span { color: var(--soft); font-size: 18px; }
-.note { max-width: 640px; margin: 16px auto 0; color: var(--soft); font-size: 17px; text-align: center; }
-
-/* screenshots */
-.shots { display: flex; gap: 14px; overflow-x: auto; padding: 4px 4px 18px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-.shots img { flex: none; width: 210px; height: auto; aspect-ratio: 540 / 1150; border-radius: 22px; scroll-snap-align: center; border: 1px solid var(--faint); background: var(--dusk); }
-@media (min-width: 760px) {
-  .shots { overflow: visible; justify-content: center; padding: 4px 0 18px; }
-  .shots img { width: calc((100% - 56px) / 5); }
-}
-.widgets { width: 100%; height: auto; border-radius: 22px; margin-top: 18px; border: 1px solid var(--faint); }
-
-/* features */
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-.ic {
-  width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px;
-  color: var(--amber); background: rgba(255, 183, 77, .13); border: 1px solid rgba(255, 183, 77, .22);
-}
-.ic svg { width: 26px; height: 26px; }
-.ic-c { margin: 0 auto 12px; }
-.btn2 svg { width: 22px; height: 22px; flex: none; color: #8ecbff; }
-.card:hover .ic { transform: scale(1.06) rotate(-3deg); }
-.ic { transition: transform .3s ease; }
-.grid h3 { margin: 0 0 6px; font-size: 21px; font-weight: 600; }
-.grid p { margin: 0; color: var(--soft); font-size: 17px; line-height: 1.75; }
-
-/* updates */
-.upd { max-width: 640px; margin: 0 auto; text-align: center; }
-.upd p { color: var(--soft); margin: 0; }
-.path { display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 12px; background: var(--glass); border: 1px solid var(--faint); color: var(--ink); font-size: 18px; }
-
-footer { padding: 56px 0 40px; text-align: center; color: var(--soft); font-size: 16px; }
-footer a { margin: 0 8px; }
-
-[data-en] { }
-html[lang="en"] body { line-height: 1.6; }
-@media (max-width: 520px) {
-  body { font-size: 18px; }
-  .hero h1 { font-size: 44px; }
-  h2 { font-size: 28px; }
-  .shots img { width: 180px; }
-}
-/* ---- motion: calm, sky-like; transform/opacity only ---- */
-body::before, body::after {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-repeat: repeat;
-}
-body::before {
-  background-image:
-    radial-gradient(1.6px 1.6px at 12% 18%, #fff 50%, transparent 52%),
-    radial-gradient(1.2px 1.2px at 38% 64%, #fff 50%, transparent 52%),
-    radial-gradient(1.8px 1.8px at 71% 27%, #fff 50%, transparent 52%),
-    radial-gradient(1.1px 1.1px at 86% 78%, #fff 50%, transparent 52%),
-    radial-gradient(1.4px 1.4px at 55% 9%, #fff 50%, transparent 52%),
-    radial-gradient(1.2px 1.2px at 24% 88%, #fff 50%, transparent 52%);
-  background-size: 520px 520px;
-  animation: twinkle 6s ease-in-out infinite;
-}
-body::after {
-  background-image:
-    radial-gradient(1.3px 1.3px at 8% 52%, #fff 50%, transparent 52%),
-    radial-gradient(1.7px 1.7px at 47% 33%, #fff 50%, transparent 52%),
-    radial-gradient(1.1px 1.1px at 64% 71%, #fff 50%, transparent 52%),
-    radial-gradient(1.5px 1.5px at 92% 14%, #fff 50%, transparent 52%),
-    radial-gradient(1.2px 1.2px at 31% 6%, #fff 50%, transparent 52%);
-  background-size: 760px 760px;
-  animation: twinkle 9s ease-in-out -3s infinite;
-}
-.wrap { position: relative; z-index: 1; }
-@keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .8; } }
-@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-@keyframes glow {
-  0%, 100% { filter: drop-shadow(0 10px 30px rgba(99, 102, 241, .5)); }
-  50% { filter: drop-shadow(0 14px 42px rgba(249, 115, 22, .45)); }
-}
-@keyframes sheen { 0%, 70% { transform: translateX(-160%) skewX(-20deg); } 100% { transform: translateX(260%) skewX(-20deg); } }
-
-.hero > * { animation: rise .8s cubic-bezier(.2, .8, .2, 1) backwards; }
-.hero > :nth-child(2) { animation-delay: .08s; }
-.hero > :nth-child(3) { animation-delay: .16s; }
-.hero > :nth-child(4) { animation-delay: .26s; }
-.hero > :nth-child(5) { animation-delay: .34s; }
-.hero > :nth-child(6) { animation-delay: .42s; }
-.hero .icon { animation: rise .8s cubic-bezier(.2, .8, .2, 1) backwards, float 6s ease-in-out .8s infinite, glow 8s ease-in-out infinite; }
-
-.dl { position: relative; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
-.dl::after {
-  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
-  animation: sheen 4.5s ease-in-out 1.6s infinite;
-}
-.dl:hover { transform: translateY(-2px); box-shadow: 0 18px 44px rgba(255, 157, 77, .45); }
-.btn2, .lang { transition: background-color .2s ease, transform .2s ease; }
-.btn2:hover, .lang:hover { background-color: rgba(255, 255, 255, .12); transform: translateY(-1px); }
-.card { transition: transform .25s ease, background-color .25s ease; }
-.card:hover { transform: translateY(-3px); background-color: rgba(255, 255, 255, .09); }
-
-.js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s cubic-bezier(.2, .8, .2, 1), transform .8s cubic-bezier(.2, .8, .2, 1); transition-delay: var(--d, 0s); }
-.js .reveal.in { opacity: 1; transform: none; }
-
+.js .rv { opacity: 0; transform: translateY(28px); transition: opacity .75s cubic-bezier(.2, .8, .2, 1), transform .75s cubic-bezier(.2, .8, .2, 1); transition-delay: var(--d, 0s); }
+.js .rv.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .js .reveal { opacity: 1; transform: none; }
+  .js .rv { opacity: 1; transform: none; }
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="bar">
-    <a class="brand" href="./"><img src="img/icon.svg" alt=""><span data-ar="عِمران" data-en="Emran">عِمران</span></a>
-    <button class="lang" id="lang" type="button" aria-label="Switch language">English</button>
-  </header>
+<div id="sky" aria-hidden="true"><i style="background:#0f2a4c"></i><i style="background:#14505f"></i><i style="background:#3a2b5c"></i><i style="background:#7a3b2c"></i></div>
+<div id="stars" aria-hidden="true"></div>
 
-  <main>
-    <div class="hero">
-      <img class="icon" src="img/icon.svg" alt="">
-      <h1 data-ar="عِمران" data-en="Emran">عِمران</h1>
-      <p class="tag" data-ar="مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث"
-         data-en="Prayer times, mushaf with recitation and offline Hifz, Qibla, adhkar, hadith">مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث</p>
+<header class="bar">
+  <a class="brand" href="./"><img src="img/icon.svg" alt="" width="32" height="32"><span data-ar="عِمران" data-en="Emran">عِمران</span></a>
+  <button class="lang" id="lang" type="button" aria-label="Switch language">English</button>
+  <a class="get" href="{{FALLBACK}}" download="Emran.apk"><span data-ar="حمّل" data-en="Download">حمّل</span></a>
+</header>
 
-      <a class="dl" id="dl" href="{{FALLBACK}}" download="Emran.apk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
-        <span id="dl-label" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span>
-      </a>
-      <div class="meta">
-        <span data-ar="الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث" data-en="Version {{VERSION}} · {{SIZE}} MB · Android 7 or newer">الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث</span>
-      </div>
-      <div class="alt">
-        <a class="btn2" href="https://t.me/emran_app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span data-ar="قناة عِمران على تيليجرام" data-en="Emran on Telegram">قناة عِمران على تيليجرام</span></a>
-      </div>
-
-      <div class="inapp" id="inapp" role="note">
-        <b data-ar="افتح الصفحة في المتصفح أولًا" data-en="Open this page in your browser first">افتح الصفحة في المتصفح أولًا</b><br>
-        <span data-ar="التنزيل لا يعمل من داخل هذا التطبيق. اضغط ⋮ أو ⋯ في الأعلى ثم «فتح في المتصفح»، وحمّل من هناك."
-              data-en="Downloads don't work inside this app. Tap ⋮ or ⋯ at the top, choose “Open in browser”, and download from there.">التنزيل لا يعمل من داخل هذا التطبيق. اضغط ⋮ أو ⋯ في الأعلى ثم «فتح في المتصفح»، وحمّل من هناك.</span>
-      </div>
-    </div>
-
-    <section id="install">
-      <h2 data-ar="التثبيت بثلاث خطوات" data-en="Install in three steps">التثبيت بثلاث خطوات</h2>
-      <ol class="steps">
-        <li><div><b data-ar="اضغط «حمّل عِمران»" data-en="Tap “Download Emran”">اضغط «حمّل عِمران»</b>
-          <span data-ar="وانتظر حتى ينتهي التنزيل. إن سألك الهاتف «هل تريد الاحتفاظ بالملف؟» اختر «تنزيل» أو «احتفاظ»."
-                data-en="Wait for the download to finish. If your phone asks whether to keep the file, choose “Download” or “Keep”.">وانتظر حتى ينتهي التنزيل. إن سألك الهاتف «هل تريد الاحتفاظ بالملف؟» اختر «تنزيل» أو «احتفاظ».</span></div></li>
-        <li><div><b data-ar="افتح الملف Emran.apk" data-en="Open the file Emran.apk">افتح الملف Emran.apk</b>
-          <span data-ar="من إشعار التنزيل أو من «التنزيلات». أول مرة فقط سيطلب الهاتف إذنًا: اضغط «الإعدادات» وفعّل «السماح من هذا المصدر» ثم ارجع."
-                data-en="From the download notification or your Downloads. The first time only, your phone asks for permission: tap “Settings”, turn on “Allow from this source”, then go back.">من إشعار التنزيل أو من «التنزيلات». أول مرة فقط سيطلب الهاتف إذنًا: اضغط «الإعدادات» وفعّل «السماح من هذا المصدر» ثم ارجع.</span></div></li>
-        <li><div><b data-ar="اضغط «تثبيت»" data-en="Tap “Install”">اضغط «تثبيت»</b>
-          <span data-ar="وبعد ثوانٍ اضغط «فتح». إن كان عِمران عندك من قبل فسيُحدَّث فوقه وتبقى بياناتك كما هي."
-                data-en="After a few seconds, tap “Open”. If you already have Emran, it updates over it and your data stays as it is.">وبعد ثوانٍ اضغط «فتح». إن كان عِمران عندك من قبل فسيُحدَّث فوقه وتبقى بياناتك كما هي.</span></div></li>
-      </ol>
-      <p class="note" data-ar="إن ظهرت رسالة من Play Protect فاضغط «التثبيت على أي حال». عِمران مفتوح المصدر وليس في متجر Play فقط لهذا السبب."
-         data-en="If Play Protect shows a warning, tap “Install anyway”. Emran is open source; it shows up only because it isn't from the Play Store.">إن ظهرت رسالة من Play Protect فاضغط «التثبيت على أي حال». عِمران مفتوح المصدر وليس في متجر Play فقط لهذا السبب.</p>
-    </section>
-
-    <section id="updates">
-      <div class="upd card">
-        <div class="ic ic-c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></div>
-        <h2 data-ar="التحديثات من داخل التطبيق" data-en="Updates come from inside the app">التحديثات من داخل التطبيق</h2>
-        <p data-ar="لا حاجة للرجوع إلى هنا. عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط."
-           data-en="No need to come back here. When a new version is out, Emran downloads and installs it over the old one in one tap, usually just a few MB.">لا حاجة للرجوع إلى هنا. عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط.</p>
-        <span class="path" data-ar="الإعدادات ← المساعدة وحول ← التحديثات" data-en="Settings → Help &amp; about → Updates">الإعدادات ← المساعدة وحول ← التحديثات</span>
-      </div>
-    </section>
-
-    <section id="look">
-      <h2 data-ar="من داخل عِمران" data-en="Inside Emran">من داخل عِمران</h2>
-      <div class="shots" id="shots">
-        <img src="img/home-maghrib.webp" data-src-en="img/home-night-en.webp" alt="" loading="lazy" width="540" height="1150">
-        <img src="img/reader.webp" data-src-en="img/quran-en.webp" alt="" loading="lazy" width="540" height="1150">
-        <img src="img/adhan.webp" data-src-en="img/adhan-en.webp" alt="" loading="lazy" width="540" height="1150">
-        <img src="img/hadith.webp" data-src-en="img/hadith-en.webp" alt="" loading="lazy" width="540" height="1150">
-        <img src="img/calendar.webp" data-src-en="img/calendar-en.webp" alt="" loading="lazy" width="540" height="1150">
-      </div>
-      <img class="widgets" src="img/widgets.webp" alt="" loading="lazy" width="1200" height="592">
-    </section>
-
-    <section id="features">
-      <h2 data-ar="ما فيه" data-en="What's inside">ما فيه</h2>
-      <div class="grid">
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><h3 data-ar="مواقيت الصلاة والأذان" data-en="Prayer times and adhan">مواقيت الصلاة والأذان</h3>
-          <p data-ar="حساب المواقيت دون إنترنت لأي مكان، بسبع عشرة طريقة حساب معتمدة، وعصر شافعي أو حنفي، وضبط كل صلاة بالدقائق."
-             data-en="Offline times for anywhere, seventeen published conventions, Shafi'i or Hanafi Asr, and per-prayer fine-tuning.">حساب المواقيت دون إنترنت لأي مكان، بسبع عشرة طريقة حساب معتمدة، وعصر شافعي أو حنفي، وضبط كل صلاة بالدقائق.</p></div>
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg></div><h3 data-ar="القرآن الكريم" data-en="Qur'an">القرآن الكريم</h3>
-          <p data-ar="صفحة مصحف المدينة بخط مجمع الملك فهد، والبحث بالكلمات أو برقم الآية، واضغط على أي آية لترى تفسيرها."
-             data-en="The Madinah mushaf page in the King Fahd Complex's font, search by words or reference, and tap any ayah for its meaning.">صفحة مصحف المدينة بخط مجمع الملك فهد، والبحث بالكلمات أو برقم الآية، واضغط على أي آية لترى تفسيرها.</p></div>
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg></div><h3 data-ar="وضع الحفظ" data-en="Hifz mode">وضع الحفظ</h3>
-          <p data-ar="اقرأ من حفظك وتظهر الكلمات كلما قرأتها. يُفحص الصوت على الهاتف نفسه، ولا يخرج صوتك من جهازك أبدًا."
-             data-en="Recite from memory and the words reveal themselves as you say them. Checked on the phone; your voice never leaves it.">اقرأ من حفظك وتظهر الكلمات كلما قرأتها. يُفحص الصوت على الهاتف نفسه، ولا يخرج صوتك من جهازك أبدًا.</p></div>
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg></div><h3 data-ar="القبلة" data-en="Qibla">القبلة</h3>
-          <p data-ar="بوصلة مع تصحيح الانحراف المغناطيسي، وعرض اختياري بالكاميرا تظهر فيه الكعبة باتجاه القبلة."
-             data-en="A compass with magnetic declination correction, plus an optional camera view with the Kaaba in the Qibla direction.">بوصلة مع تصحيح الانحراف المغناطيسي، وعرض اختياري بالكاميرا تظهر فيه الكعبة باتجاه القبلة.</p></div>
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="3.6" r="1.9"/><circle cx="17.6" cy="6.4" r="1.9"/><circle cx="18.6" cy="12.4" r="1.9"/><circle cx="5.4" cy="12.4" r="1.9"/><circle cx="6.4" cy="6.4" r="1.9"/><path d="M8 16.5c1 1.4 2.4 2 4 2s3-.6 4-2"/><path d="M12 18.5V22"/></svg></div><h3 data-ar="المسبحة والأذكار والحديث" data-en="Masbaha, adhkar and hadith">المسبحة والأذكار والحديث</h3>
-          <p data-ar="مسبحة بخيط من ٣٣ حبة، وأذكار الصباح والمساء وحصن المسلم، والأحاديث الصحيحة فقط."
-             data-en="A masbaha with a string of 33 beads, morning and evening adhkar and Hisn al-Muslim, and sahih hadith only.">مسبحة بخيط من ٣٣ حبة، وأذكار الصباح والمساء وحصن المسلم، والأحاديث الصحيحة فقط.</p></div>
-        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><h3 data-ar="بلا مقابل، ابتغاء وجه الله" data-en="Free, for the sake of Allah">بلا مقابل، ابتغاء وجه الله</h3>
-          <p data-ar="لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. كل شيء يعمل دون إنترنت."
-             data-en="No account, no ads, no analytics, no subscriptions. Everything works with no internet.">لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. كل شيء يعمل دون إنترنت.</p></div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <a href="https://t.me/emran_app">Telegram</a>·<a href="https://github.com/SammyNashed/Emran" data-ar="الكود المصدري" data-en="Source code">الكود المصدري</a>
-    <div style="margin-top:10px">GPL-3.0</div>
-  </footer>
+<div class="inapp" id="inapp" role="note">
+  <b data-ar="افتح الصفحة في المتصفح أولًا" data-en="Open this page in your browser first">افتح الصفحة في المتصفح أولًا</b>
+  <span data-ar="التنزيل لا يعمل من داخل هذا التطبيق. اضغط ⋮ أو ⋯ في الأعلى ثم «فتح في المتصفح»، وحمّل من هناك." data-en="Downloads don&#x27;t work inside this app. Tap ⋮ or ⋯ at the top, choose “Open in browser”, and download from there.">التنزيل لا يعمل من داخل هذا التطبيق. اضغط ⋮ أو ⋯ في الأعلى ثم «فتح في المتصفح»، وحمّل من هناك.</span>
 </div>
 
+<main>
+<div id="show">
+  <div class="stage" id="stage">
+    <div class="hero" id="hero">
+      <h1 data-ar="رفيقك في الصلاة والقرآن" data-en="Your companion for prayer and Qur&#x27;an">رفيقك في الصلاة والقرآن</h1>
+      <p class="sub" data-ar="مواقيت الصلاة والمصحف والأذكار والحديث، مجانًا وبلا إعلانات." data-en="Prayer times, the mushaf, adhkar and hadith. Free, with no ads.">مواقيت الصلاة والمصحف والأذكار والحديث، مجانًا وبلا إعلانات.</p>
+      <a class="get big" href="{{FALLBACK}}" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
+      <div class="meta"><span data-ar="الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث" data-en="Version {{VERSION}} · {{SIZE}} MB · Android 7 or newer">الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث</span><a href="https://t.me/emran_app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg><span data-ar="قناة تيليجرام" data-en="Telegram channel">قناة تيليجرام</span></a></div>
+    </div>
+    <div class="pan a" id="pa"></div>
+    <div class="pan b" id="pb"></div>
+    <div class="fan" aria-hidden="true">
+      <div class="ph side" data-ui><div class="scr"><img src="img/s-calendar.webp" data-src-en="img/s-calendar-en.webp" alt="" width="760" height="1618" decoding="async"></div></div><div class="ph side" data-ui><div class="scr"><img src="img/s-adhan.webp" data-src-en="img/s-adhan-en.webp" alt="" width="760" height="1618" decoding="async"></div></div><div class="ph side" data-ui><div class="scr"><img src="img/s-reader.webp" data-src-en="img/s-reader-en.webp" alt="" width="760" height="1618" decoding="async"></div></div><div class="ph side" data-ui><div class="scr"><img src="img/s-hadith.webp" data-src-en="img/s-hadith-en.webp" alt="" width="760" height="1618" decoding="async"></div></div>
+      <div class="ph" id="main" data-ui><div class="scr"></div></div>
+    </div>
+  </div>
+  <div class="steps" id="steps">
+    <article>
+      <div class="l"><h2 data-ar="مواقيت صلاتك، بلا إنترنت" data-en="Prayer times, no internet needed">مواقيت صلاتك، بلا إنترنت</h2><p data-ar="لأي مكان في العالم، بسبع عشرة طريقة حساب معتمدة وعصر شافعي أو حنفي." data-en="For anywhere on earth, with seventeen published methods and Shafi&#x27;i or Hanafi Asr.">لأي مكان في العالم، بسبع عشرة طريقة حساب معتمدة وعصر شافعي أو حنفي.</p></div>
+      <div class="sp" data-ui><img src="img/s-home.webp" data-src-en="img/s-home-en.webp" alt="صفحة عمران الرئيسية" width="760" height="1618" decoding="async"></div>
+      <ul class="r"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div><b data-ar="عدّ تنازلي للأذان" data-en="A countdown to the adhan">عدّ تنازلي للأذان</b><span data-ar="وللإقامة بعده في كل صلاة." data-en="And to the iqama of every prayer.">وللإقامة بعده في كل صلاة.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><div><b data-ar="ضبط كل صلاة بالدقائق" data-en="Fine-tune every prayer">ضبط كل صلاة بالدقائق</b><span data-ar="قدّم أو أخّر أي صلاة لتطابق مسجدك." data-en="Move any prayer a few minutes to match your mosque.">قدّم أو أخّر أي صلاة لتطابق مسجدك.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/></svg><div><b data-ar="القبلة" data-en="Qibla">القبلة</b><span data-ar="بوصلة، وعرض بالكاميرا إن أردت." data-en="A compass, or a camera view if you like.">بوصلة، وعرض بالكاميرا إن أردت.</span></div></li></ul>
+    </article>
+    <article>
+      <div class="l"><h2 data-ar="مصحف المدينة كاملًا" data-en="The whole Madinah mushaf">مصحف المدينة كاملًا</h2><p data-ar="٦٠٤ صفحات بخط مجمع الملك فهد، مع أحد عشر قارئًا." data-en="604 pages in the King Fahd Complex&#x27;s font, with eleven reciters.">٦٠٤ صفحات بخط مجمع الملك فهد، مع أحد عشر قارئًا.</p></div>
+      <div class="sp" data-ui><img src="img/s-reader.webp" data-src-en="img/s-reader-en.webp" alt="صفحة من المصحف" width="760" height="1618" decoding="async"></div>
+      <ul class="r"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg><div><b data-ar="تفسير كل آية" data-en="The meaning of every ayah">تفسير كل آية</b><span data-ar="اضغط على أي آية لترى تفسيرها." data-en="Tap any ayah to read its tafsir.">اضغط على أي آية لترى تفسيرها.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><div><b data-ar="وضع الحفظ" data-en="Hifz mode">وضع الحفظ</b><span data-ar="اقرأ من حفظك، وصوتك لا يخرج من هاتفك." data-en="Recite from memory; your voice never leaves your phone.">اقرأ من حفظك، وصوتك لا يخرج من هاتفك.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16M3 12h18"/></svg><div><b data-ar="فيديو قرآني" data-en="Qur&#x27;an videos">فيديو قرآني</b><span data-ar="اصنع مقطعًا بالآيات والقارئ على هاتفك." data-en="Make a clip with the ayat and reciter you pick, on your phone.">اصنع مقطعًا بالآيات والقارئ على هاتفك.</span></div></li></ul>
+    </article>
+    <article>
+      <div class="l"><h2 data-ar="أذان يحترم هاتفك" data-en="An adhan that respects your phone">أذان يحترم هاتفك</h2><p data-ar="يتبع وضع الصامت والاهتزاز وعدم الإزعاج." data-en="It follows silent, vibrate and Do Not Disturb.">يتبع وضع الصامت والاهتزاز وعدم الإزعاج.</p></div>
+      <div class="sp" data-ui><img src="img/s-adhan.webp" data-src-en="img/s-adhan-en.webp" alt="إعدادات الأذان" width="760" height="1618" decoding="async"></div>
+      <ul class="r"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div><b data-ar="اختر المؤذن" data-en="Choose the muezzin">اختر المؤذن</b><span data-ar="أحمد النفيس، أو مشاري العفاسي، أو سعد الغامدي." data-en="Ahmad Al-Nafees, Mishary Alafasy or Saad Al-Ghamdi.">أحمد النفيس، أو مشاري العفاسي، أو سعد الغامدي.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><div><b data-ar="ساعات الهدوء" data-en="Quiet hours">ساعات الهدوء</b><span data-ar="لا يزعجك في الوقت الذي تحدده." data-en="It stays quiet during the hours you set.">لا يزعجك في الوقت الذي تحدده.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><div><b data-ar="حد للصوت" data-en="A loudness cap">حد للصوت</b><span data-ar="لا يتجاوز الأذان الدرجة التي تختارها." data-en="The adhan never goes above the level you pick.">لا يتجاوز الأذان الدرجة التي تختارها.</span></div></li></ul>
+    </article>
+    <article>
+      <div class="l"><h2 data-ar="الأحاديث الصحيحة فقط" data-en="Sahih hadith only">الأحاديث الصحيحة فقط</h2><p data-ar="البخاري ومسلم كاملين، ومن السنن ما صحّحه الألباني." data-en="Bukhari and Muslim in full, and from the Sunan what al-Albani graded sahih.">البخاري ومسلم كاملين، ومن السنن ما صحّحه الألباني.</p></div>
+      <div class="sp" data-ui><img src="img/s-hadith.webp" data-src-en="img/s-hadith-en.webp" alt="مكتبة الحديث" width="760" height="1618" decoding="async"></div>
+      <ul class="r"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><div><b data-ar="ابحث برقم الحديث" data-en="Search by number">ابحث برقم الحديث</b><span data-ar="أو بأي كلمة فيه." data-en="Or by any word in it.">أو بأي كلمة فيه.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="3.6" r="1.9"/><circle cx="17.6" cy="6.4" r="1.9"/><circle cx="18.6" cy="12.4" r="1.9"/><circle cx="5.4" cy="12.4" r="1.9"/><circle cx="6.4" cy="6.4" r="1.9"/><path d="M8 16.5c1 1.4 2.4 2 4 2s3-.6 4-2"/><path d="M12 18.5V22"/></svg><div><b data-ar="المسبحة والأذكار" data-en="Masbaha and adhkar">المسبحة والأذكار</b><span data-ar="أذكار اليوم وحصن المسلم." data-en="The day&#x27;s adhkar and Hisn al-Muslim.">أذكار اليوم وحصن المسلم.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg><div><b data-ar="الذكر العائم" data-en="Floating dhikr">الذكر العائم</b><span data-ar="بطاقة هادئة بذكر تختاره فوق أي تطبيق." data-en="A calm card with a dhikr you pick, over any app.">بطاقة هادئة بذكر تختاره فوق أي تطبيق.</span></div></li></ul>
+    </article>
+    <article>
+      <div class="l"><h2 data-ar="التقويم الهجري" data-en="The Hijri calendar">التقويم الهجري</h2><p data-ar="الشهر الهجري والميلادي معًا، وكم بقي لرمضان والعيد." data-en="Hijri and Gregorian together, and how long until Ramadan and Eid.">الشهر الهجري والميلادي معًا، وكم بقي لرمضان والعيد.</p></div>
+      <div class="sp" data-ui><img src="img/s-calendar.webp" data-src-en="img/s-calendar-en.webp" alt="التقويم الهجري" width="760" height="1618" decoding="async"></div>
+      <ul class="r"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><div><b data-ar="المناسبات القادمة" data-en="Coming occasions">المناسبات القادمة</b><span data-ar="رمضان والعيدان ويوم عرفة." data-en="Ramadan, both Eids and the Day of Arafah.">رمضان والعيدان ويوم عرفة.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><div><b data-ar="عشرون أداة للشاشة" data-en="Twenty home-screen widgets">عشرون أداة للشاشة</b><span data-ar="الصلاة القادمة والتاريخ وآية اليوم." data-en="The next prayer, the date and the ayah of the day.">الصلاة القادمة والتاريخ وآية اليوم.</span></div></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><div><b data-ar="تتحدّث وحدها" data-en="They update themselves">تتحدّث وحدها</b><span data-ar="عند كل صلاة وعند منتصف الليل." data-en="At every prayer and at midnight.">عند كل صلاة وعند منتصف الليل.</span></div></li></ul>
+    </article>
+  </div>
+</div>
+
+<section id="widgets"><div class="wrap">
+  <h2 class="t" data-ar="عشرون أداة لشاشتك" data-en="Twenty widgets for your home screen">عشرون أداة لشاشتك</h2>
+  <span data-ar="الصلاة القادمة، وصلوات اليوم، والتاريخ الهجري، وآية اليوم." data-en="The next prayer, the day&#x27;s prayers, the Hijri date and the ayah of the day.">الصلاة القادمة، وصلوات اليوم، والتاريخ الهجري، وآية اليوم.</span>
+  <img src="img/widgets.webp" alt="أدوات عمران على الشاشة الرئيسية" width="1200" height="592" decoding="async">
+</div></section>
+
+<section id="install"><div class="wrap">
+  <div>
+    <h2 class="t" data-ar="التثبيت بثلاث خطوات" data-en="Install in three steps">التثبيت بثلاث خطوات</h2>
+    <a class="get big" href="{{FALLBACK}}" download="Emran.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span class="lbl" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span></a>
+  </div>
+  <ol>
+    <li><div><b data-ar="اضغط «حمّل عِمران»" data-en="Tap “Download Emran”">اضغط «حمّل عِمران»</b><span data-ar="وانتظر حتى ينتهي التنزيل. إن سألك الهاتف عن الاحتفاظ بالملف، اختر «تنزيل» أو «احتفاظ»." data-en="Wait for the download to finish. If your phone asks whether to keep the file, choose “Download” or “Keep”.">وانتظر حتى ينتهي التنزيل. إن سألك الهاتف عن الاحتفاظ بالملف، اختر «تنزيل» أو «احتفاظ».</span></div></li>
+    <li><div><b data-ar="افتح الملف Emran.apk" data-en="Open the file Emran.apk">افتح الملف Emran.apk</b><span data-ar="من إشعار التنزيل أو من «التنزيلات». أول مرة فقط سيطلب الهاتف إذنًا: اضغط «الإعدادات» وفعّل «السماح من هذا المصدر» ثم ارجع." data-en="From the download notification or your Downloads. The first time only, your phone asks for permission: tap “Settings”, turn on “Allow from this source”, then go back.">من إشعار التنزيل أو من «التنزيلات». أول مرة فقط سيطلب الهاتف إذنًا: اضغط «الإعدادات» وفعّل «السماح من هذا المصدر» ثم ارجع.</span></div></li>
+    <li><div><b data-ar="اضغط «تثبيت»" data-en="Tap “Install”">اضغط «تثبيت»</b><span data-ar="وبعد ثوانٍ اضغط «فتح». إن كان عِمران عندك من قبل فسيُحدَّث فوقه وتبقى بياناتك كما هي." data-en="After a few seconds, tap “Open”. If you already have Emran, it updates over it and your data stays as it is.">وبعد ثوانٍ اضغط «فتح». إن كان عِمران عندك من قبل فسيُحدَّث فوقه وتبقى بياناتك كما هي.</span></div></li>
+    <li class="plain"><p class="note" data-ar="إن ظهرت رسالة من Play Protect فاضغط «التثبيت على أي حال». تظهر لأن عِمران ليس من متجر Play." data-en="If Play Protect shows a warning, tap “Install anyway”. It appears because Emran isn't from the Play Store.">إن ظهرت رسالة من Play Protect فاضغط «التثبيت على أي حال». تظهر لأن عِمران ليس من متجر Play.</p></li>
+  </ol>
+</div></section>
+
+<section id="updates"><div class="wrap">
+  <h2 class="t" data-ar="التحديثات من داخل التطبيق" data-en="Updates come from inside the app">التحديثات من داخل التطبيق</h2>
+  <div>
+    <span data-ar="عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط." data-en="When a new version is out, Emran downloads and installs it over the old one in one tap, usually just a few MB.">عندما يصدر إصدار جديد، يُنزّله عِمران ويثبّته فوق القديم بضغطة، وغالبًا ببضعة ميغا فقط.</span>
+    <div class="path"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg><span data-ar="الإعدادات ← المساعدة وحول ← التحديثات" data-en="Settings → Help &amp; about → Updates">الإعدادات ← المساعدة وحول ← التحديثات</span></div>
+  </div>
+</div></section>
+
+<section id="free"><div class="wrap">
+  <h2 class="t" data-ar="بلا مقابل، ابتغاء وجه الله" data-en="Free, for the sake of Allah">بلا مقابل، ابتغاء وجه الله</h2>
+  <span data-ar="لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. المواقيت والقرآن والحفظ والأذكار والحديث كلها تعمل دون إنترنت." data-en="No account, no ads, no analytics, no subscriptions. Prayer times, the Qur&#x27;an, Hifz, adhkar and hadith all work with no internet.">لا حسابات ولا إعلانات ولا تحليلات ولا اشتراكات. المواقيت والقرآن والحفظ والأذكار والحديث كلها تعمل دون إنترنت.</span>
+</div></section>
+</main>
+
+<footer>
+  <span class="name" data-ar="عِمران" data-en="Emran">عِمران</span>
+  <div class="links"><a href="https://t.me/emran_app">Telegram</a><a href="https://github.com/SammyNashed/Emran"><span data-ar="الكود المصدري" data-en="Source code">الكود المصدري</span></a><span>GPL-3.0</span></div>
+</footer>
 <script>
 (function () {
   var root = document.documentElement, btn = document.getElementById('lang');
+  var clamp = function (v, a, b) { return Math.max(a === undefined ? 0 : a, Math.min(b === undefined ? 1 : b, v)); };
+  var ease = function (x) { return x * x * (3 - 2 * x); };
+  var lerp = function (a, b, x) { return a + (b - a) * x; };
+  var layoutFn = null, draw = null;
+
   function apply(lang) {
     root.lang = lang; root.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.querySelectorAll('[data-ar]').forEach(function (el) { el.textContent = el.getAttribute('data-' + lang); });
-    document.querySelectorAll('#shots img').forEach(function (img) {
+    document.querySelectorAll('img[data-src-en]').forEach(function (img) {
       if (!img.dataset.srcAr) img.dataset.srcAr = img.getAttribute('src');
       img.src = lang === 'en' ? img.dataset.srcEn : img.dataset.srcAr;
     });
     btn.textContent = lang === 'ar' ? 'English' : 'العربية';
     document.title = lang === 'ar' ? 'عِمران · Emran' : 'Emran · عِمران';
+    if (layoutFn) layoutFn();
   }
   var saved = null;
   try { saved = localStorage.getItem('lang'); } catch (e) {}
@@ -328,81 +260,171 @@ body::after {
     apply(lang);
     try { localStorage.setItem('lang', lang); } catch (e) {}
   });
+
   // The APK sits on Cloudflare in pieces (each file there must be under 25 MB). Fetch them in
   // order, join them into one Emran.apk and hand it to the browser to save. Anything missing
   // (an old browser, a failed piece) falls back to the single file on GitHub, the link's href.
-  var parts = {{PARTS}}, dl = document.getElementById('dl'), label = document.getElementById('dl-label'), busy = false;
-  function say(ar, en) { label.textContent = root.lang === 'ar' ? ar : en; }
-  dl.addEventListener('click', function (e) {
-    if (!window.fetch || !window.Blob || !window.URL || !parts.length || !window.ReadableStream) return;
-    e.preventDefault();
-    if (busy) return;
-    busy = true;
-    var total = {{BYTES}}, got = 0, chunks = [];
-    function pct() { var p = Math.min(99, Math.floor(got * 100 / total)); say('جارٍ التنزيل… ' + p + '٪', 'Downloading… ' + p + '%'); }
-    pct();
-    parts.reduce(function (chain, url) {
-      return chain.then(function () {
-        return fetch(url).then(function (r) {
-          if (!r.ok) throw new Error(r.status);
-          var reader = r.body.getReader();
-          function pump() {
-            return reader.read().then(function (x) {
-              if (x.done) return;
-              chunks.push(x.value); got += x.value.length; pct();
-              return pump();
-            });
-          }
-          return pump();
+  var parts = {{PARTS}}, busy = false, labels = document.querySelectorAll('.lbl'), fallback = '{{FALLBACK}}';
+  function say(ar, en) { labels.forEach(function (l) { l.textContent = root.lang === 'ar' ? ar : en; }); }
+  function reset() { labels.forEach(function (l) { l.textContent = l.getAttribute('data-' + root.lang); }); }
+  document.querySelectorAll('a.get').forEach(function (dl) {
+    dl.addEventListener('click', function (e) {
+      if (!window.fetch || !window.Blob || !window.URL || !parts.length || !window.ReadableStream) return;
+      e.preventDefault();
+      if (busy) return;
+      busy = true;
+      var total = {{BYTES}}, got = 0, chunks = [];
+      function pct() { var p = Math.min(99, Math.floor(got * 100 / total)); say('جارٍ التنزيل… ' + p + '٪', 'Downloading… ' + p + '%'); }
+      pct();
+      parts.reduce(function (chain, url) {
+        return chain.then(function () {
+          return fetch(url).then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            var reader = r.body.getReader();
+            function pump() {
+              return reader.read().then(function (x) {
+                if (x.done) return;
+                chunks.push(x.value); got += x.value.length; pct();
+                return pump();
+              });
+            }
+            return pump();
+          });
         });
+      }, Promise.resolve()).then(function () {
+        if (got !== total) throw new Error('size');
+        var blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+        chunks = [];
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'Emran.apk';
+        document.body.appendChild(a); a.click(); a.remove();
+        say('تم التنزيل، افتح الملف', 'Downloaded. Open the file');
+        busy = false;
+      }).catch(function () {
+        busy = false; chunks = []; reset();
+        location.href = fallback;
       });
-    }, Promise.resolve()).then(function () {
-      if (got !== total) throw new Error('size');
-      var blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
-      chunks = [];
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = 'Emran.apk';
-      document.body.appendChild(a); a.click(); a.remove();
-      say('تم التنزيل ✓ افتح الملف', 'Downloaded ✓ Open the file');
-      busy = false;
-    }).catch(function () {
-      busy = false; chunks = [];
-      say('حمّل عِمران', 'Download Emran');
-      location.href = dl.getAttribute('href');
     });
   });
-  // Sections, steps, cards and screenshots fade up as they scroll in; siblings slightly staggered.
-  var groups = [['section h2'], ['.steps li'], ['.note'], ['.upd'], ['.shots img'], ['.widgets'], ['.grid .card']];
-  var items = [];
-  groups.forEach(function (g) {
-    document.querySelectorAll(g[0]).forEach(function (el, i) {
-      el.classList.add('reveal'); el.style.setProperty('--d', Math.min(i, 6) * 0.08 + 's'); items.push(el);
-    });
-  });
-  // Plain scroll check (works in every browser, ~20 elements): reveal what is on screen.
-  var ticking = false;
-  function check() {
-    ticking = false;
-    var h = window.innerHeight || document.documentElement.clientHeight;
-    items = items.filter(function (el) {
-      if (el.getBoundingClientRect().top < h * 0.92) {
-        el.classList.add('in');
-        // Done fading: drop the reveal styles so hover effects work again.
-        setTimeout(function () { el.classList.remove('reveal', 'in'); }, 1700);
-        return false;
-      }
-      return true;
-    });
-    if (!items.length) { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); }
-  }
-  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(check); } }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
-  check();
+
   // Instagram, Facebook, TikTok, Snapchat and similar in-app browsers can't download files.
   if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|Snapchat|Twitter/i.test(navigator.userAgent)) {
     document.getElementById('inapp').classList.add('show');
   }
+
+  // Later sections rise in as they arrive, the parts of each one slightly staggered.
+  var items = [];
+  document.querySelectorAll('section .wrap').forEach(function (w) {
+    w.querySelectorAll('h2, p, li, .get, .path, img').forEach(function (el, i) {
+      el.classList.add('rv'); el.style.setProperty('--d', Math.min(i, 6) * 0.08 + 's'); items.push(el);
+    });
+  });
+  function reveal() {
+    var h = window.innerHeight;
+    items = items.filter(function (el) {
+      if (el.getBoundingClientRect().top < h * 0.92) {
+        el.classList.add('in');
+        setTimeout(function () { el.classList.remove('rv', 'in'); }, 1700);
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // The pinned story: one sticky stage carries the hero, the fan of phones and the panels.
+  // With reduced motion the page stays a plain stack of sections, which is also the no-script page.
+  var pin = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!pin) {
+    addEventListener('scroll', reveal, { passive: true }); reveal();
+    return;
+  }
+  root.classList.add('pin');
+  var show = document.getElementById('show'), stage = document.getElementById('stage'), hero = document.getElementById('hero');
+  var pa = document.getElementById('pa'), pb = document.getElementById('pb'), main = document.getElementById('main');
+  var scr = main.querySelector('.scr'), sides = [].slice.call(document.querySelectorAll('.ph.side')), layers = [].slice.call(document.querySelectorAll('#sky i'));
+  var arts = [].slice.call(document.querySelectorAll('#steps article'));
+  var L = [], R = [], shots = [];
+  arts.forEach(function (a) {
+    var l = a.querySelector('.l'), r = a.querySelector('.r'), im = a.querySelector('img');
+    var bl = document.createElement('div'); bl.className = 'blk'; bl.appendChild(l); pa.appendChild(bl);
+    var br = document.createElement('div'); br.className = 'blk'; br.appendChild(r); pb.appendChild(br);
+    scr.appendChild(im); L.push(bl); R.push(br); shots.push(im);
+  });
+  var n = arts.length, HERO = .85, STEP = .95, vw, vh, W, tg = 76, T = 0, y0 = 0, base = 0, s0 = .82, mob = false, lastW = 0, intro = 0;
+  var offs = [[-2, 2.08, .68, .3], [-1, 1.1, .85, .14], [1, 1.1, .85, .14], [2, 2.08, .68, .3]];
+
+  function layout() {
+    vw = window.innerWidth; vh = stage.clientHeight || window.innerHeight; lastW = vw;
+    var was = mob; mob = vw < 900;
+    root.classList.toggle('m', mob);
+    root.classList.toggle('short', mob && vh < 690);
+    if (mob !== was || !layout.done) R.forEach(function (br, i) {
+      var r = (mob ? br : L[i]).querySelector('.r');
+      if (r) (mob ? L[i] : br).appendChild(r);
+    });
+    layout.done = true;
+    if (mob) {
+      T = L.reduce(function (m, b) { return Math.max(m, b.offsetHeight); }, 0) + 40;
+      root.style.setProperty('--T', T + 'px');
+      W = Math.min(vw * .68, 330); base = T + 14; s0 = .96;
+    } else {
+      W = Math.min((vh - tg - 22) / 2.066, 430, vw * .3); base = 0; s0 = .82;
+    }
+    root.style.setProperty('--W', W + 'px');
+    y0 = tg + hero.offsetHeight + 26 - tg;
+    show.style.height = (vh * (HERO + STEP * (n - 1) + .3) + vh) + 'px';
+    draw();
+  }
+  draw = function () {
+    var y = Math.max(0, -show.getBoundingClientRect().top);
+    var h = clamp(y / (vh * HERO)), eh = ease(h), io = ease(clamp(intro));
+    var total = Math.max(1, show.offsetHeight - vh);
+    var s = clamp((y - vh * HERO) / (vh * STEP), 0, n - 1), fl = Math.min(Math.floor(s), n - 2);
+    var t = fl + ease(clamp((s - fl - .3) / .4));
+    var cy = lerp(y0, base, eh), sc = lerp(s0, 1, eh);
+    main.style.transform = 'translateY(' + (cy + (1 - io) * 90) + 'px) scale(' + sc + ')';
+    main.style.opacity = clamp(intro * 1.6);
+    sides.forEach(function (p, i) {
+      var o = offs[i], k = Math.abs(o[0]), sign = o[0] > 0 ? 1 : -1;
+      var d = clamp((intro - .12 * k) / (1 - .12 * k)), ed = ease(d);
+      var x = sign * o[1] * W * s0 * (1 + eh * .55), yy = y0 + o[3] * W - eh * vh * .3 + (1 - ed) * (120 + k * 30);
+      p.style.transform = 'translate(' + x + 'px,' + yy + 'px) scale(' + (o[2] * s0) + ')';
+      p.style.opacity = Math.min(clamp(d * 1.6), 1 - clamp(h / .6));
+    });
+    hero.style.transform = 'translateY(' + (-eh * vh * .34) + 'px)';
+    hero.style.opacity = 1 - clamp(h / .45);
+    hero.style.pointerEvents = h > .3 ? 'none' : '';
+    var p = clamp((h - .42) / .58), ep = ease(p);
+    [pa, pb].forEach(function (el) { el.style.opacity = p; el.style.transform = 'translateY(' + ((1 - ep) * 70) + 'px)'; });
+    var pH = pa.clientHeight;
+    function place(b, i) {
+      var d = i - t, op = clamp(1 - Math.abs(d) * 1.5);
+      b.style.opacity = op; b.style.visibility = op ? 'visible' : 'hidden';
+      b.style.transform = 'translateY(' + (d * pH * .5) + 'px)';
+    }
+    L.forEach(place); R.forEach(place);
+    shots.forEach(function (im, i) { if (i) im.style.transform = 'translateY(' + clamp(i - t) * 101 + '%)'; });
+    var u = clamp(y / total) * layers.length;
+    layers.forEach(function (l, j) { l.style.opacity = clamp(u - j); });
+  };
+  var ticking = false;
+  function frame() { ticking = false; draw(); reveal(); }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', function () {
+    // Phones resize when the address bar slides; only a real change of width or a big height jump re-lays out.
+    if (window.innerWidth !== lastW || Math.abs((stage.clientHeight || 0) - vh) > 140) layout();
+  });
+  layoutFn = layout;
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  reveal();
+  var t0 = performance.now();
+  (function tick(now) {
+    intro = (now - t0) / 1250;
+    draw();
+    if (intro < 1) requestAnimationFrame(tick); else { intro = 1; draw(); }
+  })(t0);
 })();
 </script>
 </body>
