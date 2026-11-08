@@ -143,9 +143,9 @@ html[lang="en"] body { line-height: 1.6; }
       <p class="tag" data-ar="مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث"
          data-en="Prayer times, mushaf with recitation and offline Hifz, Qibla, adhkar, hadith">مواقيت الصلاة، المصحف مع التلاوة والحفظ دون إنترنت، القبلة، الأذكار والحديث</p>
 
-      <a class="dl" href="download/Emran.apk" download>
+      <a class="dl" id="dl" href="{{FALLBACK}}" download="Emran.apk">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
-        <span data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span>
+        <span id="dl-label" data-ar="حمّل عِمران" data-en="Download Emran">حمّل عِمران</span>
       </a>
       <div class="meta">
         <span data-ar="الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث" data-en="Version {{VERSION}} · {{SIZE}} MB · Android 7 or newer">الإصدار {{VERSION}} · {{SIZE}} ميغا · أندرويد 7 فأحدث</span>
@@ -252,6 +252,49 @@ html[lang="en"] body { line-height: 1.6; }
     lang = root.lang === 'ar' ? 'en' : 'ar';
     apply(lang);
     try { localStorage.setItem('lang', lang); } catch (e) {}
+  });
+  // The APK sits on Cloudflare in pieces (each file there must be under 25 MB). Fetch them in
+  // order, join them into one Emran.apk and hand it to the browser to save. Anything missing
+  // (an old browser, a failed piece) falls back to the single file on GitHub, the link's href.
+  var parts = {{PARTS}}, dl = document.getElementById('dl'), label = document.getElementById('dl-label'), busy = false;
+  function say(ar, en) { label.textContent = root.lang === 'ar' ? ar : en; }
+  dl.addEventListener('click', function (e) {
+    if (!window.fetch || !window.Blob || !window.URL || !parts.length || !window.ReadableStream) return;
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    var total = {{BYTES}}, got = 0, chunks = [];
+    function pct() { var p = Math.min(99, Math.floor(got * 100 / total)); say('جارٍ التنزيل… ' + p + '٪', 'Downloading… ' + p + '%'); }
+    pct();
+    parts.reduce(function (chain, url) {
+      return chain.then(function () {
+        return fetch(url).then(function (r) {
+          if (!r.ok) throw new Error(r.status);
+          var reader = r.body.getReader();
+          function pump() {
+            return reader.read().then(function (x) {
+              if (x.done) return;
+              chunks.push(x.value); got += x.value.length; pct();
+              return pump();
+            });
+          }
+          return pump();
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      if (got !== total) throw new Error('size');
+      var blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+      chunks = [];
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'Emran.apk';
+      document.body.appendChild(a); a.click(); a.remove();
+      say('تم التنزيل ✓ افتح الملف', 'Downloaded ✓ Open the file');
+      busy = false;
+    }).catch(function () {
+      busy = false; chunks = [];
+      say('حمّل عِمران', 'Download Emran');
+      location.href = dl.getAttribute('href');
+    });
   });
   // Instagram, Facebook, TikTok, Snapchat and similar in-app browsers can't download files.
   if (/Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|Snapchat|Twitter/i.test(navigator.userAgent)) {

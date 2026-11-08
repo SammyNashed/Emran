@@ -32,8 +32,15 @@ object UpdateChecker {
 
     const val CHANNEL_URL = "https://t.me/emran_app"
     private const val CHANNEL_HANDLE = "emran_app"
-    const val SITE_URL = "https://sammynashed.github.io/Emran/"
-    private const val LATEST_URL = SITE_URL + "update/latest.json"
+    const val SITE_URL = "https://emran-app.pages.dev/"
+    /**
+     * Asked in order: Emran's site on Cloudflare (fast in Syria), then the copy on GitHub Pages
+     * (slow there but reachable). If one host is ever blocked, updates still work.
+     */
+    private val LATEST_URLS = listOf(
+        SITE_URL + "update/latest.json",
+        "https://sammynashed.github.io/Emran/update/latest.json",
+    )
 
     /**
      * Opens the channel in the Telegram app. `tg://` goes straight to the app without looking
@@ -77,14 +84,22 @@ object UpdateChecker {
     }
 
     /** Where the version file lives. Overridable for testing via the "update_url" pref (debug installs only can set it). */
-    private fun latestUrl(context: Context): String =
+    private fun latestUrls(context: Context): List<String> =
         context.getSharedPreferences("emran_update", Context.MODE_PRIVATE)
-            .getString("update_url", null)?.takeIf { it.isNotBlank() } ?: LATEST_URL
+            .getString("update_url", null)?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: LATEST_URLS
 
     suspend fun check(context: Context, isArabic: Boolean): Result = withContext(Dispatchers.IO) {
+        var last: Result = Result.Offline
+        for (url in latestUrls(context)) {
+            last = checkAt(context, url, isArabic)
+            if (last !is Result.Offline && last !is Result.Failed) return@withContext last
+        }
+        last
+    }
+
+    private fun checkAt(context: Context, base: String, isArabic: Boolean): Result {
         var conn: HttpURLConnection? = null
-        try {
-            val base = latestUrl(context)
+        return try {
             conn = (URL(base).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 15_000
                 readTimeout = 15_000
@@ -92,11 +107,11 @@ object UpdateChecker {
                 useCaches = false
             }
             // No latest.json published yet means no update exists, which is not an error to show.
-            if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) return@withContext Result.UpToDate
-            if (conn.responseCode != HttpURLConnection.HTTP_OK) return@withContext Result.Failed
+            if (conn.responseCode == HttpURLConnection.HTTP_NOT_FOUND) return Result.UpToDate
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) return Result.Failed
             val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             val latestCode = json.getInt("versionCode")
-            if (latestCode <= BuildConfig.VERSION_CODE) return@withContext Result.UpToDate
+            if (latestCode <= BuildConfig.VERSION_CODE) return Result.UpToDate
             val notes = json.optString(if (isArabic) "notes_ar" else "notes_en")
                 .ifBlank { json.optString("notes_en") }
             Result.Available(json.optString("versionName", latestCode.toString()), notes, plan(context, base, json, latestCode))
