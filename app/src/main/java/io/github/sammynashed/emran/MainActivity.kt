@@ -62,6 +62,9 @@ val LocalDockVisible = compositionLocalOf { mutableStateOf(true) }
 
 class MainActivity : ComponentActivity() {
 
+    /** Bumped by [onNewIntent]: Emran is singleTask, so a notification or floating card tapped while it is open arrives here. */
+    private val intentTick = androidx.compose.runtime.mutableIntStateOf(0)
+
     private val viewModel: PrayerViewModel by viewModels()
     private val quranViewModel: QuranViewModel by viewModels()
 
@@ -141,7 +144,8 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 } else {
-                    val route = intent.getStringExtra("ROUTE")
+                    val tick = intentTick.intValue
+                    val route = remember(tick) { intent.getStringExtra("ROUTE") }
                     val targetStart = intent.getStringExtra("START_DESTINATION") ?: "home"
                     val initialRoute = "home"
                     val navController = rememberNavController()
@@ -154,7 +158,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(currentRoute) {
                         // When transitioning back to main/home from a subscreen, retain the last activeTabRoute
                     }
-                    LaunchedEffect(route) {
+                    LaunchedEffect(route, tick) {
                         if (route == "more") {
                             navController.navigate("hadith") { launchSingleTop = true }
                         } else if (route == "PRAYER_TAB" || route == "prayer_times") {
@@ -194,7 +198,7 @@ class MainActivity : ComponentActivity() {
                             (currentRoute == "home" && activeTabRoute == "finetune") ||
                             currentRoute == "prayer_times" || currentRoute == "calendar" || currentRoute == "reciters" || currentRoute == "quran_player" || currentRoute == "compass" ||
                             currentRoute == "dhikr" || currentRoute?.startsWith("ayah/") == true || currentRoute == "ayah_pick" ||
-                            currentRoute == "testers" || currentRoute?.startsWith("quran_video") == true || currentRoute == "adhan_behavior" || currentRoute == "floating_dhikr" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
+                            currentRoute == "testers" || currentRoute?.startsWith("quran_video") == true || currentRoute == "adhan_behavior" || currentRoute == "floating_dhikr" || currentRoute == "floating_dhikr_pick" || currentRoute == "calculation" || currentRoute == "reliable_alerts" || currentRoute == "adhkar" || currentRoute?.startsWith("adhkar_category/") == true ||
                             currentRoute?.startsWith("adhkar_detail/") == true ||
                             currentRoute == "hadith" || currentRoute?.startsWith("hadith_") == true || currentRoute?.startsWith("bookmarks") == true
                         SkyHost(
@@ -367,12 +371,16 @@ class MainActivity : ComponentActivity() {
                                          )
                                      }
                                      composable(
-                                         "adhkar_detail/{folderId}",
-                                         arguments = listOf(androidx.navigation.navArgument("folderId") { type = androidx.navigation.NavType.StringType })
+                                         "adhkar_detail/{folderId}?item={item}",
+                                         arguments = listOf(
+                                             androidx.navigation.navArgument("folderId") { type = androidx.navigation.NavType.StringType },
+                                             androidx.navigation.navArgument("item") { type = androidx.navigation.NavType.StringType; nullable = true; defaultValue = null },
+                                         )
                                      ) { backStackEntry ->
                                          val folderId = backStackEntry.arguments?.getString("folderId") ?: ""
                                          AdhkarDetailScreen(
                                              folderId = folderId,
+                                             focusItemId = backStackEntry.arguments?.getString("item"),
                                              onNavigateBack = { navController.popBackStack() }
                                          )
                                      }
@@ -519,7 +527,11 @@ class MainActivity : ComponentActivity() {
                                         io.github.sammynashed.emran.ui.screens.FloatingDhikrScreen(
                                             lang = currentLanguage,
                                             onBack = { navController.popBackStack() },
+                                            onPick = { navController.navigate("floating_dhikr_pick") { launchSingleTop = true } },
                                         )
+                                    }
+                                    composable("floating_dhikr_pick") {
+                                        io.github.sammynashed.emran.ui.screens.FloatingDhikrPickScreen(onBack = { navController.popBackStack() })
                                     }
                                     composable("adhan_behavior") {
                                         io.github.sammynashed.emran.ui.screens.AdhanBehaviorScreen(
@@ -620,6 +632,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.hasExtra("ROUTE")) intentTick.intValue++
         applyDesignDebugExtras(intent)
         takeUpdateFile(intent)
     }

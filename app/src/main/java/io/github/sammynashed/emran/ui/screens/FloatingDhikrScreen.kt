@@ -60,7 +60,7 @@ import io.github.sammynashed.emran.ui.localization.Text
 
 /** "الذكر العائم": everything about the floating card, with a live copy of it at the top. */
 @Composable
-fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
+fun FloatingDhikrScreen(lang: String, onBack: () -> Unit, onPick: () -> Unit = {}) {
     val ar = lang == "ar"
     val sky = LocalSky.current
     val context = LocalContext.current
@@ -74,12 +74,12 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
     var picked by remember { mutableStateOf(FloatingDhikr.selectedIds(context)) }
     var granted by remember { mutableStateOf(FloatingDhikr.canDraw(context)) }
     var choicesVersion by remember { mutableIntStateOf(0) }
-    val choices = remember(choicesVersion) { FloatingDhikr.choices(context) }
+    val sections = remember(choicesVersion) { FloatingDhikr.sections(context) }
+    val choices = remember(sections) { sections.flatMap { it.items } }
 
     var showEvery by remember { mutableStateOf(false) }
     var showDuration by remember { mutableStateOf(false) }
     var showQuiet by remember { mutableStateOf(false) }
-    var showPick by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
     var askPermission by remember { mutableStateOf(false) }
 
@@ -88,6 +88,8 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
     DisposableEffect(lifecycle) {
         val obs = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_RESUME) {
+                // Back from the picker (or from adding one of your own): show the new choice.
+                picked = FloatingDhikr.selectedIds(context); choicesVersion++
                 val was = granted
                 granted = FloatingDhikr.canDraw(context)
                 if (!was && granted && !on) { on = true; FloatingDhikr.setOn(context, true) }
@@ -113,10 +115,11 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
     }
     fun tryNow() {
         if (!FloatingDhikr.canDraw(context)) { askPermission = true; return }
-        val d = FloatingDhikr.next(context) ?: return
+        // Nothing chosen yet: choosing comes first.
+        val d = FloatingDhikr.next(context) ?: run { onPick(); return }
         FloatingDhikrOverlay.show(context, d)
     }
-    val sample = choices.firstOrNull { it.id in picked } ?: FloatingDhikr.BUILT_IN.first()
+    val sample = choices.firstOrNull { it.id in picked } ?: choices.firstOrNull()
 
     CompositionLocalProvider(LocalLayoutDirection provides if (ar) LayoutDirection.Rtl else LayoutDirection.Ltr) {
         Column(Modifier.fillMaxSize()) {
@@ -134,7 +137,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
                 // The real card, looping, so what you set is what you see.
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val w = with(LocalDensity.current) { (maxWidth - 28.dp).toPx().toInt() }
-                    FloatingDhikrPreview(sample, lang, show, w)
+                    sample?.let { FloatingDhikrPreview(it, lang, show, w) }
                 }
                 Spacer(Modifier.height(Space.sm))
 
@@ -146,6 +149,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
                         value = if (on && granted) everyLabel(every) else if (on) (if (ar) "يحتاج إذنًا" else "Needs permission") else (if (ar) "متوقف" else "Off"),
                         onClick = {
                             if (!on && !granted) askPermission = true
+                            else if (!on && picked.isEmpty()) onPick()
                             else { on = !on; FloatingDhikr.setOn(context, on) }
                         },
                     )
@@ -191,8 +195,12 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
                     SettingsRow(
                         icon = Icons.Default.FormatListBulleted, minHeight = 50.dp,
                         title = if (ar) "الأذكار التي تظهر" else "Adhkar it shows",
-                        value = if (ar) "$n ${if (n in 3..10) "أذكار" else "ذكرًا"}" else "$n selected",
-                        onClick = { showPick = true },
+                        value = when {
+                            n == 0 -> if (ar) "اختر الأذكار" else "Choose"
+                            ar -> "$n ${if (n in 3..10) "أذكار" else "ذكرًا"}"
+                            else -> "$n selected"
+                        },
+                        onClick = onPick,
                     )
                 }
 
@@ -200,8 +208,8 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
                 GlassButton(if (ar) "جرّبه الآن" else "Try it now", { tryNow() }, filled = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(Space.sm))
                 Text(
-                    if (ar) "يظهر فقط والشاشة مفتوحة، ولا يظهر أثناء المكالمات ولا في ساعات الهدوء. اضغط عليه لتفتح المسبحة."
-                    else "It only appears while the screen is on and unlocked, never during calls or quiet hours. Tap it to open the Tasbeeh.",
+                    if (ar) "يظهر فقط والشاشة مفتوحة، ولا يظهر أثناء المكالمات ولا في ساعات الهدوء. اضغط عليه لتقرأ الذكر كاملًا مع فضله ومصدره."
+                    else "It only appears while the screen is on and unlocked, never during calls or quiet hours. Tap it to read the whole dhikr with its virtue and source.",
                     color = sky.inkSoft, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.padding(horizontal = 6.dp),
                 )
             }
@@ -260,26 +268,7 @@ fun FloatingDhikrScreen(lang: String, onBack: () -> Unit) {
         }
     }
 
-    if (showPick) {
-        GlassDialog(onDismiss = { showPick = false }, title = if (ar) "الأذكار التي تظهر" else "Adhkar it shows",
-            subtitle = if (ar) "تظهر بالتناوب. أذكارك الخاصة من «أذكاري» هنا أيضًا." else "They take turns. Your own from “My adhkar” are here too.",
-            confirmLabel = if (ar) "تم" else "Done", onConfirm = { showPick = false }) {
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                choices.forEach { d ->
-                    val sel = d.id in picked
-                    ChoiceRow(
-                        label = d.ar, selected = sel,
-                        sublabel = if (d.id.startsWith("u")) (if (ar) "من أذكاري" else "My adhkar") else (if (ar) d.sourceAr else d.en),
-                        onClick = {
-                            val next = if (sel) picked - d.id else picked + d.id
-                            if (next.isNotEmpty()) { picked = next; FloatingDhikr.setSelected(context, next) }
-                        },
-                    )
-                }
-            }
-            GlassButton(if (ar) "اكتب ذكرًا خاصًا" else "Write your own", { showAdd = true }, filled = false, modifier = Modifier.fillMaxWidth())
-        }
-    }
+
 
     if (showAdd) {
         var text by remember { mutableStateOf("") }

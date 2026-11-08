@@ -27,44 +27,37 @@ import java.time.ZoneId
  * never wakes a sleeping phone just to show a card nobody sees.
  */
 object FloatingDhikr {
-    /** A short dhikr the card can show. Built-in ones carry their source; the user's own ("u…" ids) come from [MyAdhkar]. */
-    data class Dhikr(val id: String, val ar: String, val en: String, val sourceAr: String?, val sourceEn: String?)
+    /**
+     * A dhikr the card can show, from the app's own Adhkar library (assets/adhkar.json, the same texts and
+     * sources as Home ▸ Adhkar) or from the user's "أذكاري". [folderId] is its section there, so a tap on
+     * the card opens that very dhikr.
+     */
+    data class Dhikr(val id: String, val ar: String, val en: String, val sourceAr: String?, val sourceEn: String?, val folderId: String)
 
-    /** Short, authentic adhkar that read well at a glance. Texts and sources match assets/adhkar.json where it has them. */
-    val BUILT_IN = listOf(
-        Dhikr("subhan-bihamdih", "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", "Glory be to Allah, and praise be to Him",
-            "صحيح البخاري ٦٤٠٥، صحيح مسلم ٢٦٩١", "Al-Bukhari 6405, Muslim 2691"),
-        Dhikr("kalimatan", "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ", "Glory be to Allah and praise be to Him; glory be to Allah, the Almighty",
-            "صحيح البخاري ٦٤٠٦، صحيح مسلم ٢٦٩٤", "Al-Bukhari 6406, Muslim 2694"),
-        Dhikr("baqiyat", "سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكْبَرُ", "Glory be to Allah, praise be to Allah, there is no god but Allah, and Allah is the Greatest",
-            "صحيح مسلم ٢١٣٧", "Muslim 2137"),
-        Dhikr("istighfar", "أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ", "I seek Allah's forgiveness and turn to Him in repentance",
-            "صحيح البخاري ٦٣٠٧، صحيح مسلم ٢٧٠٢", "Al-Bukhari 6307, Muslim 2702"),
-        Dhikr("hawqala", "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", "There is no might and no power except with Allah",
-            "صحيح البخاري ٦٣٨٤، صحيح مسلم ٢٧٠٤", "Al-Bukhari 6384, Muslim 2704"),
-        Dhikr("salawat", "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ", "O Allah, send prayers and peace upon our Prophet Muhammad ﷺ",
-            "«مَن صلّى عليّ واحدةً صلّى الله عليه عشرًا» صحيح مسلم ٤٠٨", "“Whoever sends one prayer on me, Allah sends ten on him”, Muslim 408"),
-        Dhikr("hamd", "الْحَمْدُ لِلَّهِ", "All praise is for Allah",
-            "«والحمد لله تملأ الميزان» صحيح مسلم ٢٢٣", "“Praise be to Allah fills the scale”, Muslim 223"),
-        Dhikr("tahlil", "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
-            "There is no god but Allah alone, without partner; His is the dominion and His the praise, and He has power over all things",
-            "صحيح البخاري ٦٤٠٣، صحيح مسلم ٢٦٩١", "Al-Bukhari 6403, Muslim 2691"),
-        Dhikr("adada-khalqih", "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، عَدَدَ خَلْقِهِ، وَرِضَا نَفْسِهِ، وَزِنَةَ عَرْشِهِ، وَمِدَادَ كَلِمَاتِهِ",
-            "Glory and praise be to Allah, as many as His creation, as pleases Him, as heavy as His Throne, as endless as His words",
-            "صحيح مسلم ٢٧٢٦", "Muslim 2726"),
-        Dhikr("azim-bihamdih", "سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ", "Glory be to Allah, the Almighty, and praise be to Him",
-            "«غُرست له نخلة في الجنة» سنن الترمذي ٣٤٦٤", "“A palm tree is planted for him in Paradise”, at-Tirmidhi 3464"),
-        Dhikr("yunus", "لَا إِلَهَ إِلَّا أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ", "There is no god but You, glory be to You; I was among the wrongdoers",
-            "سورة الأنبياء ٨٧", "Al-Anbiya 21:87"),
-        Dhikr("hasbi", "حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ، عَلَيْهِ تَوَكَّلْتُ، وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ", "Allah is enough for me; there is no god but Him. In Him I trust, and He is Lord of the mighty Throne",
-            "سورة التوبة ١٢٩", "At-Tawbah 9:129"),
-        Dhikr("rabbana-atina", "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", "Our Lord, give us good in this world and good in the Hereafter, and protect us from the Fire",
-            "سورة البقرة ٢٠١", "Al-Baqarah 2:201"),
-        Dhikr("raditu", "رَضِيتُ بِاللَّهِ رَبًّا، وَبِالْإِسْلَامِ دِينًا، وَبِمُحَمَّدٍ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا",
-            "I am pleased with Allah as my Lord, Islam as my religion and Muhammad ﷺ as my Prophet",
-            "سنن أبي داود ٥٠٧٢", "Abu Dawud 5072"),
-    )
-    private val DEFAULT_IDS = setOf("subhan-bihamdih", "baqiyat", "istighfar", "hawqala", "salawat", "hamd")
+    /** A section of the library as the picker lists it. */
+    class Section(val id: String, val titleAr: String, val titleEn: String, val items: List<Dhikr>)
+
+    @Volatile private var library: List<Section>? = null
+
+    /** The bundled library, parsed once (a few hundred KB; plain org.json so a receiver can call it directly). */
+    private fun bundled(c: Context): List<Section> = library ?: runCatching {
+        val root = org.json.JSONObject(c.applicationContext.assets.open("adhkar.json").bufferedReader().use { it.readText() })
+        val folders = root.getJSONArray("folders")
+        (0 until folders.length()).map { fi ->
+            val f = folders.getJSONObject(fi)
+            val items = f.getJSONArray("items")
+            val list = (0 until items.length()).mapNotNull { ii ->
+                val it = items.getJSONObject(ii)
+                val id = it.optString("id").ifBlank { return@mapNotNull null }
+                val ar = it.optString("textAr")
+                if (ar.isBlank()) return@mapNotNull null
+                Dhikr(id, ar, it.optString("textEn").ifBlank { ar },
+                    it.optString("sourceAr").ifBlank { it.optString("source") }.ifBlank { null },
+                    it.optString("source").ifBlank { null }, f.getString("id"))
+            }
+            Section(f.getString("id"), f.optString("titleAr"), f.optString("titleEn"), list)
+        }.filter { it.items.isNotEmpty() }
+    }.getOrElse { android.util.Log.e("FloatingDhikr", "adhkar.json", it); emptyList() }.also { library = it }
 
     val EVERY_CHOICES = listOf(15, 30, 60, 120, 180)
     val SHOW_CHOICES = listOf(5, 8, 12, 20)
@@ -81,7 +74,8 @@ object FloatingDhikr {
     fun quietOn(c: Context) = prefs(c).getBoolean("float_dhikr_quiet_on", true)
     fun quietStart(c: Context) = prefs(c).getInt("float_dhikr_quiet_start", 23 * 60)
     fun quietEnd(c: Context) = prefs(c).getInt("float_dhikr_quiet_end", 7 * 60)
-    fun selectedIds(c: Context): Set<String> = prefs(c).getStringSet("float_dhikr_ids", null)?.toSet() ?: DEFAULT_IDS
+    /** Only what the person picked; nothing is chosen for them. */
+    fun selectedIds(c: Context): Set<String> = prefs(c).getStringSet("float_dhikr_ids", null)?.toSet() ?: emptySet()
 
     fun setOn(c: Context, on: Boolean) { prefs(c).edit().putBoolean("float_dhikr_on", on).apply(); schedule(c) }
     fun setEvery(c: Context, m: Int) { prefs(c).edit().putInt("float_dhikr_every", m).apply(); schedule(c) }
@@ -106,15 +100,22 @@ object FloatingDhikr {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /** Everything the user can pick: the built-in list, then their own adhkar from "أذكاري". */
-    fun choices(c: Context): List<Dhikr> = BUILT_IN + MyAdhkar.load(c).mapNotNull { item ->
-        val id = item.id ?: return@mapNotNull null
-        Dhikr(id, item.textAr, MyAdhkar.translationOf(item).ifBlank { item.textAr }, item.sourceAr, item.source)
+    /** The user's own first, then every section of the library in the app's order. */
+    fun sections(c: Context): List<Section> {
+        val mine = MyAdhkar.load(c).mapNotNull { item ->
+            val id = item.id ?: return@mapNotNull null
+            Dhikr(id, item.textAr, MyAdhkar.translationOf(item).ifBlank { item.textAr }, item.sourceAr, item.source, MyAdhkar.FOLDER_ID)
+        }
+        val own = if (mine.isEmpty()) emptyList() else listOf(Section(MyAdhkar.FOLDER_ID, "أذكاري", "My adhkar", mine))
+        return own + bundled(c)
     }
 
-    /** The next dhikr in turn among the selected ones (round robin, so a short list doesn't repeat back to back). */
+    fun choices(c: Context): List<Dhikr> = sections(c).flatMap { it.items }
+
     fun next(c: Context): Dhikr? {
         val chosen = selectedIds(c)
-        val list = choices(c).filter { it.id in chosen }.ifEmpty { BUILT_IN.filter { it.id in DEFAULT_IDS } }
+        val all = choices(c)
+        val list = all.filter { it.id in chosen }
         if (list.isEmpty()) return null
         val i = prefs(c).getInt("float_dhikr_turn", 0)
         prefs(c).edit().putInt("float_dhikr_turn", i + 1).apply()

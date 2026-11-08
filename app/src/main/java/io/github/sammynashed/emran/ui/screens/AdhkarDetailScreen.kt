@@ -37,6 +37,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -117,6 +121,8 @@ private fun shareDhikr(context: Context, folderId: String, title: String, item: 
 fun AdhkarDetailScreen(
     folderId: String,
     onNavigateBack: () -> Unit,
+    /** Set when the floating card was tapped: scroll to this dhikr and open it in full. */
+    focusItemId: String? = null,
     viewModel: AdhkarViewModel = viewModel(),
 ) {
     val lang = LocalAppLanguage.current
@@ -173,6 +179,10 @@ fun AdhkarDetailScreen(
             }
         } else if (folder != null) {
             val listState = rememberLazyListState()
+            if (focusItemId != null) LaunchedEffect(folder.id, focusItemId) {
+                val i = folder.items.indexOfFirst { it.id == focusItemId }
+                if (i >= 0) { listState.scrollToItem(i); selectedItem = folder.items[i] }
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().drawScrollbar(listState, color = sky.ink.copy(alpha = 0.5f)),
@@ -230,7 +240,7 @@ fun AdhkarDetailScreen(
  * times, and an optional source or note. Saved straight into "أذكاري".
  */
 @Composable
-private fun MyDhikrEditor(item: AdhkarItem?, lang: String, onDismiss: () -> Unit) {
+internal fun MyDhikrEditor(item: AdhkarItem?, lang: String, onDismiss: () -> Unit, onSaved: (String) -> Unit = {}) {
     val sky = LocalSky.current
     val context = LocalContext.current
     val ar = lang == "ar"
@@ -250,6 +260,7 @@ private fun MyDhikrEditor(item: AdhkarItem?, lang: String, onDismiss: () -> Unit
         onConfirm = {
             if (text.isNotBlank()) {
                 MyAdhkar.save(context, item?.id, text, translation, reps.toIntOrNull() ?: 1, source)
+                (item?.id ?: MyAdhkar.load(context).lastOrNull()?.id)?.let(onSaved)
                 onDismiss()
             }
         },
@@ -503,6 +514,8 @@ fun AdhkarListItem(
     onToggleBookmark: () -> Unit = {},
     onCopy: () -> Unit = {},
     onShare: () -> Unit = {},
+    /** Non-null in choose mode (floating dhikr): a check replaces bookmark / copy / share, a tap toggles it. */
+    selected: Boolean? = null,
 ) {
     val sky = LocalSky.current
     val haptic = LocalHapticFeedback.current
@@ -531,7 +544,18 @@ fun AdhkarListItem(
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 )
                 Spacer(Modifier.weight(1f))
-                ItemActions(bookmarked = bookmarked, onToggleBookmark = onToggleBookmark, onCopy = onCopy, onShare = onShare)
+                if (selected == null) {
+                    ItemActions(bookmarked = bookmarked, onToggleBookmark = onToggleBookmark, onCopy = onCopy, onShare = onShare)
+                } else {
+                    Box(
+                        Modifier.padding(10.dp).size(30.dp).clip(CircleShape)
+                            .background(if (selected) sky.ink else Color.Transparent)
+                            .border(2.dp, sky.ink.copy(alpha = if (selected) 1f else 0.45f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (selected) androidx.compose.material3.Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF14161F), modifier = Modifier.size(19.dp))
+                    }
+                }
             }
             Column(Modifier.padding(end = 12.dp)) {
                 // One language only: Arabic script in Arabic, English in English.

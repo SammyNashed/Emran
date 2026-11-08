@@ -227,9 +227,11 @@ fun AdhkarFolderWidget(
             ) { Icon(adhkarIcon(folder.icon), contentDescription = null, tint = sky.ink, modifier = Modifier.size(28.dp)) }
             Spacer(Modifier.height(12.dp))
             // The title is capped so the count below is always the thing that survives.
+            // minLines = maxLines: a one-line title keeps the room of a long one, so every card in a grid
+            // is the same size (a grid row never evens out its cards by itself).
             Text(
                 text = title, color = sky.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 20.sp,
-                maxLines = titleLines, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                minLines = titleLines, maxLines = titleLines, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(4.dp))
             Text(

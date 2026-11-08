@@ -163,7 +163,7 @@ object FloatingDhikrOverlay {
             close(animated = true)
             ctx.startActivity(
                 Intent(ctx, io.github.sammynashed.emran.MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("ROUTE", "dhikr"),
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("ROUTE", "adhkar_detail/${dhikr.folderId}?item=${android.net.Uri.encode(dhikr.id)}"),
             )
         }
 
